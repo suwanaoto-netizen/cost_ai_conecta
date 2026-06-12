@@ -683,10 +683,23 @@ function baselineDocs(){
 /* No 採番：生成分（古い）→ SEED（新しい）の順で積み、SEEDを上位表示 */
 let NEXT_NO=1101;
 const docs=[];
+/* ───── 明細テーブル（書類から独立。各行は docId で書類を参照＝外部キー） ───── */
+const LINES=[];
+function linesOf(docId){ return LINES.filter(l=>l.docId===docId); }
+/* 永続書類は LINES を参照。編集中ドラフトは自前の lines を保持するためそちらを優先 */
+function docLines(d){ return d.lines || linesOf(d.id); }
+/* docId に属する明細を total replace（編集確定／反映時に使用） */
+function writeLines(docId, lines){
+  for(let i=LINES.length-1;i>=0;i--){ if(LINES[i].docId===docId) LINES.splice(i,1); }
+  (lines||[]).forEach(l=>{ const c=JSON.parse(JSON.stringify(l)); c.docId=docId; LINES.push(c); });
+}
 function maxLineDate(s){ return s.lines.map(l=>l.inspectedAt).sort().slice(-1)[0]||""; }
 function pushDoc(s){ const reflectedAt=s.status==="反映済み"?(maxLineDate(s)+" 09:00:00"):null;
   const category=s.category||CATEGORIES[docs.length%CATEGORIES.length];
-  docs.push(Object.assign({id:"d"+(docs.length+1), no:NEXT_NO++, deleted:false, reflectedAt, category}, s)); }
+  const id="d"+(docs.length+1);
+  const {lines, ...rest}=s;
+  docs.push(Object.assign({id, no:NEXT_NO++, deleted:false, reflectedAt, category}, rest));
+  (lines||[]).forEach(l=>{ l.docId=id; LINES.push(l); }); }
 baselineDocs().forEach(pushDoc);
 genDocs(34).forEach(pushDoc);
 genMultiDocs(14).forEach(pushDoc);
@@ -695,8 +708,8 @@ SEED.forEach(pushDoc);
 /* ───── ユーティリティ ───── */
 const yen=n=>"¥"+Math.round(n).toLocaleString("ja-JP");
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const docTotal=d=>d.lines.reduce((s,l)=>s+(+l.amount||0),0);
-const docDate=d=>d.lines.map(l=>l.inspectedAt).sort()[0]||"";
+const docTotal=d=>docLines(d).reduce((s,l)=>s+(+l.amount||0),0);
+const docDate=d=>docLines(d).map(l=>l.inspectedAt).sort()[0]||"";
 function nowStamp(){const d=new Date();const p=n=>String(n).padStart(2,"0");
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;}
 
@@ -785,7 +798,7 @@ function applyDocSort(list){
     case "cat":return d.category||"";
     case "vendor":return d.vendor;
     case "date":return docDate(d);
-    case "lines":return d.lines.length;
+    case "lines":return docLines(d).length;
     case "amount":return docTotal(d);
     default:return d.no;
   }};
@@ -915,7 +928,7 @@ function renderDocBody(){
       <td>${officeChip(d.category)}</td>
       <td class="vendor">${esc(d.vendor)}</td>
       <td class="date">${docDate(d)}</td>
-      <td class="lc">${d.lines.length} 件</td>
+      <td class="lc">${docLines(d).length} 件</td>
       <td class="r">${total}</td>
       <td><div class="rowact">${act}</div></td>
     </tr>`;
@@ -947,7 +960,7 @@ function bulkMarkEntered(){ state.bulkMenu=false;
 function bulkReflect(){ state.bulkMenu=false;
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="入力済み");
   if(t.length===0){ render(); toast("反映できる「入力済み」の書類が選択されていません"); return; }
-  runReflect(t.map(d=>({name:d.name,lines:d.lines})), `${t.length}件の書類をロジポケに反映しました`, ()=>{
+  runReflect(t.map(d=>({name:d.name,lines:docLines(d)})), `${t.length}件の書類をロジポケに反映しました`, ()=>{
     const ts=nowStamp(); t.forEach(d=>{d.status="反映済み";d.reflectedAt=ts;state.selected.delete(d.id);});
     render(); toast(`${t.length}件をロジポケ（車両コスト）へ反映しました`, {label:"車両コスト一覧を見る", fn:gotoVehicles}); }); }
 function bulkTrash(){ state.bulkMenu=false;
@@ -1050,8 +1063,9 @@ function finishUpload(){
   u.files.forEach(f=>{
     const id="d"+(docs.length+1)+"-"+Date.now()+"-"+newIds.length;
     docs.push({id, no:NEXT_NO++, deleted:false, reflectedAt:null,
-      name:f.name, vendor:u.ocr?f.vendor:"", cat:f.cat, category:u.category||"", status:"未入力",
-      lines:u.ocr?f.lines:f.lines.map(l=>({...l,plate:"",site:"",vendor:""}))});
+      name:f.name, vendor:u.ocr?f.vendor:"", cat:f.cat, category:u.category||"", status:"未入力"});
+    const fl=u.ocr?f.lines:f.lines.map(l=>({...l,plate:"",site:"",vendor:""}));
+    fl.forEach(l=>{ l.docId=id; LINES.push(l); });
     newIds.push(id);
   });
   const added=u.files.length;
@@ -1066,7 +1080,7 @@ function finishUpload(){
 /* ───── 右サイドパネル（書類詳細） ───── */
 function openPanel(id){
   const d=docs.find(x=>x.id===id); if(!d)return;
-  state.panelId=id; state.draft=JSON.parse(JSON.stringify(d)); state.pvZoom=100; state.panelJustOpened=true; renderOverlay();
+  state.panelId=id; state.draft=Object.assign(JSON.parse(JSON.stringify(d)),{lines:JSON.parse(JSON.stringify(linesOf(id)))}); state.pvZoom=100; state.panelJustOpened=true; renderOverlay();
 }
 function closePanel(){state.panelId=null;state.draft=null;renderOverlay();}
 function panelNav(delta){
@@ -1075,7 +1089,7 @@ function panelNav(delta){
   if(idx<0) return;
   const ni=idx+delta; if(ni<0||ni>=list.length) return;
   const d=list[ni];
-  state.panelId=d.id; state.draft=JSON.parse(JSON.stringify(d)); state.pvZoom=100; state.panelJustOpened=false;
+  state.panelId=d.id; state.draft=Object.assign(JSON.parse(JSON.stringify(d)),{lines:JSON.parse(JSON.stringify(linesOf(d.id)))}); state.pvZoom=100; state.panelJustOpened=false;
   state.docPage=Math.floor(ni/state.docPerPage)+1; // 背面の一覧ページも同期
   render();
 }
@@ -1189,7 +1203,7 @@ function downloadOriginal(docId){
   const d=docs.find(x=>x.id===docId)||state.draft; if(!d)return;
   try{
     const sub=docTotal(d),tax=Math.round(sub*0.1),total=sub+tax;
-    const rows=d.lines.map(l=>`<tr><td>${esc(l.item)}</td><td>${l.kind==="共通"?("拠点 "+(l.site||"-")):("車番 "+(l.plate||"-"))}</td><td style="text-align:right">${yen(l.amount)}</td></tr>`).join("");
+    const rows=docLines(d).map(l=>`<tr><td>${esc(l.item)}</td><td>${l.kind==="共通"?("拠点 "+(l.site||"-")):("車番 "+(l.plate||"-"))}</td><td style="text-align:right">${yen(l.amount)}</td></tr>`).join("");
     const html=`<!DOCTYPE html><html lang="ja"><meta charset="utf-8"><title>${esc(d.name)}</title>
 <body style="font-family:sans-serif;max-width:680px;margin:30px auto;color:#1B2330">
 <h1 style="text-align:center;letter-spacing:4px">請求書</h1>
@@ -1225,8 +1239,8 @@ function pnToggleKind(lid){
 }
 function savePanel(){
   const d=docs.find(x=>x.id===state.panelId); if(!d)return;
-  Object.assign(d,{cat:state.draft.cat,category:state.draft.category,vendor:state.draft.vendor,
-    lines:JSON.parse(JSON.stringify(state.draft.lines))});
+  Object.assign(d,{cat:state.draft.cat,category:state.draft.category,vendor:state.draft.vendor});
+  writeLines(d.id, state.draft.lines);
   if(d.status==="未入力") d.status="入力済み";
   state.draft.status=d.status;
   render();
@@ -1298,7 +1312,7 @@ function closeReflect(){ const f=state._reflectFinish; state._reflectFinish=null
 function reflectPanel(){
   const d=docs.find(x=>x.id===state.panelId); if(!d||d.status!=="入力済み")return;
   runReflect([{name:state.draft.name,lines:state.draft.lines}], `${state.draft.name} を反映しました`, ()=>{
-    Object.assign(d,{cat:state.draft.cat,category:state.draft.category,vendor:state.draft.vendor,lines:JSON.parse(JSON.stringify(state.draft.lines))});
+    Object.assign(d,{cat:state.draft.cat,category:state.draft.category,vendor:state.draft.vendor}); writeLines(d.id, state.draft.lines);
     d.status="反映済み"; d.reflectedAt=nowStamp(); state.draft.status="反映済み"; state.draft.reflectedAt=d.reflectedAt;
     state.selected.delete(d.id);
     render(); renderNav(); toast("ロジポケ（車両コスト）へ反映しました", {label:"車両コスト一覧を見る", fn:()=>{ closePanel(); gotoVehicles(); }});
@@ -1314,7 +1328,7 @@ function buildVehicles(catFilter){
     if(line.date>e.last)e.last=line.date; e.lines.push(line); if(line.fuso&&!e.fuso)e.fuso=line.fuso; };
   docs.filter(d=>d.status==="反映済み"&&!d.deleted).forEach(d=>{
     if(cf!=="all" && (d.category||"")!==cf) return;
-    d.lines.forEach(l=>{
+    linesOf(d.id).forEach(l=>{
       const kind=l.kind, target=kind==="共通"?(l.site||"未設定"):(l.plate||"未設定");
       const key=(kind==="共通"?"S:":"V:")+target;
       add(ensure(key,kind,target),{lid:l.lid,src:"doc",docId:d.id,item:l.item,cat:l.cat,date:l.inspectedAt,amount:+l.amount,vendor:d.vendor,doc:d.name,office:d.category,fuso:l.fuso});
@@ -1330,7 +1344,7 @@ function buildVehicles(catFilter){
 }
 /* 車両内訳の編集（元データに反映） */
 function vehEditDocLine(docId,lid,field,val){
-  const d=docs.find(x=>x.id===docId); if(!d)return; const l=d.lines.find(x=>x.lid===lid); if(!l)return;
+  const l=LINES.find(x=>x.docId===docId && x.lid===lid); if(!l)return;
   if(field==="amount") l.amount=parseInt(String(val).replace(/[^0-9]/g,""))||0;
   else if(field==="date") l.inspectedAt=val;
   else l[field]=val;
