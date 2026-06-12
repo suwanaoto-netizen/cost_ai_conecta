@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Conecta｜請求書データ化・車両コスト管理</title>
+<style>
+  :root{
+    --bg:#EEF0EC; --panel:#FAFBF9; --card:#fff;
+    --ink:#1B2330; --inkSoft:#5A6472; --inkFaint:#9AA3AD;
+    --line:#D9DED5; --lineSoft:#E7EAE3;
+    --green:#16A571; --greenDark:#0E7A4B; --greenSoft:#E4F4EC; --greenLine:#A9DDC5;
+    --teal:#157F73; --tealSoft:#DCEFEC;
+    --blue:#2563EB; --blueSoft:#E5EDFB;
+    --amber:#B87514; --amberSoft:#FBEFD8;
+    --alert:#B23A2E; --alertSoft:#F7E2DF;
+    --slate:#1F2A37; --slateHi:#2C3A4B;
+    --mono:ui-monospace,SFMono-Regular,Menlo,'Roboto Mono',monospace;
+    --sans:'Hiragino Kaku Gothic ProN','Yu Gothic','Noto Sans JP',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--ink);
+       -webkit-font-smoothing:antialiased;font-size:14px;overflow:hidden}
+  button{font-family:var(--sans)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spin{animation:spin .9s linear infinite}
+  @keyframes slideIn{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+
+  /* ───── shell ───── */
+  .shell{display:flex;height:100vh}
+  .side{width:214px;flex-shrink:0;background:linear-gradient(180deg,#11875A 0%,#0C6A43 100%);color:#E6F4EC;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;transition:width .18s ease}
+  .side.collapsed{width:66px}
+  .brand{display:flex;align-items:center;gap:10px;padding:18px 16px 12px}
+  .brand .mark{width:34px;height:34px;border-radius:9px;background:#fff;display:grid;place-items:center;flex-shrink:0}
+  .brand-txt{min-width:0}
+  .brand .nm{font-size:14px;font-weight:800;color:#fff;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand .tag{font-size:10px;color:#9FD9BE;font-family:var(--mono);margin-top:1px;white-space:nowrap}
+  .side-toggle{display:flex;align-items:center;justify-content:center;gap:7px;margin:0 12px 4px;padding:7px;background:rgba(255,255,255,.08);border:none;border-radius:8px;color:#CFEAD9;font-size:11px;font-weight:700;cursor:pointer;transition:.12s}
+  .side-toggle:hover{background:rgba(255,255,255,.16);color:#fff}
+  .side-toggle .chev{display:flex;transition:transform .18s ease;transform:rotate(180deg)}
+  .side.collapsed .side-toggle{margin:0 9px 4px}
+  .side.collapsed .side-toggle .chev{transform:rotate(0deg)}
+  .side.collapsed .side-toggle .stxt{display:none}
+  .nav{padding:8px;display:flex;flex-direction:column;gap:3px}
+  .nav-h{font-size:10px;font-weight:800;letter-spacing:.8px;color:#8FCDB0;padding:12px 12px 6px}
+  .navbtn{display:flex;align-items:center;gap:11px;background:none;border:none;color:#D6EFE1;
+          padding:10px 12px;border-radius:9px;font-size:13.5px;font-weight:700;cursor:pointer;text-align:left;width:100%;transition:.12s}
+  .navbtn .nic{display:flex;flex-shrink:0}
+  .navbtn:hover{background:rgba(255,255,255,.12);color:#fff}
+  .navbtn.active{background:#fff;color:var(--greenDark)}
+  .navbtn .lbl{white-space:nowrap}
+  .navbtn .ct{margin-left:auto;font-size:11px;font-family:var(--mono);background:rgba(255,255,255,.18);padding:1px 7px;border-radius:999px;font-weight:700}
+  .navbtn.active .ct{background:var(--greenSoft);color:var(--greenDark)}
+  .side-foot{margin-top:auto;padding:14px 16px;border-top:1px solid rgba(255,255,255,.14);font-size:11px;color:#A8DBC4;line-height:1.6}
+  /* collapsed: アイコンのみ */
+  .side.collapsed .brand{justify-content:center;padding:18px 0 12px}
+  .side.collapsed .brand-txt{display:none}
+  .side.collapsed .nav{padding:8px 9px}
+  .side.collapsed .nav-h{display:none}
+  .side.collapsed .navbtn{justify-content:center;padding:11px 0}
+  .side.collapsed .navbtn .lbl,
+  .side.collapsed .navbtn .ct{display:none}
+  .side.collapsed .side-foot{display:none}
+
+  /* ───── main ───── */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;height:100vh;min-height:0}
+  .topbar{height:54px;flex-shrink:0;background:var(--card);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:0 22px;z-index:10}
+  .topbar .crumb{font-size:13px;color:var(--inkSoft)}
+  .topbar .crumb b{color:var(--ink);font-weight:800}
+  .topbar .who{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--inkSoft)}
+  .topbar .avatar{width:26px;height:26px;border-radius:999px;background:var(--greenSoft);display:grid;place-items:center;color:var(--greenDark);font-weight:800;font-size:12px}
+  .content{padding:22px;animation:fade .2s ease;flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .doc-body{flex:1;min-height:0;display:flex;flex-direction:column}
+
+  .pagehead{display:flex;align-items:flex-end;gap:14px;margin-bottom:16px;flex-wrap:wrap;flex-shrink:0}
+  .pagehead h1{font-size:20px;margin:0;font-weight:800}
+  .pagehead p{margin:4px 0 0;color:var(--inkSoft);font-size:13px}
+  .pagehead .page-desc{margin:0;color:var(--inkSoft);font-size:12.5px;max-width:560px}
+  .ph-spacer{flex:1}
+
+  .btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--blue);color:#fff;border:none;
+               border-radius:9px;padding:10px 18px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .btn-primary:hover{filter:brightness(1.06)}
+  .btn-green{display:inline-flex;align-items:center;gap:7px;background:var(--green);color:#fff;border:none;border-radius:9px;padding:10px 18px;font-size:14px;font-weight:800;cursor:pointer}
+  .btn-green:hover{filter:brightness(1.05)}
+  .btn-green:disabled{background:#C6CEC6;cursor:not-allowed;filter:none}
+  .btn-ghost{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1.5px solid var(--line);color:var(--ink);border-radius:9px;padding:9px 15px;font-size:13.5px;font-weight:700;cursor:pointer}
+  .btn-ghost:hover{border-color:var(--greenLine);color:var(--greenDark)}
+
+  /* ───── toolbar / filters ───── */
+  .toolbar{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+  .seg button{background:#fff;border:none;padding:7px 13px;font-size:12.5px;font-weight:700;color:var(--inkSoft);cursor:pointer;border-right:1px solid var(--line);display:inline-flex;align-items:center;gap:6px}
+  .seg button:last-child{border-right:none}
+  .seg button.active{background:var(--greenSoft);color:var(--greenDark)}
+  .seg button .n{font-size:10.5px;font-family:var(--mono);background:#EEF0EC;color:var(--inkSoft);border-radius:999px;padding:0 6px}
+  .seg button.active .n{background:#fff;color:var(--greenDark)}
+  .srch{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:9px;padding:7px 11px;background:#fff;min-width:210px}
+  .srch input{border:none;outline:none;font-size:13px;font-family:var(--sans);flex:1;background:none;color:var(--ink)}
+  .tb-spacer{flex:1}
+  .trash-toggle{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:8px 13px;font-size:12.5px;font-weight:700;color:var(--inkSoft);cursor:pointer}
+  .trash-toggle:hover{border-color:#E0B8B2;color:var(--alert)}
+  .trash-toggle.on{background:var(--alertSoft);border-color:#E0B8B2;color:var(--alert)}
+  .filter-sel{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:5px 10px;background:#fff}
+  .filter-sel .fs-l{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--inkSoft);white-space:nowrap}
+  .filter-sel select{border:none;outline:none;font-family:var(--sans);font-size:13px;font-weight:700;color:var(--ink);background:none;cursor:pointer;max-width:150px}
+  .office-chip{display:inline-block;font-size:11.5px;font-weight:700;color:var(--greenDark);background:var(--greenSoft);border:1px solid var(--greenLine);border-radius:6px;padding:2px 9px;white-space:nowrap}
+  .office-none{font-size:11.5px;color:var(--inkFaint)}
+  .count-line{font-size:12.5px;color:var(--inkSoft);margin:0 0 10px;flex-shrink:0}
+  .count-line b{color:var(--ink);font-family:var(--mono)}
+
+  /* ───── table ───── */
+  .twrap{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;flex:1;min-height:0;display:flex;flex-direction:column}
+  .tscroll{flex:1;min-height:0;overflow:auto}
+  table.dt{width:100%;border-collapse:collapse;font-size:12.5px;min-width:880px}
+  .dt th,.dt td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--lineSoft);vertical-align:middle}
+  .dt thead th{position:sticky;top:0;z-index:2;background:#F3F5F2;font-size:11px;font-weight:800;color:var(--inkSoft);letter-spacing:.3px;white-space:nowrap;box-shadow:inset 0 -1px 0 var(--line)}
+  .dt tbody tr{cursor:pointer;transition:background .1s}
+  .dt tbody tr:hover{background:#F6FBF8}
+  .dt tbody tr:last-child td{border-bottom:none}
+  .dt .no{font-family:var(--mono);color:var(--inkSoft);font-size:12px}
+  .dt .r{text-align:right;font-family:var(--mono);font-weight:700;white-space:nowrap}
+  .dt .docname{font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px;min-width:0}
+  .dt .docname .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
+  .dt .vendor{color:var(--ink)}
+  .dt .date{font-family:var(--mono);color:var(--inkSoft);font-size:12px;white-space:nowrap}
+  .dt .lc{font-family:var(--mono);color:var(--inkSoft)}
+  .rowact{display:flex;gap:6px;justify-content:flex-end}
+  .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer}
+  .icon-btn:hover{border-color:#E0B8B2;background:var(--alertSoft)}
+  .icon-btn.restore:hover{border-color:var(--greenLine);background:var(--greenSoft)}
+  .ftag{display:inline-flex;align-items:center;gap:5px;background:var(--greenSoft);color:var(--greenDark);border-radius:5px;padding:2px 7px;font-size:10.5px;font-weight:800}
+
+  /* status chips */
+  .st{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:800;white-space:nowrap}
+  .st-todo{background:#EAEDE8;color:#5A6472}
+  .st-done{background:var(--tealSoft);color:var(--teal)}
+  .st-reflected{background:var(--greenSoft);color:var(--greenDark)}
+  .st-deleted{background:var(--alertSoft);color:var(--alert)}
+  .dot{width:6px;height:6px;border-radius:999px;background:currentColor;display:inline-block}
+
+  /* category pill (cost) */
+  .catpill{display:inline-block;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;white-space:nowrap}
+
+  .empty{text-align:center;padding:48px 20px;color:var(--inkSoft)}
+  .empty .et{font-size:15px;font-weight:800;color:var(--ink);margin:14px 0 6px}
+  .empty .es{font-size:13px;max-width:420px;margin:0 auto}
+
+  /* ───── upload modal ───── */
+  .ovl{position:fixed;inset:0;background:rgba(15,20,28,.5);z-index:60;display:grid;place-items:center;padding:20px;animation:fade .15s ease}
+  .modal{background:#fff;border-radius:14px;width:min(560px,100%);max-height:90vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.4)}
+  .m-head{display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--lineSoft)}
+  .m-head .t{font-size:17px;font-weight:800}
+  .m-head .x{margin-left:auto;background:none;border:none;cursor:pointer;padding:4px}
+  .m-body{padding:18px 20px}
+  .upl-tabs{display:flex;gap:22px;border-bottom:1px solid var(--lineSoft);margin-bottom:16px}
+  .upl-tab{font-size:13.5px;font-weight:800;color:var(--green);padding:0 2px 11px;border-bottom:2px solid var(--green);margin-bottom:-1px}
+  .dropzone{border:1.5px dashed #C7CFD8;border-radius:10px;background:#FBFDFC;padding:30px 18px;text-align:center;cursor:pointer;transition:.15s;min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .dropzone:hover{border-color:var(--green);background:#F3FBF7}
+  .dropzone.filled{display:block;text-align:left;padding:16px}
+  .dropzone.drag{border-color:var(--green);background:#EFFAF3;border-style:solid}
+  .dz-text{font-size:13.5px;color:var(--inkSoft);margin:10px 0}
+  .btn-select{background:var(--green);color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:14px;font-weight:800;cursor:pointer}
+  .btn-select:hover{filter:brightness(1.06)}
+  .chips{display:flex;flex-direction:column;gap:7px;max-height:202px;overflow-y:auto;padding-right:2px}
+  .upl-sample{color:var(--green);font-weight:700;text-decoration:underline;text-underline-offset:2px;margin-left:4px}
+  .chip{display:flex;align-items:center;gap:9px;background:var(--greenSoft);border:1px solid var(--greenLine);border-radius:8px;padding:8px 12px;font-size:12.5px}
+  .chip .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;color:var(--ink)}
+  .chip .ln{font-family:var(--mono);font-size:11px;color:var(--inkSoft)}
+  .chip .x{background:none;border:none;cursor:pointer;color:var(--inkSoft);font-size:15px;line-height:1;padding:0 2px}
+  .dz-count{text-align:right;font-size:12px;color:var(--inkSoft);margin-top:10px}
+  .upl-help{font-size:11.5px;color:var(--inkFaint);margin:10px 2px 0;line-height:1.6}
+  .ocr-row{display:flex;align-items:center;gap:10px;margin:18px 2px 0}
+  .ocr-row .txt{font-size:13px;color:var(--ink)}
+  .ocr-row .sub{font-size:11px;color:var(--inkFaint);margin-top:2px}
+  .switch{position:relative;width:40px;height:22px;border-radius:999px;background:#C7CFD8;cursor:pointer;transition:.18s;flex-shrink:0}
+  .switch.on{background:var(--green)}
+  .switch .knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:999px;background:#fff;transition:.18s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+  .switch.on .knob{left:20px}
+  .m-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 20px;border-top:1px solid var(--lineSoft)}
+  .btn-cancel{background:#fff;border:1px solid #DCDFE6;color:var(--ink);border-radius:8px;padding:9px 18px;font-size:13.5px;font-weight:700;cursor:pointer}
+  .btn-upload{background:var(--green);border:none;color:#fff;border-radius:8px;padding:9px 22px;font-size:14px;font-weight:800;cursor:pointer}
+  .btn-upload:hover:not(:disabled){filter:brightness(1.05)}
+  .btn-upload:disabled{background:#E5E9EE;color:#B7BEC7;cursor:not-allowed}
+  .uprog{padding:4px 2px}
+  .up-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+  .up-label{font-size:12.5px;color:var(--ink);font-weight:700;display:flex;align-items:center;gap:7px}
+  .up-pct{font-size:12px;color:var(--inkSoft);font-family:var(--mono)}
+  .up-track{height:7px;background:#E7EBEF;border-radius:999px;overflow:hidden}
+  .up-fill{height:100%;background:var(--green);border-radius:999px;transition:width .18s linear}
+
+  /* ───── side panel ───── */
+  .panel-ovl{position:fixed;inset:0;background:rgba(15,20,28,.42);z-index:55;display:flex;justify-content:flex-end;animation:fade .15s ease}
+  .panel{width:min(1040px,96vw);background:#fff;height:100vh;display:flex;flex-direction:column;box-shadow:-12px 0 40px rgba(0,0,0,.22)}
+  .panel.anim{animation:slideIn .22s cubic-bezier(.22,.61,.36,1)}
+  .pn-head{display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line);flex-shrink:0}
+  /* stepper */
+  .stepper{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--lineSoft);border-radius:10px;padding:11px 12px;margin-bottom:16px}
+  .stepper .step{display:flex;align-items:center;gap:7px;white-space:nowrap}
+  .stepper .sdot{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;font-size:11px;font-weight:800;flex-shrink:0}
+  .stepper .slab{font-size:11.5px;font-weight:700}
+  .stepper .step.todo .sdot{background:#E4E8E1;color:#9AA3AD}
+  .stepper .step.todo .slab{color:var(--inkFaint)}
+  .stepper .step.current .sdot{background:var(--green);color:#fff;box-shadow:0 0 0 3px var(--greenSoft)}
+  .stepper .step.current .slab{color:var(--greenDark)}
+  .stepper .step.done .sdot{background:var(--green);color:#fff}
+  .stepper .step.done .slab{color:var(--ink)}
+  .stepper .sline{flex:1;height:2px;background:#E4E8E1;border-radius:2px;min-width:14px}
+  .stepper .sline.done{background:var(--greenLine)}
+  .reflect-hint{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--amber);background:var(--amberSoft);border:1px solid rgba(184,117,20,.3);border-radius:8px;padding:5px 9px;white-space:nowrap}
+  .pn-nav{display:inline-flex;align-items:center;gap:6px;margin-left:4px}
+  .pn-navbtn{display:inline-flex;align-items:center;gap:3px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 11px;font-size:12.5px;font-weight:700;color:var(--ink);cursor:pointer}
+  .pn-navbtn:hover:not(:disabled){border-color:var(--greenLine);color:var(--greenDark);background:var(--greenSoft)}
+  .pn-navbtn:disabled{color:#C2C9C0;cursor:not-allowed;background:#F7F8F5}
+  .pn-navbtn .ic-l{display:inline-flex;transform:rotate(180deg)}
+  .pn-navbtn .ic-r{display:inline-flex}
+  .pn-navpos{font-size:11px;font-family:var(--mono);color:var(--inkSoft);min-width:42px;text-align:center}
+  .toast-btn{margin-left:6px;background:var(--green);color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:12.5px;font-weight:800;cursor:pointer}
+  .toast-btn:hover{filter:brightness(1.08)}
+  .pn-no{font-family:var(--mono);font-size:12px;color:var(--inkSoft)}
+  .pn-no b{color:var(--ink);font-size:14px}
+  .pn-actions{margin-left:auto;display:flex;align-items:center;gap:9px}
+  .pn-body{flex:1;display:flex;min-height:0}
+  .pn-left{width:48%;min-width:380px;overflow-y:auto;padding:18px 20px;border-right:1px solid var(--line)}
+  .pn-right{flex:1;background:#52525B;overflow:auto;padding:16px;display:flex;flex-direction:column;min-width:0}
+
+  .pn-sec{font-size:11px;font-weight:800;color:var(--inkSoft);letter-spacing:.4px;margin:18px 0 9px;display:flex;align-items:center;gap:8px}
+  .pn-sec:first-child{margin-top:0}
+  .pn-sec .ct{font-family:var(--mono);font-weight:700;color:var(--green)}
+  .fld{margin-bottom:11px}
+  .fld label{display:block;font-size:11px;color:var(--inkSoft);margin:0 0 4px;font-weight:700}
+  .in{width:100%;font-family:var(--sans);font-size:13.5px;padding:8px 10px;border:1px solid #D5DAD3;border-radius:7px;outline:none;background:#fff;color:var(--ink)}
+  .in:focus{border-color:var(--green);box-shadow:0 0 0 2px var(--greenSoft)}
+  .in.mono{font-family:var(--mono)}
+  .in[readonly]{background:#F3F5F2;color:var(--inkSoft)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .total-box{display:flex;align-items:baseline;justify-content:space-between;background:var(--greenSoft);border:1px solid var(--greenLine);border-radius:9px;padding:11px 14px;margin-top:4px}
+  .total-box .lab{font-size:12px;font-weight:800;color:var(--greenDark)}
+  .total-box .v{font-family:var(--mono);font-weight:800;font-size:18px;color:var(--ink)}
+
+  .line-card{border:1px solid var(--line);border-radius:10px;padding:12px 13px;margin-bottom:11px;background:var(--panel)}
+  .lc-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+  .lc-no{font-size:11px;font-weight:800;color:var(--inkSoft);font-family:var(--mono)}
+  .match-badge{margin-left:auto}
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap}
+  .legend{font-size:11px;color:var(--inkSoft);display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px;align-items:center}
+  .lg{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:5px}
+  .lg-g{color:#0E7A4B;background:rgba(22,165,113,.16);border:1px solid rgba(22,165,113,.5)}
+  .lg-r{color:#B23A2E;background:rgba(178,58,46,.14);border:1px solid rgba(178,58,46,.5)}
+  .lg-b{color:#1E55C8;background:rgba(37,99,235,.12);border:1px solid rgba(37,99,235,.5)}
+  .in.b-g{border-color:#16A571!important;border-width:1.5px}
+  .in.b-r{border-color:#B23A2E!important;border-width:1.5px}
+  .in.b-b{border-color:#2563EB!important;border-width:1.5px}
+
+  /* preview (右側 書類) */
+  .pv-toolbar{display:flex;align-items:center;gap:8px;background:#3F3F46;color:#E5E7EB;padding:6px 10px;border-radius:7px;margin-bottom:12px;font-size:12px}
+  .pv-toolbar button{background:#52525B;color:#fff;border:none;width:26px;height:24px;border-radius:5px;cursor:pointer;font-size:15px;line-height:1}
+  .pv-toolbar .fn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pv-page-wrap{flex:1;display:flex;justify-content:center;align-items:flex-start;overflow:auto}
+  .pv-foot{flex-shrink:0;padding:12px 4px 2px;display:flex;justify-content:center}
+  .pv-download{display:inline-flex;align-items:center;gap:9px;background:#fff;border:1px solid #D9DED5;color:#1B2330;border-radius:10px;padding:11px 20px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+  .pv-download:hover{background:#F3F5F2}
+
+  /* ───── settings ───── */
+  .settings-wrap{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:14px;padding-bottom:8px}
+  .set-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .set-h{font-size:14px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:11px;border-bottom:1px solid var(--lineSoft)}
+  .set-count{font-size:11px;font-weight:700;font-family:var(--mono);color:var(--inkSoft);background:#EEF0EC;border-radius:999px;padding:1px 8px;margin-left:2px}
+  .set-row{display:flex;align-items:center;gap:18px;padding:11px 0;border-bottom:1px solid var(--lineSoft)}
+  .set-row:last-child{border-bottom:none;padding-bottom:2px}
+  .set-l{flex:1;min-width:0}
+  .set-t{font-size:13.5px;font-weight:700;color:var(--ink)}
+  .set-d{font-size:12px;color:var(--inkSoft);margin-top:3px;line-height:1.5}
+  .set-c{flex-shrink:0;display:flex;align-items:center;gap:10px}
+  .set-range{gap:12px}
+  .set-range input[type=range]{width:200px;accent-color:var(--green)}
+  .set-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .set-chip{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 8px 5px 12px;font-size:12.5px;font-weight:700;color:var(--ink)}
+  .set-chip.mono{font-family:var(--mono);font-size:12px}
+  .set-chip button{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:none;border-radius:999px;background:#EEF0EC;color:var(--inkSoft);cursor:pointer;font-size:13px;line-height:1}
+  .set-chip button:hover{background:var(--alertSoft);color:var(--alert)}
+  .set-add{display:flex;align-items:center;gap:9px}
+  .pv-page{background:#fff;color:#1B2330;width:470px;padding:30px 32px;box-shadow:0 4px 20px rgba(0,0,0,.35);transform-origin:top center;flex-shrink:0}
+  .iv-h{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1B2330;padding-bottom:10px}
+  .iv-title{font-size:22px;font-weight:800;letter-spacing:4px}
+  .iv-no{font-size:10.5px;color:#5A6472;margin-top:3px;font-family:var(--mono)}
+  .iv-issuer{font-size:12px;text-align:right;line-height:1.6}
+  .iv-issuer span{font-size:10px;color:#5A6472}
+  .iv-to{font-size:15px;font-weight:700;margin:14px 0 2px;border-bottom:1px solid #1B2330;display:inline-block;padding-bottom:2px}
+  .iv-meta{font-size:10.5px;color:#5A6472;margin:8px 0 14px;font-family:var(--mono)}
+  .iv-tbl{width:100%;border-collapse:collapse;font-size:12px}
+  .iv-tbl th{background:#1B2330;color:#fff;padding:6px 8px;text-align:left;font-weight:600}
+  .iv-tbl th.r,.iv-tbl td.r{text-align:right}
+  .iv-tbl td{padding:7px 8px;border-bottom:1px solid #E2E5E0}
+  .iv-veh{margin-top:3px;font-size:10px;color:#5A6472;font-family:var(--mono)}
+  .iv-sum{margin:12px 0 0 auto;width:220px;font-size:12px}
+  .iv-sum>div{display:flex;justify-content:space-between;padding:4px 0}
+  .iv-total{border-top:2px solid #1B2330;font-weight:800;font-size:14px;margin-top:4px;padding-top:6px}
+  .mk{border-radius:3px;padding:1px 3px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+  .mk-g{background:rgba(22,165,113,.22)} .mk-r{background:rgba(178,58,46,.18)} .mk-b{background:rgba(37,99,235,.18)}
+  .pn-foot-note{font-size:11.5px;color:var(--inkSoft);background:var(--amberSoft);border:1px solid rgba(184,117,20,.25);border-radius:8px;padding:9px 11px;margin-top:12px;line-height:1.5;display:flex;gap:7px}
+
+  /* reflect log overlay */
+  .log-modal{background:var(--slate);border-radius:14px;width:min(640px,100%);max-height:84vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.4)}
+  .log-modal .mh{padding:14px 18px;display:flex;align-items:center;gap:9px;border-bottom:1px solid rgba(255,255,255,.1);color:#fff}
+  .log-modal .order{margin-left:auto;color:rgba(255,255,255,.5);font-size:12px;font-family:var(--mono)}
+  .log{padding:18px;overflow-y:auto;font-family:var(--mono);font-size:12.5px;color:#D9E2EC}
+  .logline{display:flex;gap:10px;padding:7px 0;transition:opacity .2s}
+  .logline.wait{opacity:.35}
+  .logline .mk2{flex-shrink:0;width:20px}
+  .tag1{color:var(--amber);margin-right:6px}
+  .tag2{color:#8FB4D9;margin-right:6px}
+  .okline{color:#6FCF97;margin-top:2px}
+  .mf{padding:14px 18px;border-top:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:10px;color:#fff;font-size:14px;font-weight:700}
+
+  /* toast */
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--slate);color:#fff;padding:12px 20px;border-radius:10px;font-size:13.5px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.3);z-index:80;display:flex;align-items:center;gap:9px;animation:fade .2s ease}
+
+  /* ───── vehicles ───── */
+  .veh-card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;flex:1;min-height:0;display:flex;flex-direction:column}
+  table.vt{width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px}
+  .vt th,.vt td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--lineSoft);vertical-align:middle}
+  .vt thead th{position:sticky;top:0;z-index:2;background:#F3F5F2;font-size:11px;font-weight:800;color:var(--inkSoft);letter-spacing:.3px;white-space:nowrap;box-shadow:inset 0 -1px 0 var(--line)}
+  .vt tbody tr.vrow{cursor:pointer}
+  .vt tbody tr.vrow:hover{background:#F6FBF8}
+  .vt .plate{display:inline-block;font-family:var(--mono);font-weight:800;font-size:13px;color:var(--greenDark);background:#fff;border:1.5px solid var(--greenLine);border-radius:6px;padding:3px 9px;letter-spacing:.5px}
+  .vt .plate.site{color:var(--inkSoft);border-color:var(--line);font-family:var(--sans)}
+  .vt .r{text-align:right;font-family:var(--mono);font-weight:700;white-space:nowrap}
+  .vt .total{font-size:15px;color:var(--ink)}
+  .mtag{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:800;white-space:nowrap}
+  .mtag.exist{background:var(--tealSoft);color:var(--teal)}
+  .mtag.newv{background:var(--amberSoft);color:var(--amber)}
+  .bar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:#EEF0EC;min-width:120px}
+  .bar span{height:100%}
+  .breakdown{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+  .bd{font-size:10px;font-family:var(--mono);color:var(--inkSoft);display:inline-flex;align-items:center;gap:4px}
+  .bd .sw{width:8px;height:8px;border-radius:2px}
+  .veh-detail td{background:#FAFBF9;padding:0}
+  .vd-inner{padding:10px 14px 14px}
+  .vd-head{display:flex;align-items:center;gap:10px;margin:0 2px 9px;flex-wrap:wrap}
+  .vd-title{font-size:12.5px;font-weight:800;color:var(--ink);display:inline-flex;align-items:center;gap:6px}
+  .vd-sub{font-size:11px;color:var(--inkSoft)}
+  .vd-spacer{flex:1}
+  .vd-sum{font-size:12px;color:var(--inkSoft)}
+  .vd-sum b{font-family:var(--mono);font-size:14px;color:var(--ink)}
+  .vd-in{width:100%;font-family:var(--sans);font-size:12px;padding:5px 7px;border:1px solid #D9DED5;border-radius:6px;background:#fff;color:var(--ink);outline:none}
+  .vd-in:focus{border-color:var(--green);box-shadow:0 0 0 2px var(--greenSoft)}
+  .vd-in.mono{font-family:var(--mono)}
+  .vd-in.ta-r{text-align:right}
+  .vd-ro{font-size:11.5px;color:var(--inkSoft);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .vd-manual td{background:#FBFBF6}
+  .vd-manual{box-shadow:inset 3px 0 0 var(--greenLine)}
+  .src-tag{font-size:10px;font-weight:800;color:var(--inkSoft);background:#EEF0EC;border-radius:5px;padding:2px 6px}
+  .vd-del{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid var(--line);background:#fff;border-radius:7px;cursor:pointer}
+  .vd-del:hover{border-color:#E0B8B2;background:var(--alertSoft)}
+  .vd-add{display:inline-flex;align-items:center;gap:6px;margin-top:11px;background:#fff;border:1px dashed var(--greenLine);color:var(--greenDark);border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:800;cursor:pointer}
+  .vd-add:hover{background:var(--greenSoft)}
+  .veh-edit-btn{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);color:var(--greenDark);border-radius:8px;padding:6px 13px;font-size:12.5px;font-weight:700;cursor:pointer}
+  .veh-edit-btn:hover{border-color:var(--greenLine);background:var(--greenSoft)}
+  .modal-wide{width:min(860px,100%)}
+  .veh-edit-body{padding:18px 20px}
+  .ve-meta{display:flex;align-items:center;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+  .ve-sum{font-size:12.5px;color:var(--inkSoft)}
+  .ve-sum b{font-family:var(--mono);font-size:15px;color:var(--ink)}
+  .ve-note{font-size:11px;font-weight:700;color:var(--greenDark);background:var(--greenSoft);border:1px solid var(--greenLine);border-radius:999px;padding:2px 9px}
+  /* 編集内容の確認 */
+  .ce-warn{display:flex;gap:11px;align-items:flex-start;background:var(--amberSoft);border:1px solid rgba(184,117,20,.3);border-radius:10px;padding:13px 15px;margin-bottom:14px}
+  .ce-q{font-size:15px;font-weight:800;color:var(--ink)}
+  .ce-note{font-size:12px;color:var(--inkSoft);margin-top:3px;line-height:1.5}
+  .ce-list{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow-y:auto}
+  .ce-row{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--lineSoft);border-radius:9px;padding:10px 12px;background:#fff}
+  .ce-row.added{border-color:var(--greenLine);background:#F3FBF7}
+  .ce-row.removed{border-color:#E0B8B2;background:var(--alertSoft)}
+  .ce-row.changed{border-color:var(--line)}
+  .ce-tag{flex-shrink:0;font-size:11px;font-weight:800;white-space:nowrap;padding-top:1px}
+  .ce-row.added .ce-tag{color:var(--greenDark)}
+  .ce-row.removed .ce-tag{color:var(--alert)}
+  .ce-row.changed .ce-tag{color:var(--teal)}
+  .ce-body{min-width:0}
+  .ce-body b{font-size:13px;font-weight:700}
+  .ce-sub{font-size:11.5px;color:var(--inkSoft);margin-left:8px;font-family:var(--mono)}
+  .ce-fields{display:flex;flex-direction:column;gap:3px;margin-top:5px}
+  .ce-f{font-size:12px;color:var(--inkSoft)}
+  .ce-f .old{font-family:var(--mono);color:var(--alert);text-decoration:line-through;text-decoration-color:rgba(178,58,46,.5)}
+  .ce-f .new{font-family:var(--mono);color:var(--greenDark);font-weight:700}
+  .ce-empty{text-align:center;color:var(--inkSoft);font-size:13px;padding:18px}
+  /* 証憑プレビュー（分割モーダル） */
+  .vd-eye{display:inline-flex;align-items:center;justify-content:center;width:30px;height:28px;border:1px solid var(--greenLine);background:#fff;border-radius:7px;cursor:pointer}
+  .vd-eye:hover{background:var(--greenSoft)}
+  .vd-eye.on{background:var(--green);border-color:var(--green)}
+  .vd-viewing td{background:#EFFAF3!important}
+  .modal-split{width:min(1240px,97vw);height:88vh;display:flex;flex-direction:column}
+  .ve-split{display:flex;gap:0;padding:0;min-height:0;flex:1}
+  .ve-left{flex:1;min-width:0;overflow:auto;padding:18px 20px;border-right:1px solid var(--line)}
+  .ve-right{width:520px;flex-shrink:0;background:#52525B;display:flex;flex-direction:column;min-height:0}
+  .ve-rhead{display:flex;align-items:center;gap:8px;background:#3F3F46;color:#E5E7EB;padding:8px 12px;font-size:12px;flex-shrink:0}
+  .ve-rhead .fn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ve-rclose{background:#52525B;border:none;border-radius:6px;width:28px;height:26px;display:grid;place-items:center;cursor:pointer}
+  .ve-rclose:hover{background:#5f5f6a}
+  .ve-rprev{flex:1;overflow:auto;padding:16px;display:flex;justify-content:center;align-items:flex-start}
+  .modal-split .m-body{flex:1;min-height:0;padding:0}
+  @media(max-width:920px){ .ve-right{width:380px} }
+  .vd-tbl{width:100%;border-collapse:collapse;font-size:12px;background:#fff;border:1px solid var(--lineSoft);border-radius:8px;overflow:hidden}
+  .vd-tbl th,.vd-tbl td{padding:8px 11px;text-align:left;border-bottom:1px solid var(--lineSoft)}
+  .vd-tbl th{background:#F3F5F2;font-size:10.5px;color:var(--inkSoft);font-weight:800}
+  .vd-tbl td.r{text-align:right;font-family:var(--mono);font-weight:700}
+  .vd-tbl tr:last-child td{border-bottom:none}
+  .chev{transition:transform .15s}
+  .chev.open{transform:rotate(90deg)}
+  .kpis{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;flex-shrink:0}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;flex:1;min-width:150px}
+  .kpi .l{font-size:11.5px;color:var(--inkSoft);font-weight:700}
+  .kpi .v{font-size:24px;font-weight:800;font-family:var(--mono);margin-top:4px}
+  .kpi .v small{font-size:13px;color:var(--inkSoft);font-family:var(--sans);font-weight:700}
+
+  /* ───── bulk select ───── */
+  .dt th.c,.dt td.c{text-align:center;white-space:nowrap}
+  .dt input[type=checkbox]{width:16px;height:16px;accent-color:var(--green);cursor:pointer;margin:0;vertical-align:middle}
+  .dt tbody tr.sel{background:#EFFAF3}
+  .dt tbody tr.sel:hover{background:#E6F6EE}
+  @keyframes rowflash{0%{background:#CFF0DE}60%{background:#E4F4EC}100%{background:transparent}}
+  .dt tbody tr.row-new{animation:rowflash 3.2s ease forwards}
+  .dt tbody tr.row-new td:first-child{box-shadow:inset 3px 0 0 var(--green)}
+  .bulkbar{display:flex;align-items:center;gap:13px;background:var(--greenSoft);border:1px solid var(--greenLine);border-radius:11px;padding:9px 9px 9px 16px;margin:0 0 12px;animation:fade .15s ease;flex-shrink:0}
+  .bb-count{font-size:13px;font-weight:800;color:var(--greenDark)}
+  .bb-clear{background:none;border:none;color:var(--greenDark);font-size:12.5px;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+  .bulk-dd{position:relative;margin-left:auto}
+  .bulk-btn{display:inline-flex;align-items:center;gap:8px;background:var(--green);color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:13.5px;font-weight:800;cursor:pointer}
+  .bulk-btn:hover{filter:brightness(1.05)}
+  .bulk-scrim{position:fixed;inset:0;z-index:30}
+  .bulk-menu{position:absolute;right:0;top:calc(100% + 7px);z-index:31;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 42px rgba(0,0,0,.2);overflow:hidden;min-width:262px;animation:fade .12s ease}
+  .bulk-menu button{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;background:#fff;border:none;border-bottom:1px solid var(--lineSoft);padding:12px 15px;font-size:13.5px;font-weight:700;color:var(--ink);cursor:pointer;text-align:left}
+  .bulk-menu button:last-child{border-bottom:none}
+  .bulk-menu button:hover{background:var(--greenSoft)}
+  .bulk-menu button .lab{display:inline-flex;align-items:center;gap:8px}
+  .bulk-menu button:disabled{color:var(--inkFaint);cursor:not-allowed;background:#FBFCFA}
+  .bulk-menu button:disabled:hover{background:#FBFCFA}
+  .bulk-menu button.danger{color:var(--alert)}
+  .bulk-menu button.danger:hover{background:var(--alertSoft)}
+  .bulk-menu .mc{font-size:11px;font-family:var(--mono);color:var(--inkSoft);background:#EEF0EC;border-radius:999px;padding:2px 8px;font-weight:700;white-space:nowrap}
+  .sel-hint{margin-left:10px;color:var(--inkSoft);font-size:12px}
+  .log-doc{color:#FFD79A;font-weight:800;border-top:1px solid rgba(255,255,255,.1);padding-top:9px;margin-top:3px;font-size:12px;display:flex;align-items:center;gap:6px}
+
+  /* ───── pager ───── */
+  .pager{display:flex;align-items:center;gap:14px;padding:12px 16px;border-top:1px solid var(--lineSoft);background:#fff;font-size:12.5px;color:var(--inkSoft);flex-wrap:wrap;flex-shrink:0}
+  /* sortable headers */
+  .dt th.sortable,.vt th.sortable{cursor:pointer;user-select:none}
+  .dt th.sortable:hover,.vt th.sortable:hover{color:var(--greenDark);background:#EAF3EC}
+  .dt th.sorted,.vt th.sorted{color:var(--greenDark)}
+  .th-in{display:inline-flex;align-items:center;gap:5px}
+  .dt th.r .th-in,.vt th.r .th-in{justify-content:flex-end}
+  .ar{font-size:9px;line-height:1}
+  .ar-dim{font-size:9px;line-height:1;opacity:.32}
+  .pager .pg-range b{color:var(--ink);font-family:var(--mono)}
+  .pg-spacer{flex:1}
+  .pg-per{display:inline-flex;align-items:center;gap:7px;font-weight:700}
+  .pg-per select{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:5px 8px;background:#fff;cursor:pointer;outline:none}
+  .pg-per select:focus{border-color:var(--green)}
+  .pg-nav{display:inline-flex;align-items:center;gap:10px}
+  .pg-btn{background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:700;color:var(--ink);cursor:pointer}
+  .pg-btn:hover:not(:disabled){border-color:var(--greenLine);color:var(--greenDark);background:var(--greenSoft)}
+  .pg-btn:disabled{color:#C2C9C0;cursor:not-allowed;background:#F7F8F5}
+  .pg-cur{font-family:var(--mono);font-weight:700;color:var(--ink);min-width:54px;text-align:center}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side" id="side">
+    <div class="brand">
+      <div class="mark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E7A4B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></svg>
+      </div>
+      <div class="brand-txt"><div class="nm">AI Conecta</div><div class="tag">invoice intake</div></div>
+    </div>
+    <button class="side-toggle" onclick="toggleSidebar()" title="サイドバーを開閉">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-foot">請求書を取り込み、車両ごとの<br>コストを自動で積み上げます。</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="crumb" id="crumb"></div>
+      <div class="who"><span id="who-name">サンプル物流株式会社</span><span class="avatar">運</span></div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<div id="overlay"></div>
+<div id="toast"></div>
+
+<script>
+/* ───── アイコン ───── */
+const I = {
+  cloud:(c='#C0C7CF',s=44)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 4 14.9"/></svg>`,
+  file:(c='#16A571',s=16)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>`,
+  docs:(c='#fff',s=18)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>`,
+  truckN:(c='#fff',s=18)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>`,
+  check:(c='#fff',s=14,w=3)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`,
+  checkc:(c='#157F73',s=22)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>`,
+  loader:(c='#16A571',s=22)=>`<svg class="spin" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`,
+  truck:(c='#B87514',s=13)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>`,
+  alert:(c='#B23A2E',s=13)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`,
+  boxes:(c='#5A6472',s=13)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z"/><path d="m7 16.5-4.74-2.85"/><path d="M7 16.5v5.17"/><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z"/><path d="m17 16.5-5-3"/></svg>`,
+  pencil:(c='#5A6472',s=13)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>`,
+  x:(c='#5A6472',s=18)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
+  db:(c='#B87514',s=18)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>`,
+  search:(c='#9AA3AD',s=15)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
+  trash:(c='#B23A2E',s=15)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`,
+  undo:(c='#0E7A4B',s=15)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>`,
+  send:(c='#fff',s=15)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>`,
+  save:(c='#fff',s=15)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>`,
+  chev:(c='#5A6472',s=14)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`,
+  plus:(c='#fff',s=16)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`,
+  download:(c='#1B2330',s=17)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>`,
+  gear:(c='#fff',s=18)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  eye:(c='#0E7A4B',s=15)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>`,
+};
+
+/* ───── マスタ ───── */
+const MASTER = new Set(["名古屋100あ1234","名古屋100か5678","三河800さ9012","名古屋800さ8706","岡崎100か2233","豊橋800せ4455","名古屋130す6677","一宮800そ8899"]);
+const SITE_MASTER = new Set(["春日井拠点","名古屋第一倉庫"]);
+const CATS=["整備費","タイヤ費","燃料費","車検費","車両関連費","その他"];
+const CAT_STYLE={
+  "整備費":{fg:"#157F73",bg:"#DCEFEC"},
+  "タイヤ費":{fg:"#B87514",bg:"#FBEFD8"},
+  "燃料費":{fg:"#1E55C8",bg:"#E5EDFB"},
+  "車検費":{fg:"#6B4FA3",bg:"#EFEAF7"},
+  "車両関連費":{fg:"#B87514",bg:"#FBEAC8"},
+  "その他":{fg:"#5A6472",bg:"#E9ECE6"},
+};
+const DOC_CATS=["全ての書類","請求書","領収書","見積書","納品書"];
+/* カテゴリー（主に営業所名）。設定で管理し、書類に紐付く */
+let CATEGORIES=["城北営業所","大宮営業所","浦和営業所","柏営業所","船橋営業所"];
+function officeChip(name){ return name?`<span class="office-chip">${esc(name)}</span>`:`<span class="office-none">未分類</span>`; }
+
+/* ───── 書類データ（請求書1枚 ＝ 1レコード、明細を内包） ───── */
+let UID=300;
+function L(item,plate,cat,date,amount,conf,extra){ return Object.assign({lid:UID++,item,plate:plate||"",site:extra&&extra.site||"",kind:plate?"単車":(extra&&extra.site?"共通":"単車"),cat,inspectedAt:date,amount,confidence:conf==null?.97:conf}, extra&&extra.fuso?{fuso:extra.fuso}:{}); }
+
+const SEED = [
+  {name:"月次整備まとめ_中部マツダ_202605.pdf", vendor:"中部マツダ整備", cat:"請求書", status:"反映済み", lines:[
+    L("継続車検 / 24ヶ月点検","名古屋100あ1234","車検費","2026-05-08",98500,.99),
+    L("12ヶ月点検","名古屋100か5678","整備費","2026-05-09",42000,.98),
+    L("オイル・エレメント交換","三河800さ9012","整備費","2026-05-10",18500,.98),
+    L("ブレーキパッド交換","岡崎100か2233","整備費","2026-05-12",36000,.97),
+    L("冷凍機 ベルト交換","名古屋800さ8706","整備費","2026-05-13",36800,.95),
+    L("バッテリー交換","豊橋800せ4455","整備費","2026-05-15",24000,.96),
+    L("ワイパー・電球交換","名古屋130す6677","整備費","2026-05-16",8200,.97),
+  ]},
+  {name:"燃料費_ENEOS法人カード_202605.pdf", vendor:"ENEOSウイング", cat:"請求書", status:"反映済み", lines:[
+    L("軽油 給油（5月分）","名古屋100あ1234","燃料費","2026-05-31",58200,.96),
+    L("軽油 給油（5月分）","名古屋100か5678","燃料費","2026-05-31",61400,.96),
+    L("軽油 給油（5月分）","三河800さ9012","燃料費","2026-05-31",49800,.96),
+    L("軽油 給油（5月分）","岡崎100か2233","燃料費","2026-05-31",55100,.95),
+    L("軽油 給油（5月分）","豊橋800せ4455","燃料費","2026-05-31",33600,.95),
+    L("軽油 給油（5月分）","名古屋130す6677","燃料費","2026-05-31",41250,.94),
+  ]},
+  {name:"ETC利用料_NEXCO中日本_202605.pdf", vendor:"NEXCO中日本", cat:"請求書", status:"反映済み", lines:[
+    L("ETC利用料（5月分）","名古屋100あ1234","その他","2026-05-31",28400,.97),
+    L("ETC利用料（5月分）","名古屋100か5678","その他","2026-05-31",31200,.97),
+    L("ETC利用料（5月分）","一宮800そ8899","その他","2026-05-31",19800,.96),
+  ]},
+  {name:"車検整備_トヨタLF_豊橋800せ4455.pdf", vendor:"トヨタL&F中部", cat:"請求書", status:"入力済み", lines:[
+    L("継続車検 / 24ヶ月点検","豊橋800せ4455","車検費","2026-05-20",112000,.98),
+  ]},
+  {name:"冷凍機修理_三河冷機_202605.pdf", vendor:"三河冷機サービス", cat:"請求書", status:"入力済み", lines:[
+    L("冷凍機 ガス補充・修理","三河800さ9012","整備費","2026-05-30",85000,.98),
+    L("冷凍機 サーモスタット交換","一宮800そ8899","整備費","2026-05-31",27500,.96),
+  ]},
+  {name:"納車整備_東海ふそう_岐阜100か7890.pdf", vendor:"東海ふそう", cat:"請求書", status:"未入力", lines:[
+    L("新車納車整備","岐阜100か7890","整備費","2026-05-28",132000,.97,{fuso:{body:"アルミバン（標準ドライ）",reefer:"三菱重工 TF410（冷凍）",digitacho:true,drarecorder:true}}),
+  ]},
+  {name:"タイヤ一括_オートバックス_春日井.pdf", vendor:"オートバックス法人", cat:"請求書", status:"未入力", lines:[
+    L("タイヤ一括購入（春日井拠点）","","タイヤ費","2026-05-15",248000,1,{site:"春日井拠点"}),
+  ]},
+  {name:"板金塗装_中日本ボデー_202605.pdf", vendor:"中日本ボデー", cat:"請求書", status:"未入力", lines:[
+    L("左サイドパネル 板金塗装","三河800さ901O","車両関連費","2026-05-22",78000,.73),
+    L("フロントバンパー交換","名古屋100か5678","車両関連費","2026-05-23",45000,.95),
+  ]},
+];
+
+/* アップロードで追加される新規書類（毎回フレッシュに複製） */
+function uploadBatch(){
+  return [
+    {name:"車検整備_スズキ自販_名古屋330え4567_202606.pdf", vendor:"スズキ自販中部", cat:"請求書", lines:[
+      L("継続車検 / 24ヶ月点検","名古屋330え4567","車検費","2026-06-03",105000,.96),
+    ]},
+    {name:"燃料費_出光法人カード_202606.pdf", vendor:"出光リテール販売", cat:"請求書", lines:[
+      L("軽油 給油（6月分）","名古屋100あ1234","燃料費","2026-06-30",62400,.96),
+      L("軽油 給油（6月分）","三河800さ9012","燃料費","2026-06-30",51800,.95),
+      L("軽油 給油（6月分）","名古屋330え4567","燃料費","2026-06-30",28600,.94),
+    ]},
+  ];
+}
+
+/* ───── デモ用データ拡充（決定論ジェネレータ） ───── */
+const FLEET=[
+ "名古屋100あ1234","名古屋100か5678","名古屋100か5679","名古屋130す6677","名古屋200あ3344",
+ "名古屋200か1188","名古屋330え4567","名古屋400さ2020","名古屋500た7788","名古屋800さ8706",
+ "名古屋800た1010","三河100か2020","三河800さ9012","三河800せ3131","岡崎100か2233",
+ "岡崎300す5566","豊橋800せ4455","豊橋100か7799","一宮800そ8899","一宮200か4422",
+ "岐阜100か7890","岐阜200さ1212","浜松100か3030","浜松300た9090","春日井500あ1212",
+ "四日市800か3434","津100す5656","知多300か7878"
+];
+const NEW_PLATES=new Set(["名古屋330え4567","岐阜100か7890","浜松100か3030","春日井500あ1212","名古屋800た1010","知多300か7878"]);
+FLEET.forEach(p=>{ if(!NEW_PLATES.has(p)) MASTER.add(p); });
+
+const GEN_VENDORS=[
+ {n:"中部マツダ整備",cat:["整備費","車検費"]},
+ {n:"トヨタL&F中部",cat:["車検費","整備費"]},
+ {n:"東海ふそう",cat:["整備費","車両関連費"]},
+ {n:"三河冷機サービス",cat:["整備費"]},
+ {n:"オートバックス法人",cat:["タイヤ費","車両関連費"]},
+ {n:"中日本ボデー",cat:["車両関連費"]},
+ {n:"矢崎エナジーシステム",cat:["車両関連費"]},
+ {n:"ENEOSウイング",cat:["燃料費"]},
+ {n:"出光リテール販売",cat:["燃料費"]},
+ {n:"NEXCO中日本",cat:["その他"]},
+ {n:"イエローハット法人",cat:["タイヤ費"]},
+ {n:"コバック車検",cat:["車検費"]},
+];
+const GEN_ITEMS={
+ "整備費":["12ヶ月点検","オイル・エレメント交換","ブレーキパッド交換","バッテリー交換","冷却水交換","ファンベルト交換","エアフィルター交換"],
+ "車検費":["継続車検 / 24ヶ月点検","車検整備一式"],
+ "タイヤ費":["タイヤ4本交換","スタッドレス組替","タイヤローテーション"],
+ "燃料費":["軽油 給油（月次）"],
+ "車両関連費":["フロントバンパー交換","左サイドパネル板金塗装","デジタコ取付","ドラレコ取付","ETC車載器取付"],
+ "その他":["ETC利用料（月次）","車両保険料","整備消耗品"],
+};
+let _rng=20260601;
+const rnd=()=>{ _rng=(_rng*1103515245+12345)&0x7fffffff; return _rng/0x7fffffff; };
+const pick=a=>a[Math.floor(rnd()*a.length)];
+const ri=(a,b)=>a+Math.floor(rnd()*(b-a+1));
+const sample=(arr,k)=>{const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a.slice(0,k);};
+function genDocs(n){
+  const out=[]; const months=["2026-02","2026-03","2026-04","2026-05"];
+  for(let i=0;i<n;i++){
+    const v=pick(GEN_VENDORS), cat=pick(v.cat), month=pick(months);
+    const date=`${month}-${String(ri(1,28)).padStart(2,"0")}`;
+    const plate=pick(FLEET), item=pick(GEN_ITEMS[cat]);
+    const lines=[L(item,plate,cat,date,ri(8,40)*2500,.97)];
+    if(rnd()<0.22){ lines.push(L(pick(GEN_ITEMS[cat]),plate,cat,date,ri(6,24)*2000,.96)); }
+    const r=rnd();
+    const status=r<0.62?"反映済み":r<0.82?"入力済み":"未入力";
+    out.push({name:`${cat}_${v.n}_${plate}_${month.replace('-','')}.pdf`, vendor:v.n, cat:"請求書", status, lines});
+  }
+  return out;
+}
+/* 明細5〜10件のまとめ請求書（多めに生成） */
+function genMultiDocs(n){
+  const out=[]; const months=["2026-03","2026-04","2026-05"];
+  const pools=[
+    {v:"ENEOSウイング",cat:"燃料費",items:["軽油 給油（月次）"],label:"燃料費まとめ"},
+    {v:"NEXCO中日本",cat:"その他",items:["ETC利用料（月次）"],label:"ETC利用料まとめ"},
+    {v:"中部マツダ整備",cat:"整備費",items:GEN_ITEMS["整備費"],label:"月次整備まとめ"},
+    {v:"イエローハット法人",cat:"タイヤ費",items:GEN_ITEMS["タイヤ費"],label:"タイヤ一括"},
+    {v:"矢崎エナジーシステム",cat:"車両関連費",items:GEN_ITEMS["車両関連費"],label:"車載器取付まとめ"},
+  ];
+  for(let i=0;i<n;i++){
+    const p=pick(pools), month=pick(months), k=ri(5,10), plates=sample(FLEET,k);
+    const lines=plates.map(pl=>L(pick(p.items),pl,p.cat,`${month}-${String(ri(1,28)).padStart(2,"0")}`,ri(8,30)*2500,.96));
+    const r=rnd(); const status=r<0.45?"反映済み":r<0.72?"入力済み":"未入力";
+    out.push({name:`${p.label}_${p.v}_${month.replace('-','')}.pdf`, vendor:p.v, cat:"請求書", status, lines});
+  }
+  return out;
+}
+/* 全車両をカバーする反映済みの燃料費（7明細ずつ＝5〜10件帯／車両コスト一覧の母数確保） */
+function baselineDocs(){
+  const out=[]; const vendors=["ENEOSウイング","出光リテール販売","ホクブトランスポート給油","コスモ石油法人"];
+  for(let i=0,vi=0;i<FLEET.length;i+=7,vi++){
+    const plates=FLEET.slice(i,i+7), vn=vendors[vi%vendors.length];
+    out.push({name:`燃料費まとめ_${vn}_202604.pdf`, vendor:vn, cat:"請求書", status:"反映済み",
+      lines:plates.map(p=>L("軽油 給油（4月分）",p,"燃料費","2026-04-30",ri(18,26)*2500,.96))});
+  }
+  return out;
+}
+
+/* No 採番：生成分（古い）→ SEED（新しい）の順で積み、SEEDを上位表示 */
+let NEXT_NO=1101;
+const docs=[];
+function maxLineDate(s){ return s.lines.map(l=>l.inspectedAt).sort().slice(-1)[0]||""; }
+function pushDoc(s){ const reflectedAt=s.status==="反映済み"?(maxLineDate(s)+" 09:00:00"):null;
+  const category=s.category||CATEGORIES[docs.length%CATEGORIES.length];
+  docs.push(Object.assign({id:"d"+(docs.length+1), no:NEXT_NO++, deleted:false, reflectedAt, category}, s)); }
+baselineDocs().forEach(pushDoc);
+genDocs(34).forEach(pushDoc);
+genMultiDocs(14).forEach(pushDoc);
+SEED.forEach(pushDoc);
+
+/* ───── ユーティリティ ───── */
+const yen=n=>"¥"+Math.round(n).toLocaleString("ja-JP");
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const docTotal=d=>d.lines.reduce((s,l)=>s+(+l.amount||0),0);
+const docDate=d=>d.lines.map(l=>l.inspectedAt).sort()[0]||"";
+function nowStamp(){const d=new Date();const p=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;}
+
+/* 突合：明細の対象（車番/拠点）をロジポケマスタと照合 */
+function matchOf(l){
+  const th=state.settings.matchThreshold;
+  if(l.kind==="共通"){const k=(l.site||"").trim();
+    if(!k) return "missing"; if((+l.confidence)<th) return "suspect"; return SITE_MASTER.has(k)?"existing":"new";}
+  const p=(l.plate||"").trim();
+  if(!p) return "missing"; if(MASTER.has(p)) return "existing"; if((+l.confidence)<th) return "suspect"; return "new";
+}
+function matchBadge(l){
+  const st=matchOf(l), v=l.kind!=="共通";
+  const m={
+    existing:{t:v?"既存車両に紐付け":"既存拠点に計上",fg:"var(--teal)",bg:"var(--tealSoft)",ic:I.check("#157F73",12,2.6)},
+    new:{t:v?"新規車両を作成":"新規拠点を作成",fg:"var(--amber)",bg:"var(--amberSoft)",ic:v?I.truck("#B87514",12):I.boxes("#B87514",12)},
+    suspect:{t:"要確認：読み取り疑い",fg:"var(--alert)",bg:"var(--alertSoft)",ic:I.alert("#B23A2E",12)},
+    missing:{t:v?"車番が未入力":"拠点が未入力",fg:"var(--alert)",bg:"var(--alertSoft)",ic:I.alert("#B23A2E",12)},
+  }[st];
+  return `<span class="badge" style="color:${m.fg};background:${m.bg}">${m.ic}${m.t}</span>`;
+}
+function catPill(c){const s=CAT_STYLE[c]||CAT_STYLE["その他"];return `<span class="catpill" style="color:${s.fg};background:${s.bg}">${esc(c)}</span>`;}
+const STATUS_META={
+  "未入力":{cls:"st-todo"}, "入力済み":{cls:"st-done"}, "反映済み":{cls:"st-reflected"},
+};
+function statusChip(s){const m=STATUS_META[s];return `<span class="st ${m.cls}"><span class="dot"></span>${s}</span>`;}
+
+/* ───── 状態 ───── */
+let state={
+  view:"documents",
+  collapsed:false,
+  filterStatus:"all",   // all|未入力|入力済み|反映済み
+  categoryFilter:"all", vehCategoryFilter:"all",
+  trash:false,
+  q:"",
+  selected:new Set(), bulkMenu:false,
+  docPage:1, docPerPage:20, vehPage:1, vehPerPage:20,
+  docSort:{key:null,dir:"asc"}, vehSort:{key:null,dir:"asc"},
+  panelId:null, draft:null, pvZoom:100,
+  upload:{open:false, files:[], ocr:true, processing:{active:false,pct:0,label:""}, _timer:null},
+  vehExpanded:new Set(),
+  vehEditKey:null, vehEditMeta:null, vehEditConfirm:false, vehEditSnapshot:null, vehViewDocId:null, vehViewLid:null,
+  manualLines:[],
+  justUploaded:new Set(),
+  settings:{ companyName:"サンプル物流株式会社", defaultOcr:true, matchThreshold:0.85,
+             defaultPageSize:20, logipokeUrl:"https://api.logipoke.example.com/v1", logipokeKey:"lpk_live_••••••••3a9f", autoReflect:false },
+};
+
+/* ───── ナビ・トップ ───── */
+function renderNav(){
+  const todoDocs=docs.filter(d=>!d.deleted && d.status==="未入力").length;
+  const veh=buildVehicles().length;
+  const items=[
+    {k:"documents",l:"書類一覧",ic:I.docs("#fff",18),ct:todoDocs,hideZero:true},
+    {k:"vehicles",l:"車両コスト一覧",ic:I.truckN("#fff",18),ct:veh},
+    {k:"settings",l:"設定",ic:I.gear("#fff",18)},
+  ];
+  document.getElementById("nav").innerHTML=
+    `<div class="nav-h">メニュー</div>`+
+    items.map(it=>{
+      const active=state.view===it.k;
+      const ic=active?it.ic.replace(/#fff/g,'#0E7A4B'):it.ic.replace(/#fff/g,'#CFEAD9');
+      const ct=(it.ct==null)?"":((it.hideZero && it.ct===0)?"":`<span class="ct">${it.ct}</span>`);
+      return `<button class="navbtn ${active?"active":""}" title="${it.l}" onclick="setView('${it.k}')">
+        <span class="nic">${ic}</span><span class="lbl">${it.l}</span>${ct}</button>`;
+    }).join("");
+}
+function toggleSidebar(){ state.collapsed=!state.collapsed; document.getElementById("side").classList.toggle("collapsed",state.collapsed); }
+function setView(v){ state.view=v; render(); }
+function renderCrumb(){
+  const label={documents:"書類一覧",vehicles:"車両コスト一覧",settings:"設定"}[state.view]||"";
+  document.getElementById("crumb").innerHTML=`AI Conecta <span style="color:var(--inkFaint)">/</span> <b>${label}</b>`;
+  const wn=document.getElementById("who-name"); if(wn) wn.textContent=state.settings.companyName;
+}
+
+/* ───── 書類一覧 ───── */
+const DOC_NUMKEYS=new Set(["no","lines","amount"]);
+function applyDocSort(list){
+  const s=state.docSort;
+  if(!s.key) return list.sort((a,b)=>b.no-a.no);
+  const dir=s.dir==="asc"?1:-1;
+  const val=d=>{switch(s.key){
+    case "no":return d.no;
+    case "status":return ({"未入力":0,"入力済み":1,"反映済み":2})[d.status];
+    case "name":return d.name;
+    case "cat":return d.category||"";
+    case "vendor":return d.vendor;
+    case "date":return docDate(d);
+    case "lines":return d.lines.length;
+    case "amount":return docTotal(d);
+    default:return d.no;
+  }};
+  return list.sort((a,b)=>{const va=val(a),vb=val(b);
+    if(va<vb)return -dir; if(va>vb)return dir; return a.no-b.no;});
+}
+function setDocSort(key){const s=state.docSort;
+  if(s.key===key) s.dir=s.dir==="asc"?"desc":"asc";
+  else {s.key=key; s.dir=DOC_NUMKEYS.has(key)?"desc":"asc";}
+  state.docPage=1; refreshDocBody();}
+function thDoc(key,label,cls){
+  const a=state.docSort.key===key;
+  const ar=a?(state.docSort.dir==="asc"?`<span class="ar">▲</span>`:`<span class="ar">▼</span>`):`<span class="ar-dim">⇅</span>`;
+  return `<th class="sortable ${cls||""} ${a?"sorted":""}" onclick="setDocSort('${key}')"><span class="th-in">${label}${ar}</span></th>`;
+}
+function visibleDocs(){
+  let list=docs.filter(d=>d.deleted===state.trash);
+  if(!state.trash && state.filterStatus!=="all") list=list.filter(d=>d.status===state.filterStatus);
+  if(state.categoryFilter!=="all") list=list.filter(d=>(d.category||"")===state.categoryFilter);
+  if(state.q.trim()){const q=state.q.trim().toLowerCase();
+    list=list.filter(d=>(d.vendor+d.name+(d.category||"")).toLowerCase().includes(q));}
+  return applyDocSort(list);
+}
+function setCategoryFilter(v){ state.categoryFilter=v; state.selected.clear(); state.bulkMenu=false; state.docPage=1; render(); }
+function renderDocuments(){
+  const counts={all:0,"未入力":0,"入力済み":0,"反映済み":0};
+  docs.filter(d=>!d.deleted).forEach(d=>{counts.all++;counts[d.status]++;});
+  const trashCount=docs.filter(d=>d.deleted).length;
+
+  const head=`<div class="pagehead">
+    <button class="btn-green" onclick="openUpload()">${I.plus()} 新規アップロード</button>
+    <p class="page-desc">請求書をアップロード → 行をクリックして内容を確認・営業所を選択 → ロジポケへ反映、の流れで進みます。複数選択でまとめて処理できます。</p>
+  </div>`;
+
+  const seg=state.trash?"":`<div class="seg">
+    ${["all","未入力","入力済み","反映済み"].map(k=>`<button class="${state.filterStatus===k?"active":""}" onclick="setFilter('${k}')">${k==="all"?"すべて":k}<span class="n">${counts[k]}</span></button>`).join("")}
+  </div>`;
+  const catSel=`<div class="filter-sel"><span class="fs-l">${I.boxes("#5A6472",14)} 営業所</span>
+    <select onchange="setCategoryFilter(this.value)"><option value="all" ${state.categoryFilter==="all"?"selected":""}>すべて</option>
+      ${CATEGORIES.map(c=>`<option value="${esc(c)}" ${state.categoryFilter===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div>`;
+  const toolbar=`<div class="toolbar">
+    ${seg}
+    ${catSel}
+    <div class="srch">${I.search()}<input placeholder="取引先・書類名で検索" value="${esc(state.q)}" oninput="setQuery(this.value)"></div>
+    <div class="tb-spacer"></div>
+    <button class="trash-toggle ${state.trash?"on":""}" onclick="toggleTrash()">${I.trash(state.trash?"#B23A2E":"#5A6472",15)} ゴミ箱<span style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.06);padding:0 6px;border-radius:999px">${trashCount}</span></button>
+  </div>`;
+
+  return head+toolbar+`<div id="doc-body" class="doc-body">${renderDocBody()}</div>`;
+}
+
+function docPageInfo(){
+  const list=visibleDocs(); const per=state.docPerPage;
+  const pages=Math.max(1,Math.ceil(list.length/per));
+  if(state.docPage>pages) state.docPage=pages;
+  if(state.docPage<1) state.docPage=1;
+  const start=(state.docPage-1)*per;
+  return {list,total:list.length,per,pages,page:state.docPage,start,slice:list.slice(start,start+per)};
+}
+function pager(kind,info){
+  if(info.total===0) return "";
+  const start=info.start+1, end=Math.min(info.start+info.per,info.total);
+  const perFn=kind==="doc"?"setDocPerPage":"setVehPerPage";
+  const pageFn=kind==="doc"?"setDocPage":"setVehPage";
+  const opts=[20,50,100].map(n=>`<option value="${n}" ${n===info.per?"selected":""}>${n}</option>`).join("");
+  return `<div class="pager">
+    <span class="pg-range">全 <b>${info.total}</b> 件中 <b>${start}</b>–<b>${end}</b> 件を表示</span>
+    <div class="pg-spacer"></div>
+    <span class="pg-per">1ページあたり <select onclick="event.stopPropagation()" onchange="${perFn}(this.value)">${opts}</select> 件</span>
+    <div class="pg-nav">
+      <button class="pg-btn" ${info.page<=1?"disabled":""} onclick="${pageFn}(${info.page-1})">‹ 前へ</button>
+      <span class="pg-cur">${info.page} / ${info.pages}</span>
+      <button class="pg-btn" ${info.page>=info.pages?"disabled":""} onclick="${pageFn}(${info.page+1})">次へ ›</button>
+    </div></div>`;
+}
+function setDocPage(p){ state.docPage=+p; refreshDocBody(); }
+function setDocPerPage(n){ state.docPerPage=+n; state.docPage=1; refreshDocBody(); }
+function setVehPage(p){ state.vehPage=+p; render(); }
+function setVehPerPage(n){ state.vehPerPage=+n; state.vehPage=1; render(); }
+
+function renderDocBody(){
+  const info=docPageInfo();
+  const list=info.list;
+  const sv=list.filter(d=>state.selected.has(d.id));
+
+  /* 上部：2件以上選択で一括処理バー、それ以外は件数 */
+  let topbar;
+  if(!state.trash && sv.length>=2){
+    const enterable=sv.filter(d=>d.status==="未入力").length;
+    const reflectable=sv.filter(d=>d.status==="入力済み").length;
+    topbar=`<div class="bulkbar">
+      <span class="bb-count">${sv.length}件を選択中</span>
+      <button class="bb-clear" onclick="clearSelection()">選択を解除</button>
+      <div class="bulk-dd">
+        <button class="bulk-btn" onclick="toggleBulkMenu()">一括処理 ${I.chev('#fff',14)}</button>
+        ${state.bulkMenu?`<div class="bulk-scrim" onclick="toggleBulkMenu()"></div>
+          <div class="bulk-menu">
+            <button ${enterable?"":"disabled"} onclick="bulkMarkEntered()"><span class="lab">${I.check(enterable?'#0E7A4B':'#9AA3AD',14,2.6)} 入力済みにする</span><span class="mc">未入力 ${enterable}件</span></button>
+            <button ${reflectable?"":"disabled"} onclick="bulkReflect()"><span class="lab">${I.send(reflectable?'#0E7A4B':'#9AA3AD',14)} ロジポケに反映</span><span class="mc">入力済み ${reflectable}件</span></button>
+            <button class="danger" onclick="bulkTrash()"><span class="lab">${I.trash('#B23A2E',14)} ゴミ箱へ移動</span><span class="mc">選択 ${sv.length}件</span></button>
+          </div>`:""}
+      </div></div>`;
+  }else{
+    const hint=(!state.trash&&sv.length===1)?`<span class="sel-hint">1件選択中（2件以上で一括処理が使えます）</span>`:"";
+    topbar=`<p class="count-line">${state.trash?"ゴミ箱":"表示中"} <b>${list.length}</b> 件${hint}</p>`;
+  }
+
+  if(list.length===0){
+    return topbar+`<div class="twrap"><div class="empty">${state.trash?I.trash("#9AA3AD",30):I.cloud("#C0C7CF",44)}
+      <div class="et">${state.trash?"ゴミ箱は空です":"該当する書類がありません"}</div>
+      <div class="es">${state.trash?"削除した書類はここに移動します。":'右上の「新規アップロード」から請求書を取り込んでください。'}</div></div></div>`;
+  }
+
+  const cbCol=!state.trash;
+  const rows=info.slice.map(d=>{
+    const total=yen(docTotal(d));
+    const act=state.trash
+      ? `<button class="icon-btn restore" title="元に戻す" onclick="event.stopPropagation();restoreDoc('${d.id}')">${I.undo("#0E7A4B",15)}</button>`
+      : `<button class="icon-btn" title="ゴミ箱へ移動" onclick="event.stopPropagation();trashDoc('${d.id}')">${I.trash("#B23A2E",15)}</button>`;
+    const isSel=state.selected.has(d.id);
+    const isNew=state.justUploaded.has(d.id);
+    const cb=cbCol?`<td class="c" onclick="event.stopPropagation()"><input type="checkbox" ${isSel?"checked":""} onclick="event.stopPropagation();toggleSelect('${d.id}')"></td>`:"";
+    return `<tr class="${cbCol&&isSel?"sel":""}${isNew?" row-new":""}" onclick="openPanel('${d.id}')">${cb}
+      <td class="no">${d.no}</td>
+      <td>${state.trash?`<span class="st st-deleted"><span class="dot"></span>削除済み</span>`:statusChip(d.status)}</td>
+      <td><div class="docname">${I.file("#16A571",16)}<span class="nm" title="${esc(d.name)}">${esc(d.name)}</span></div></td>
+      <td>${officeChip(d.category)}</td>
+      <td class="vendor">${esc(d.vendor)}</td>
+      <td class="date">${docDate(d)}</td>
+      <td class="lc">${d.lines.length} 件</td>
+      <td class="r">${total}</td>
+      <td><div class="rowact">${act}</div></td>
+    </tr>`;
+  }).join("");
+  const cbHead=cbCol?`<th class="c" style="width:42px"><input type="checkbox" id="cb-all" onclick="event.stopPropagation();toggleSelectAll()"></th>`:"";
+  const table=`<div class="twrap"><div class="tscroll"><table class="dt">
+    <thead><tr>${cbHead}${thDoc('no','No')}${thDoc('status','ステータス')}${thDoc('name','区分・書類名')}${thDoc('cat','営業所')}${thDoc('vendor','取引先')}${thDoc('date','取引日')}${thDoc('lines','明細')}${thDoc('amount','金額（税抜）','r')}<th></th></tr></thead>
+    <tbody>${rows}</tbody></table></div>${pager("doc",info)}</div>`;
+  return topbar+table;
+}
+function setFilter(k){state.filterStatus=k;state.selected.clear();state.bulkMenu=false;state.docPage=1;render();}
+function setQuery(v){state.q=v;state.docPage=1; if(state.view==="documents") refreshDocBody();}
+function refreshDocBody(){const b=document.getElementById("doc-body"); if(!b){render();return;} b.innerHTML=renderDocBody(); setSelectAllState();}
+function setSelectAllState(){const cb=document.getElementById("cb-all"); if(!cb)return;
+  const pg=docPageInfo().slice; const sel=pg.filter(d=>state.selected.has(d.id)).length;
+  cb.checked=pg.length>0&&sel===pg.length; cb.indeterminate=sel>0&&sel<pg.length;}
+
+/* ───── 選択・一括処理（全選択は現ページ単位） ───── */
+function toggleSelect(id){ state.selected.has(id)?state.selected.delete(id):state.selected.add(id); refreshDocBody(); }
+function toggleSelectAll(){ const pg=docPageInfo().slice; const all=pg.length>0&&pg.every(d=>state.selected.has(d.id));
+  if(all) pg.forEach(d=>state.selected.delete(d.id)); else pg.forEach(d=>state.selected.add(d.id));
+  refreshDocBody(); }
+function clearSelection(){ state.selected.clear(); state.bulkMenu=false; refreshDocBody(); }
+function toggleBulkMenu(){ state.bulkMenu=!state.bulkMenu; refreshDocBody(); }
+function bulkMarkEntered(){ state.bulkMenu=false;
+  const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="未入力");
+  if(t.length===0){ render(); toast("「未入力」の書類が選択されていません"); return; }
+  t.forEach(d=>d.status="入力済み"); render(); toast(`${t.length}件を入力済みにしました`); }
+function bulkReflect(){ state.bulkMenu=false;
+  const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="入力済み");
+  if(t.length===0){ render(); toast("反映できる「入力済み」の書類が選択されていません"); return; }
+  runReflect(t.map(d=>({name:d.name,lines:d.lines})), `${t.length}件の書類をロジポケに反映しました`, ()=>{
+    const ts=nowStamp(); t.forEach(d=>{d.status="反映済み";d.reflectedAt=ts;state.selected.delete(d.id);});
+    render(); toast(`${t.length}件をロジポケ（車両コスト）へ反映しました`, {label:"車両コスト一覧を見る", fn:gotoVehicles}); }); }
+function bulkTrash(){ state.bulkMenu=false;
+  const t=visibleDocs().filter(d=>state.selected.has(d.id));
+  if(t.length===0){ render(); return; }
+  t.forEach(d=>{d.deleted=true; state.selected.delete(d.id);});
+  render(); toast(`${t.length}件をゴミ箱へ移動しました`); }
+function toggleTrash(){state.trash=!state.trash;state.filterStatus="all";state.selected.clear();state.bulkMenu=false;state.docPage=1;render();}
+function trashDoc(id){const d=docs.find(x=>x.id===id);if(d){d.deleted=true;toast(`「${d.name}」をゴミ箱へ移動しました`);}render();}
+function restoreDoc(id){const d=docs.find(x=>x.id===id);if(d){d.deleted=false;toast(`「${d.name}」を書類一覧に戻しました`);}render();}
+
+/* ───── アップロードモーダル ───── */
+function openUpload(){state.upload={open:true,files:[],ocr:state.settings.defaultOcr,category:(CATEGORIES[0]||""),processing:{active:false,pct:0,label:""},_timer:null};renderOverlay();}
+function setUploadCategory(v){ if(state.upload.processing.active)return; state.upload.category=v; }
+function closeUpload(){if(state.upload.processing.active)return;state.upload.open=false;renderOverlay();}
+function uplRemove(i){if(state.upload.processing.active)return;state.upload.files.splice(i,1);renderOverlay();}
+function toggleOcr(){if(state.upload.processing.active)return;state.upload.ocr=!state.upload.ocr;renderOverlay();}
+function renderUploadModal(){
+  const u=state.upload, proc=u.processing.active, has=u.files.length>0;
+  const fileInput=`<input type="file" id="upl-file" multiple accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx,.xls" style="display:none" onchange="handleUploadFiles(this.files)">`;
+  const dzAttrs=proc?"":`onclick="pickFiles()" ondragover="uplDragOver(event)" ondragleave="uplDragLeave(event)" ondrop="uplDrop(event)"`;
+  let dz;
+  if(has){
+    const chips=u.files.map((f,i)=>`<div class="chip">${I.file("#16A571",15)}
+      <span class="nm">${esc(f.name)}</span><span class="ln">明細 ${f.lines.length}件</span>
+      ${proc?"":`<button class="x" title="削除" onclick="event.stopPropagation();uplRemove(${i})">×</button>`}</div>`).join("");
+    dz=`<div class="dropzone filled" ${dzAttrs}><div class="chips">${chips}</div>
+        <div class="dz-count">合計 ${u.files.length} 件${proc?"":'　<span style="color:var(--green);font-weight:700">＋ クリック / ドロップで追加</span>'}</div></div>`;
+  }else{
+    dz=`<div class="dropzone" ${dzAttrs}>${I.cloud("#C0C7CF",44)}
+        <div class="dz-text">ファイルをドラッグ＆ドロップ、または</div>
+        <button class="btn-select" onclick="event.stopPropagation();pickFiles()">ファイルを選択</button></div>`;
+  }
+  const catRow=`<div class="upl-cat">
+    <label class="upl-cat-l">営業所</label>
+    <select class="in" style="max-width:280px" onchange="setUploadCategory(this.value)">
+      <option value="" ${!u.category?"selected":""}>（未選択）</option>
+      ${CATEGORIES.map(c=>`<option value="${esc(c)}" ${u.category===c?"selected":""}>${esc(c)}</option>`).join("")}
+    </select>
+    <span class="upl-cat-d">選択した営業所が書類に紐付きます。選択肢は設定の「営業所の管理」で追加できます。</span>
+  </div>`;
+  const body=`<div class="m-body" ${proc?'style="opacity:.55;pointer-events:none"':""}>
+    <div class="upl-tabs"><div class="upl-tab">新規アップロード</div></div>
+    ${fileInput}${dz}
+    <div class="upl-help">ファイル選択（1ファイルあたり最大50MBまで、100件まで複数選択可能）${proc?"":'　<a href="javascript:void(0)" class="upl-sample" onclick="useSampleFiles()">サンプル請求書を読み込む</a>'}</div>
+    ${catRow}
+    <div class="ocr-row">
+      <div class="switch ${u.ocr?"on":""}" onclick="toggleOcr()"><div class="knob"></div></div>
+      <div><div class="txt">AI-OCRで明細を自動データ化する</div><div class="sub">取引先・金額・対象車両・コスト分類を読み取ります（pdf, png, jpg）</div></div>
+    </div></div>`;
+  const foot=proc
+    ? `<div class="m-foot" style="display:block"><div class="uprog">
+         <div class="up-row"><span class="up-label" id="up-label">${I.loader('#16A571',14)}<span>${esc(u.processing.label)}</span></span>
+           <span class="up-pct" id="up-pct">${Math.round(u.processing.pct)}%</span></div>
+         <div class="up-track"><div class="up-fill" id="up-fill" style="width:${u.processing.pct}%"></div></div>
+       </div></div>`
+    : `<div class="m-foot">
+         <button class="btn-cancel" onclick="closeUpload()">キャンセル</button>
+         <button class="btn-upload" ${has?"":"disabled"} onclick="doUpload()">アップロード</button></div>`;
+  return `<div class="ovl" onclick="if(event.target===this)closeUpload()"><div class="modal">
+    <div class="m-head"><span class="t">アップロード</span>
+      ${proc?"":`<button class="x" onclick="closeUpload()">${I.x("#5A6472",18)}</button>`}</div>
+    ${body}${foot}</div></div>`;
+}
+/* ファイル選択（実ファイル）／ドラッグ＆ドロップ */
+function pickFiles(){ if(state.upload.processing.active)return; const el=document.getElementById("upl-file"); if(el) el.click(); }
+function makeUploadEntry(name){
+  const v=pick(GEN_VENDORS), cat=pick(v.cat), month=pick(["2026-04","2026-05","2026-06"]);
+  const k=ri(1,4), plates=sample(FLEET,k);
+  const lines=plates.map(p=>L(pick(GEN_ITEMS[cat]),p,cat,`${month}-${String(ri(1,28)).padStart(2,"0")}`,ri(8,40)*2500,.96));
+  return {name:name||"無題.pdf", vendor:v.n, cat:"請求書", lines};
+}
+function handleUploadFiles(fileList){
+  if(state.upload.processing.active)return;
+  const arr=Array.from(fileList||[]);
+  if(!arr.length) return;
+  arr.forEach(f=>{ if(state.upload.files.length<100) state.upload.files.push(makeUploadEntry(f.name)); });
+  renderOverlay();
+}
+function uplDragOver(e){ e.preventDefault(); const dz=e.currentTarget; if(dz)dz.classList.add("drag"); }
+function uplDragLeave(e){ const dz=e.currentTarget; if(dz)dz.classList.remove("drag"); }
+function uplDrop(e){ e.preventDefault(); const dz=e.currentTarget; if(dz)dz.classList.remove("drag");
+  if(state.upload.processing.active)return;
+  const fl=e.dataTransfer&&e.dataTransfer.files; if(fl&&fl.length) handleUploadFiles(fl); }
+function useSampleFiles(){ if(state.upload.processing.active)return; uploadBatch().forEach(f=>state.upload.files.push(f)); renderOverlay(); }
+function doUpload(){
+  const u=state.upload; if(u.files.length===0)return;
+  u.processing={active:true,pct:0,label:u.ocr?"データ化中（AI-OCR / 明細OCR）":"ファイルを保存中…"};
+  renderOverlay();
+  u._timer=setInterval(()=>{
+    u.processing.pct=Math.min(100,u.processing.pct+5+Math.random()*6);
+    const fill=document.getElementById("up-fill"); if(fill)fill.style.width=u.processing.pct+"%";
+    const pct=document.getElementById("up-pct"); if(pct)pct.textContent=Math.round(u.processing.pct)+"%";
+    if(u.processing.pct>=100){clearInterval(u._timer);setTimeout(finishUpload,360);}
+  },170);
+}
+function finishUpload(){
+  const u=state.upload;
+  const newIds=[];
+  u.files.forEach(f=>{
+    const id="d"+(docs.length+1)+"-"+Date.now()+"-"+newIds.length;
+    docs.push({id, no:NEXT_NO++, deleted:false, reflectedAt:null,
+      name:f.name, vendor:u.ocr?f.vendor:"", cat:f.cat, category:u.category||"", status:"未入力",
+      lines:u.ocr?f.lines:f.lines.map(l=>({...l,plate:"",site:"",vendor:""}))});
+    newIds.push(id);
+  });
+  const added=u.files.length;
+  state.upload={open:false,files:[],ocr:true,category:"",processing:{active:false,pct:0,label:""},_timer:null};
+  state.trash=false; state.filterStatus="all"; state.categoryFilter="all"; state.view="documents"; state.docPage=1;
+  state.justUploaded=new Set(newIds);
+  render();
+  toast(`${added}件の書類をデータ化しました（ステータス：未入力）`);
+  setTimeout(()=>{ state.justUploaded=new Set(); if(state.view==="documents") render(); }, 3200);
+}
+
+/* ───── 右サイドパネル（書類詳細） ───── */
+function openPanel(id){
+  const d=docs.find(x=>x.id===id); if(!d)return;
+  state.panelId=id; state.draft=JSON.parse(JSON.stringify(d)); state.pvZoom=100; state.panelJustOpened=true; renderOverlay();
+}
+function closePanel(){state.panelId=null;state.draft=null;renderOverlay();}
+function panelNav(delta){
+  const list=visibleDocs();
+  const idx=list.findIndex(d=>d.id===state.panelId);
+  if(idx<0) return;
+  const ni=idx+delta; if(ni<0||ni>=list.length) return;
+  const d=list[ni];
+  state.panelId=d.id; state.draft=JSON.parse(JSON.stringify(d)); state.pvZoom=100; state.panelJustOpened=false;
+  state.docPage=Math.floor(ni/state.docPerPage)+1; // 背面の一覧ページも同期
+  render();
+}
+function renderPanel(){
+  const d=state.draft; if(!d)return"";
+  const total=docTotal(d);
+  const isReflected=d.status==="反映済み";
+  const st=d.status; // 未入力 / 入力済み / 反映済み
+  const s2 = st==="未入力" ? "current" : "done";        // 内容を保存
+  const s3 = st==="反映済み" ? "done" : (st==="入力済み" ? "current" : "todo"); // ロジポケに反映
+  const stepper=`<div class="stepper">
+    <div class="step done"><span class="sdot">${I.check("#fff",11,3)}</span><span class="slab">取込・データ化</span></div>
+    <div class="sline done"></div>
+    <div class="step ${s2}"><span class="sdot">${s2==="done"?I.check("#fff",11,3):"2"}</span><span class="slab">入力済みにする</span></div>
+    <div class="sline ${st!=="未入力"?"done":""}"></div>
+    <div class="step ${s3}"><span class="sdot">${s3==="done"?I.check("#fff",11,3):"3"}</span><span class="slab">ロジポケに反映</span></div>
+  </div>`;
+  const _nl=visibleDocs(); const _ni=_nl.findIndex(x=>x.id===state.panelId);
+  const hasPrev=_ni>0, hasNext=_ni>=0&&_ni<_nl.length-1;
+  const navPos=_ni>=0?`<span class="pn-navpos">${_ni+1} / ${_nl.length}</span>`:"";
+  const head=`<div class="pn-head">
+    <div class="pn-no">No. <b>${d.no}</b></div>
+    ${statusChip(d.status)}
+    <div class="pn-nav">
+      <button class="pn-navbtn" ${hasPrev?"":"disabled"} title="前の書類" onclick="panelNav(-1)"><span class="ic-l">${I.chev("#5A6472",13)}</span>前へ</button>
+      ${navPos}
+      <button class="pn-navbtn" ${hasNext?"":"disabled"} title="次の書類" onclick="panelNav(1)">次へ<span class="ic-r">${I.chev("#5A6472",13)}</span></button>
+    </div>
+    <div class="pn-actions">
+      ${st==="未入力"?`<span class="reflect-hint">${I.alert("#B87514",12)} 入力済みにすると反映できます</span>`:""}
+      ${isReflected?"":`<button class="btn-ghost" onclick="savePanel()">${I.check("#5A6472",14,2.6)} 入力済み</button>`}
+      ${isReflected?`<span class="badge" style="color:var(--greenDark);background:var(--greenSoft)">${I.check("#0E7A4B",12,2.6)}反映済み（${d.reflectedAt||""}）</span>`
+        : `<button class="btn-green" ${d.status==="入力済み"?"":"disabled"} title="${d.status==="入力済み"?"":"先に入力済みにしてください"}" onclick="reflectPanel()">${I.send()} ロジポケに反映</button>`}
+      <button class="icon-btn" style="border-color:var(--line)" title="閉じる" onclick="closePanel()">${I.x("#5A6472",16)}</button>
+    </div>
+  </div>`;
+
+  const fields=`
+    <div class="pn-sec">書類情報</div>
+    <div class="fld"><label>書類名</label><input class="in" value="${esc(d.name)}" readonly></div>
+    <div class="grid2">
+      <div class="fld"><label>営業所</label>
+        <select class="in" ${isReflected?"disabled":""} onchange="pnDoc('category',this.value)">${[""].concat(CATEGORIES.includes(d.category)||!d.category?CATEGORIES:[d.category].concat(CATEGORIES)).filter((x,i,a)=>a.indexOf(x)===i).map(c=>`<option value="${esc(c)}" ${c===(d.category||"")?"selected":""}>${c===""?"（未選択）":esc(c)}</option>`).join("")}</select></div>
+      <div class="fld"><label>取引先</label><input class="in" ${isReflected?"readonly":""} value="${esc(d.vendor)}" oninput="pnVendor(this.value)"></div>
+    </div>
+    <div class="total-box"><span class="lab">書類合計（明細 ${d.lines.length}件）</span><span class="v" id="pn-total">${yen(total)}</span></div>`;
+
+  const legend=`<div class="legend">右の書類の読み取り箇所と対応：
+    <span class="lg lg-g">項目</span><span class="lg lg-r">対象車両</span><span class="lg lg-b">金額</span></div>`;
+
+  const lineCards=d.lines.map((l,idx)=>{
+    const v=l.kind!=="共通";
+    const targetFld=v
+      ? `<div class="fld"><label>対象車両（車番）</label>
+           <input class="in mono b-r" value="${esc(l.plate)}" placeholder="（車両なし）" oninput="pnLine(${l.lid},'plate',this.value)"></div>`
+      : `<div class="fld"><label>拠点・機器</label>
+           <input class="in b-r" value="${esc(l.site)}" placeholder="春日井拠点 など" oninput="pnLine(${l.lid},'site',this.value)"></div>`;
+    return `<div class="line-card">
+      <div class="lc-head"><span class="lc-no">明細 ${idx+1}</span>
+        <button class="btn-ghost" style="padding:3px 9px;font-size:11px" onclick="pnToggleKind(${l.lid})">区分：${v?"車両":"拠点共通"}</button>
+        <span class="match-badge" id="pn-badge-${l.lid}">${matchBadge(l)}</span></div>
+      <div class="fld"><label>項目</label><input class="in b-g" value="${esc(l.item)}" oninput="pnLine(${l.lid},'item',this.value)"></div>
+      <div class="grid2">
+        <div class="fld"><label>コスト分類</label>
+          <select class="in" onchange="pnLine(${l.lid},'cat',this.value)">${CATS.map(c=>`<option ${c===l.cat?"selected":""}>${c}</option>`).join("")}</select></div>
+        <div class="fld"><label>発生日</label><input class="in mono" value="${esc(l.inspectedAt)}" oninput="pnLine(${l.lid},'inspectedAt',this.value)"></div>
+      </div>
+      <div class="grid2">
+        ${targetFld}
+        <div class="fld"><label>金額（税抜）</label><input class="in mono b-b" value="${(+l.amount).toLocaleString('ja-JP')}" oninput="pnLine(${l.lid},'amount',this.value)"></div>
+      </div>
+    </div>`;
+  }).join("");
+
+  const note=`<div class="pn-foot-note">${I.db("#B87514",16)}<span>対象車両がロジポケに登録済みかは、上のバッジで自動判定しています（既存／新規／要確認）。<b>「ロジポケに反映」</b>すると、新規車両はマスタ作成、既存車両はコストを積み上げます。</span></div>`;
+
+  const left=`<div class="pn-left">${stepper}${fields}
+    <div class="pn-sec">明細 <span class="ct">${d.lines.length}件</span></div>
+    ${legend}${lineCards}${note}</div>`;
+  const right=`<div class="pn-right">
+    <div class="pv-toolbar"><span style="display:flex">${I.file("#E5E7EB",14)}</span><span class="fn">${esc(d.name)}</span>
+      <button onclick="pvZoom(-10)">−</button><span id="pv-zoom">${state.pvZoom}%</span><button onclick="pvZoom(10)">＋</button></div>
+    <div class="pv-page-wrap" id="pv-page-wrap">${buildPreview(d)}</div>
+    <div class="pv-foot"><button class="pv-download" onclick="downloadOriginal('${d.id}')">${I.download("#1B2330",17)} ファイルの原本をダウンロード</button></div>
+  </div>`;
+
+  return `<div class="panel-ovl" onclick="if(event.target===this)closePanel()"><div class="panel${state.panelJustOpened?" anim":""}">
+    ${head}<div class="pn-body">${left}${right}</div></div></div>`;
+}
+function buildPreview(d){
+  const sub=docTotal(d), tax=Math.round(sub*0.1), total=sub+tax;
+  const lines=d.lines.map(l=>`<tr><td><span class="mk mk-g">${esc(l.item)}</span>
+      <div class="iv-veh"><span class="mk mk-r">${l.kind==="共通"?("拠点 "+(l.site||"—")):("車番 "+(l.plate||"—"))}</span></div></td>
+    <td class="r">1</td><td class="r"><span class="mk mk-b">${yen(l.amount)}</span></td></tr>`).join("");
+  const z=state.pvZoom/100;
+  return `<div class="pv-page" style="transform:scale(${z})">
+    <div class="iv-h"><div><div class="iv-title">請求書</div><div class="iv-no">No. INV-2026-${String(1000+d.no)}</div></div>
+      <div class="iv-issuer"><b>${esc(d.vendor||"（取引先 未読取）")}</b><br><span>登録番号 T1234567890123</span><br><span>名古屋市中区錦1-2-3</span></div></div>
+    <div class="iv-to">${esc(state.settings.companyName)} 御中</div>
+    <div class="iv-meta">発行日：${docDate(d)}　／　お支払期限：翌月末</div>
+    <table class="iv-tbl"><thead><tr><th>項目</th><th class="r">数量</th><th class="r">金額</th></tr></thead><tbody>${lines}</tbody></table>
+    <div class="iv-sum"><div><span>小計</span><span>${yen(sub)}</span></div>
+      <div><span>消費税(10%)</span><span>${yen(tax)}</span></div>
+      <div class="iv-total"><span>合計</span><span>${yen(total)}</span></div></div>
+  </div>`;
+}
+function refreshPreview(){const w=document.getElementById("pv-page-wrap");if(w)w.innerHTML=buildPreview(state.draft);  const z=document.getElementById("pv-zoom");if(z)z.textContent=state.pvZoom+"%";
+  const t=document.getElementById("pn-total");if(t)t.textContent=yen(docTotal(state.draft));}
+function pvZoom(dz){state.pvZoom=Math.max(50,Math.min(200,state.pvZoom+dz));refreshPreview();}
+function downloadOriginal(docId){
+  const d=docs.find(x=>x.id===docId)||state.draft; if(!d)return;
+  try{
+    const sub=docTotal(d),tax=Math.round(sub*0.1),total=sub+tax;
+    const rows=d.lines.map(l=>`<tr><td>${esc(l.item)}</td><td>${l.kind==="共通"?("拠点 "+(l.site||"-")):("車番 "+(l.plate||"-"))}</td><td style="text-align:right">${yen(l.amount)}</td></tr>`).join("");
+    const html=`<!DOCTYPE html><html lang="ja"><meta charset="utf-8"><title>${esc(d.name)}</title>
+<body style="font-family:sans-serif;max-width:680px;margin:30px auto;color:#1B2330">
+<h1 style="text-align:center;letter-spacing:4px">請求書</h1>
+<p style="text-align:right;font-size:12px">No. INV-2026-${String(1000+(d.no||0))}　発行日：${docDate(d)}</p>
+<p style="font-size:15px;font-weight:700;border-bottom:1px solid #1B2330;display:inline-block">${esc(state.settings.companyName)} 御中</p>
+<p style="text-align:right;font-weight:700">${esc(d.vendor||"（取引先 未読取）")}</p>
+<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px" border="1" cellpadding="7">
+<thead><tr style="background:#1B2330;color:#fff"><th>項目</th><th>対象</th><th>金額</th></tr></thead><tbody>${rows}</tbody></table>
+<p style="text-align:right;margin-top:12px">小計 ${yen(sub)}／消費税 ${yen(tax)}／<b>合計 ${yen(total)}</b></p>
+</body></html>`;
+    const blob=new Blob([html],{type:"text/html;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url;
+    a.download=(d.name||"invoice").replace(/\.(pdf|png|jpe?g)$/i,"")+".html";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+    toast("ファイルの原本をダウンロードしました");
+  }catch(e){ toast("ダウンロードを開始できませんでした"); }
+}
+function pnDoc(field,val){state.draft[field]=val;}
+function pnVendor(val){state.draft.vendor=val;refreshPreview();}
+function pnLine(lid,field,val){
+  const l=state.draft.lines.find(x=>x.lid===lid); if(!l)return;
+  if(field==="amount"){l.amount=parseInt(String(val).replace(/[^0-9]/g,""))||0;}
+  else l[field]=val;
+  if(field==="plate"||field==="site"){l.confidence=Math.max(l.confidence,.99);
+    const b=document.getElementById("pn-badge-"+lid); if(b)b.innerHTML=matchBadge(l);}
+  refreshPreview();
+}
+function pnToggleKind(lid){
+  const l=state.draft.lines.find(x=>x.lid===lid); if(!l)return;
+  l.kind=l.kind==="共通"?"単車":"共通"; renderOverlay();
+}
+function savePanel(){
+  const d=docs.find(x=>x.id===state.panelId); if(!d)return;
+  Object.assign(d,{cat:state.draft.cat,category:state.draft.category,vendor:state.draft.vendor,
+    lines:JSON.parse(JSON.stringify(state.draft.lines))});
+  if(d.status==="未入力") d.status="入力済み";
+  state.draft.status=d.status;
+  render();
+  toast("入力済みにしました");
+}
+
+/* ───── ロジポケ反映 ───── */
+function buildPlanFromLines(allLines){
+  const lines=[]; let vid=10290, sid=5400;
+  const ws=allLines.map(l=>({l,st:matchOf(l)}));
+  const vNew=ws.filter(x=>x.l.kind!=="共通"&&(x.st==="new"||x.st==="suspect")&&(x.l.plate||"").trim());
+  [...new Set(vNew.map(x=>x.l.plate))].forEach(p=>{vid++;
+    lines.push({phase:1,text:`POST /vehicles  新規車両マスタ ${p}`,ok:`→ vehicle_id: V-${vid} を発行`});
+    vNew.filter(x=>x.l.plate===p).forEach(x=>lines.push({phase:2,text:`POST /costs  V-${vid} ← ${x.l.item}`,ok:`→ ${yen(x.l.amount)} を紐付け`}));});
+  const cNew=ws.filter(x=>x.l.kind==="共通"&&(x.st==="new"||x.st==="suspect")&&(x.l.site||"").trim());
+  [...new Set(cNew.map(x=>x.l.site))].forEach(sn=>{sid++;
+    lines.push({phase:1,text:`POST /sites  新規拠点マスタ ${sn}`,ok:`→ site_id: S-${sid} を発行`});
+    cNew.filter(x=>x.l.site===sn).forEach(x=>lines.push({phase:2,text:`POST /costs  S-${sid} ← ${x.l.item}`,ok:`→ ${yen(x.l.amount)} を計上`}));});
+  ws.filter(x=>x.l.kind!=="共通"&&x.st==="existing").forEach(x=>lines.push({phase:2,text:`POST /costs  ${x.l.plate} ← ${x.l.item}`,ok:`→ ${yen(x.l.amount)} を既存マスタに追記`}));
+  ws.filter(x=>x.l.kind==="共通"&&x.st==="existing").forEach(x=>lines.push({phase:2,text:`POST /costs  ${x.l.site} ← ${x.l.item}`,ok:`→ ${yen(x.l.amount)} を計上`}));
+  return lines;
+}
+
+/* 単一・一括 共通の連携ログ。units=[{name,lines}] */
+function runReflect(units, doneLabel, onFinish){
+  const plan=[];
+  const multi=units.length>1;
+  units.forEach(u=>{
+    if(multi) plan.push({header:true,text:u.name});
+    buildPlanFromLines(u.lines).forEach(x=>plan.push(x));
+  });
+  state._reflectFinish=onFinish;
+  const ov=document.getElementById("overlay");
+  const delay=plan.length>16?170:380;
+  /* シェルは一度だけ生成（毎ステップ作り直すとフェードが再生され点滅するため） */
+  ov.innerHTML=`<div class="ovl"><div class="log-modal">
+    <div class="mh">${I.db("#D98A1F",18)}<span style="font-weight:800;font-size:15px">ロジポケ連携ログ</span>
+      <span class="order">① マスタ登録 → ② コスト書込</span></div>
+    <div class="log" id="reflect-log"></div>
+    <div class="mf" id="reflect-foot"></div></div></div>`;
+  const logEl=document.getElementById("reflect-log");
+  const footEl=document.getElementById("reflect-foot");
+  let done=0;
+  const draw=()=>{
+    const finished=done>=plan.length;
+    logEl.innerHTML = plan.length ? plan.map((l,i)=>{
+      const stt=i<done?"ok":i===done?"run":"wait";
+      if(l.header){
+        return `<div class="logline ${stt==='wait'?'wait':''}"><span class="mk2"></span><div class="log-doc">${I.file('#FFD79A',13)}${esc(l.text)}</div></div>`;
+      }
+      const mk=stt==="ok"?I.check("#6FCF97",15,3):stt==="run"?I.loader("#D9E2EC",15):"·";
+      const okline=stt==="ok"?`<div class="okline">${esc(l.ok)}</div>`:"";
+      const tag=l.phase===1?`<span class="tag1">[STEP1]</span>`:`<span class="tag2">[STEP2]</span>`;
+      return `<div class="logline ${stt==='wait'?'wait':''}"><span class="mk2">${mk}</span>
+        <div><div>${tag}${esc(l.text)}</div>${okline}</div></div>`;
+    }).join("") : '<div style="color:rgba(255,255,255,.6)">書き込む明細がありません</div>';
+    footEl.innerHTML = finished
+      ? `${I.checkc("#6FCF97",18)}<span>${esc(doneLabel)}</span>
+         <button class="btn-green" style="margin-left:auto" onclick="closeReflect()">閉じる</button>`
+      : `${I.loader("#D98A1F",16)}<span style="color:rgba(255,255,255,.7);font-weight:400">書き込み中… ${Math.min(done,plan.length)}/${plan.length}</span>`;
+    logEl.scrollTop=logEl.scrollHeight;
+  };
+  draw();
+  const tick=()=>{ if(done>=plan.length) return; done++; draw(); setTimeout(tick,delay); };
+  if(plan.length>0) setTimeout(tick,delay);
+}
+function closeReflect(){ const f=state._reflectFinish; state._reflectFinish=null; if(f)f(); }
+
+function reflectPanel(){
+  const d=docs.find(x=>x.id===state.panelId); if(!d||d.status!=="入力済み")return;
+  runReflect([{name:state.draft.name,lines:state.draft.lines}], `${state.draft.name} を反映しました`, ()=>{
+    Object.assign(d,{cat:state.draft.cat,category:state.draft.category,vendor:state.draft.vendor,lines:JSON.parse(JSON.stringify(state.draft.lines))});
+    d.status="反映済み"; d.reflectedAt=nowStamp(); state.draft.status="反映済み"; state.draft.reflectedAt=d.reflectedAt;
+    state.selected.delete(d.id);
+    render(); renderNav(); toast("ロジポケ（車両コスト）へ反映しました", {label:"車両コスト一覧を見る", fn:()=>{ closePanel(); gotoVehicles(); }});
+  });
+}
+
+/* ───── 車両コスト一覧（反映済み書類＋手動明細を集計） ───── */
+function buildVehicles(catFilter){
+  const cf=catFilter||"all";
+  const map=new Map();
+  const ensure=(key,kind,target)=>{ if(!map.has(key)) map.set(key,{key,kind,target,total:0,byCat:{},count:0,last:"",lines:[],fuso:null}); return map.get(key); };
+  const add=(e,line)=>{ e.total+=(+line.amount||0); e.byCat[line.cat]=(e.byCat[line.cat]||0)+(+line.amount||0); e.count++;
+    if(line.date>e.last)e.last=line.date; e.lines.push(line); if(line.fuso&&!e.fuso)e.fuso=line.fuso; };
+  docs.filter(d=>d.status==="反映済み"&&!d.deleted).forEach(d=>{
+    if(cf!=="all" && (d.category||"")!==cf) return;
+    d.lines.forEach(l=>{
+      const kind=l.kind, target=kind==="共通"?(l.site||"未設定"):(l.plate||"未設定");
+      const key=(kind==="共通"?"S:":"V:")+target;
+      add(ensure(key,kind,target),{lid:l.lid,src:"doc",docId:d.id,item:l.item,cat:l.cat,date:l.inspectedAt,amount:+l.amount,vendor:d.vendor,doc:d.name,office:d.category,fuso:l.fuso});
+    });
+  });
+  state.manualLines.forEach(m=>{ if(cf!=="all" && (m.office||"")!==cf) return;
+    add(ensure(m.vkey,m.kind,m.target),{lid:m.id,src:"manual",item:m.item,cat:m.cat,date:m.date,amount:+m.amount,vendor:m.vendor||"手動追加",doc:"手動追加"});
+  });
+  return [...map.values()].sort((a,b)=>{
+    if(a.kind!==b.kind)return a.kind==="共通"?1:-1;
+    return b.total-a.total;
+  });
+}
+/* 車両内訳の編集（元データに反映） */
+function vehEditDocLine(docId,lid,field,val){
+  const d=docs.find(x=>x.id===docId); if(!d)return; const l=d.lines.find(x=>x.lid===lid); if(!l)return;
+  if(field==="amount") l.amount=parseInt(String(val).replace(/[^0-9]/g,""))||0;
+  else if(field==="date") l.inspectedAt=val;
+  else l[field]=val;
+  render();
+}
+function vehEditManualLine(id,field,val){
+  const m=state.manualLines.find(x=>x.id===id); if(!m)return;
+  if(field==="amount") m.amount=parseInt(String(val).replace(/[^0-9]/g,""))||0;
+  else m[field]=val;
+  render();
+}
+let _mlid=1;
+function vehAddManualLine(vkey,kind,target){
+  const office=state.vehCategoryFilter==="all"?"":state.vehCategoryFilter;
+  state.manualLines.push({id:"m"+(_mlid++), vkey, kind, target, item:"新規コスト項目", cat:"その他", date:"2026-06-01", amount:0, vendor:"手動追加", office});
+  render();
+}
+function vehDeleteManualLine(id){ state.manualLines=state.manualLines.filter(x=>x.id!==id); render(); }
+
+/* 内訳の編集テーブル（モーダル内で使用） */
+function renderVehBreakdown(v){
+  const catOpts=c=>CATS.map(x=>`<option ${x===c?"selected":""}>${x}</option>`).join("");
+  const rows=v.lines.slice().sort((a,b)=>a.date<b.date?1:-1).map(x=>{
+    const isM=x.src==="manual";
+    const onEdit=isM?`vehEditManualLine('${x.lid}'`:`vehEditDocLine('${x.docId}',${x.lid}`;
+    const viewing=!isM && state.vehViewLid===String(x.lid);
+    const last=isM
+      ? `<button class="vd-del" title="この明細を削除" onclick="vehDeleteManualLine('${x.lid}')">${I.trash("#B23A2E",13)}</button>`
+      : `<button class="vd-eye ${viewing?"on":""}" title="証憑（請求書）を表示" onclick="vehViewDoc('${x.docId}','${x.lid}')">${I.eye(viewing?"#fff":"#0E7A4B",15)}</button>`;
+    const vendorCell=isM
+      ? `<input class="vd-in" value="${esc(x.vendor)}" onchange="${onEdit},'vendor',this.value)">`
+      : `<span class="vd-ro" title="${esc(x.vendor)}">${esc(x.vendor)}</span>`;
+    return `<tr class="${isM?"vd-manual":""}${viewing?" vd-viewing":""}">
+      <td style="width:118px"><input class="vd-in mono" value="${esc(x.date)}" onchange="${onEdit},'date',this.value)"></td>
+      <td><input class="vd-in" value="${esc(x.item)}" onchange="${onEdit},'item',this.value)"></td>
+      <td style="width:126px"><select class="vd-in" onchange="${onEdit},'cat',this.value)">${catOpts(x.cat)}</select></td>
+      <td style="width:140px">${vendorCell}</td>
+      <td style="width:116px"><input class="vd-in mono ta-r" value="${(+x.amount)}" onchange="${onEdit},'amount',this.value)"></td>
+      <td style="width:48px;text-align:center">${last}</td>
+    </tr>`;
+  }).join("");
+  return `<table class="vd-tbl"><thead><tr><th>発生日</th><th>項目</th><th>コスト分類</th><th>取引先</th><th style="text-align:right">金額</th><th></th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="6" style="text-align:center;color:var(--inkSoft);padding:16px">明細がありません。下のボタンから追加できます。</td></tr>'}</tbody></table>
+    <button class="vd-add" onclick="vehAddManualLine('${v.key}','${v.kind}','${esc(v.target)}')">${I.plus("#0E7A4B",14)} 明細を追加</button>`;
+}
+function openVehEdit(key,kind,target){
+  state.vehEditKey=key; state.vehEditMeta={key,kind,target}; state.vehEditConfirm=false;
+  state.vehViewDocId=null; state.vehViewLid=null;
+  const v=buildVehicles(state.vehCategoryFilter).find(x=>x.key===key);
+  state.vehEditSnapshot = v ? v.lines.map(l=>({lid:String(l.lid),src:l.src,item:l.item,cat:l.cat,date:l.date,amount:+l.amount})) : [];
+  render();
+}
+function closeVehEdit(){ state.vehEditKey=null; state.vehEditMeta=null; state.vehEditConfirm=false; state.vehEditSnapshot=null; state.vehViewDocId=null; state.vehViewLid=null; render(); }
+function vehViewDoc(docId,lid){ state.vehViewDocId=docId; state.vehViewLid=String(lid); state.pvZoom=100; render(); }
+function closeVehView(){ state.vehViewDocId=null; state.vehViewLid=null; render(); }
+function vehEditAskConfirm(){ state.vehEditConfirm=true; render(); }
+function vehEditBack(){ state.vehEditConfirm=false; render(); }
+function vehEditDiff(){
+  const v=buildVehicles(state.vehCategoryFilter).find(x=>x.key===state.vehEditKey);
+  const cur=v? v.lines.map(l=>({lid:String(l.lid),src:l.src,item:l.item,cat:l.cat,date:l.date,amount:+l.amount})) : [];
+  const snap=state.vehEditSnapshot||[];
+  const snapMap=new Map(snap.map(l=>[l.lid,l])), curMap=new Map(cur.map(l=>[l.lid,l]));
+  const out=[];
+  cur.forEach(l=>{ if(!snapMap.has(l.lid)) out.push({type:"added",l}); });
+  snap.forEach(l=>{ if(!curMap.has(l.lid)) out.push({type:"removed",l}); });
+  cur.forEach(l=>{ const s=snapMap.get(l.lid); if(!s) return; const fields=[];
+    if(l.item!==s.item) fields.push(["項目",s.item,l.item]);
+    if(l.cat!==s.cat) fields.push(["コスト分類",s.cat,l.cat]);
+    if(l.date!==s.date) fields.push(["発生日",s.date,l.date]);
+    if(+l.amount!==+s.amount) fields.push(["金額",yen(s.amount),yen(l.amount)]);
+    if(fields.length) out.push({type:"changed",l,fields});
+  });
+  return out;
+}
+function renderVehEditModal(){
+  const key=state.vehEditKey; if(!key) return "";
+  const list=buildVehicles(state.vehCategoryFilter);
+  let v=list.find(x=>x.key===key);
+  if(!v){ const m=state.vehEditMeta||{key,kind:"単車",target:key.replace(/^[VS]:/,"")};
+    v={key:m.key,kind:m.kind,target:m.target,total:0,byCat:{},count:0,last:"",lines:[],fuso:null}; }
+  const isV=v.kind!=="共通";
+  const isMaster=isV?MASTER.has(v.target):SITE_MASTER.has(v.target);
+  const mtag=isMaster?`<span class="mtag exist">${I.check("#157F73",11,2.6)}既存マスタ</span>`
+                     :`<span class="mtag newv">${isV?I.truck("#B87514",11):I.boxes("#B87514",11)}新規作成</span>`;
+  const filterNote=state.vehCategoryFilter!=="all"?`<span class="ve-note">絞り込み中：${esc(state.vehCategoryFilter)}</span>`:"";
+  const titlePlate=`<span class="plate ${isV?"":"site"}" style="margin-right:9px">${esc(v.target)}</span>`;
+
+  if(state.vehEditConfirm){
+    const diff=vehEditDiff();
+    const rows = diff.length ? diff.map(d=>{
+      if(d.type==="added") return `<div class="ce-row added"><span class="ce-tag">＋ 追加</span><div class="ce-body"><b>${esc(d.l.item)}</b><span class="ce-sub">${esc(d.l.cat)}・${yen(d.l.amount)}</span></div></div>`;
+      if(d.type==="removed") return `<div class="ce-row removed"><span class="ce-tag">－ 削除</span><div class="ce-body"><b>${esc(d.l.item)}</b><span class="ce-sub">${esc(d.l.cat)}・${yen(d.l.amount)}</span></div></div>`;
+      return `<div class="ce-row changed"><span class="ce-tag">✎ 変更</span><div class="ce-body"><b>${esc(d.l.item)}</b>
+        <div class="ce-fields">${d.fields.map(f=>`<span class="ce-f">${esc(f[0])}：<span class="old">${esc(f[1])}</span> → <span class="new">${esc(f[2])}</span></span>`).join("")}</div></div></div>`;
+    }).join("") : `<div class="ce-empty">変更された項目はありません。</div>`;
+    return `<div class="ovl" onclick="if(event.target===this)vehEditBack()"><div class="modal modal-wide">
+      <div class="m-head"><span class="t">${titlePlate}編集内容の確認</span>
+        <button class="x" onclick="vehEditBack()">${I.x("#5A6472",18)}</button></div>
+      <div class="m-body veh-edit-body">
+        <div class="ce-warn">${I.alert("#B87514",18)}<div><div class="ce-q">本当に編集を完了しますがよろしいですか？</div>
+          <div class="ce-note">以下の内容で確定します。請求書由来の明細の変更は元の書類にも反映されます。</div></div></div>
+        <div class="ce-list">${rows}</div>
+      </div>
+      <div class="m-foot">
+        <button class="btn-cancel" onclick="vehEditBack()">戻る</button>
+        <button class="btn-green" onclick="closeVehEdit()">${I.check("#fff",14,3)} 編集を完了する</button>
+      </div>
+    </div></div>`;
+  }
+
+  const previewing = !!state.vehViewDocId;
+  const vdoc = previewing ? docs.find(d=>d.id===state.vehViewDocId) : null;
+  const editPane=`
+      <div class="ve-meta">${mtag}<span class="ve-sum">合計 <b>${yen(v.total)}</b>（明細 ${v.count}件）</span>${filterNote}</div>
+      <div class="vd-sub" style="margin:0 2px 12px">行を直接編集できます。請求書由来の明細は ${I.eye("#0E7A4B",13)} で証憑（請求書）を右に表示できます。変更は元の書類にも反映されます。</div>
+      ${renderVehBreakdown(v)}`;
+  if(previewing && vdoc){
+    return `<div class="ovl" onclick="if(event.target===this)vehEditAskConfirm()"><div class="modal modal-split">
+      <div class="m-head"><span class="t">${titlePlate}のコスト内訳を編集</span>
+        <button class="x" onclick="vehEditAskConfirm()">${I.x("#5A6472",18)}</button></div>
+      <div class="m-body ve-split">
+        <div class="ve-left">${editPane}</div>
+        <div class="ve-right">
+          <div class="ve-rhead">${I.file("#E5E7EB",14)}<span class="fn">${esc(vdoc.name)}</span>
+            <button class="ve-rclose" title="閉じる" onclick="closeVehView()">${I.x("#CBD3DD",16)}</button></div>
+          <div class="ve-rprev">${buildPreview(vdoc)}</div>
+        </div>
+      </div>
+      <div class="m-foot"><button class="btn-green" onclick="vehEditAskConfirm()">${I.check("#fff",14,3)} 完了</button></div>
+    </div></div>`;
+  }
+  return `<div class="ovl" onclick="if(event.target===this)vehEditAskConfirm()"><div class="modal modal-wide">
+    <div class="m-head"><span class="t">${titlePlate}のコスト内訳を編集</span>
+      <button class="x" onclick="vehEditAskConfirm()">${I.x("#5A6472",18)}</button></div>
+    <div class="m-body veh-edit-body">${editPane}</div>
+    <div class="m-foot"><button class="btn-green" onclick="vehEditAskConfirm()">${I.check("#fff",14,3)} 完了</button></div>
+  </div></div>`;
+}
+function renderVehicles(){
+  let veh=buildVehicles(state.vehCategoryFilter);
+  const vehicles=veh.filter(v=>v.kind!=="共通");
+  const grand=veh.reduce((s,v)=>s+v.total,0);
+  const newCount=vehicles.filter(v=>!MASTER.has(v.target)).length;
+  /* 並び替え */
+  if(state.vehSort.key){
+    const dir=state.vehSort.dir==="asc"?1:-1;
+    const val=v=>({target:v.target,
+      master:(MASTER.has(v.target)||SITE_MASTER.has(v.target))?1:0,
+      total:v.total,last:v.last,count:v.count})[state.vehSort.key];
+    veh=veh.slice().sort((a,b)=>{const va=val(a),vb=val(b);
+      if(va<vb)return -dir; if(va>vb)return dir; return b.total-a.total;});
+  }
+
+  const catSel=`<div class="filter-sel"><span class="fs-l">${I.boxes("#5A6472",14)} 営業所</span>
+    <select onchange="setVehCategoryFilter(this.value)"><option value="all" ${state.vehCategoryFilter==="all"?"selected":""}>すべて</option>
+      ${CATEGORIES.map(c=>`<option value="${esc(c)}" ${state.vehCategoryFilter===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div>`;
+  const head=`<div class="pagehead">
+    <div><h1>車両コスト一覧</h1><p>反映済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}</p></div>
+    <div class="ph-spacer"></div>${catSel}
+  </div>`;
+
+  if(veh.length===0){
+    return head+`<div class="veh-card"><div class="empty">${I.truckN("#9AA3AD",40)}
+      <div class="et">${state.vehCategoryFilter==="all"?"まだ反映された車両がありません":"この営業所の反映済みコストはありません"}</div>
+      <div class="es">${state.vehCategoryFilter==="all"?'書類一覧で内容を確認し「ロジポケに反映」すると、ここに車両ごとのコストが積み上がります。':"別の営業所を選ぶか、該当営業所の書類を反映してください。"}</div></div></div>`;
+  }
+
+  const kpis=`<div class="kpis">
+    <div class="kpi"><div class="l">登録車両</div><div class="v">${vehicles.length}<small> 台</small></div></div>
+    <div class="kpi"><div class="l">うち新規作成</div><div class="v" style="color:var(--amber)">${newCount}<small> 台</small></div></div>
+    <div class="kpi"><div class="l">反映済みコスト合計</div><div class="v">${yen(grand)}</div></div>
+    <div class="kpi"><div class="l">反映済み書類</div><div class="v">${docs.filter(d=>d.status==="反映済み"&&!d.deleted).length}<small> 件</small></div></div>
+  </div>`;
+
+  /* ページング */
+  const per=state.vehPerPage;
+  const pages=Math.max(1,Math.ceil(veh.length/per));
+  if(state.vehPage>pages)state.vehPage=pages; if(state.vehPage<1)state.vehPage=1;
+  const start=(state.vehPage-1)*per;
+  const info={total:veh.length,per,pages,page:state.vehPage,start};
+  const pageVeh=veh.slice(start,start+per);
+
+  const rows=pageVeh.map(v=>{
+    const isV=v.kind!=="共通";
+    const isMaster=isV?MASTER.has(v.target):SITE_MASTER.has(v.target);
+    const mtag=isMaster?`<span class="mtag exist">${I.check("#157F73",11,2.6)}既存マスタ</span>`
+                       :`<span class="mtag newv">${isV?I.truck("#B87514",11):I.boxes("#B87514",11)}新規作成</span>`;
+    const cats=Object.keys(v.byCat).sort((a,b)=>v.byCat[b]-v.byCat[a]);
+    const bar=`<div class="bar">${cats.map(c=>{const s=CAT_STYLE[c]||CAT_STYLE["その他"];
+      return `<span style="width:${(v.byCat[c]/v.total*100).toFixed(1)}%;background:${s.fg}"></span>`;}).join("")}</div>
+      <div class="breakdown">${cats.map(c=>{const s=CAT_STYLE[c]||CAT_STYLE["その他"];
+      return `<span class="bd"><span class="sw" style="background:${s.fg}"></span>${esc(c)} ${yen(v.byCat[c])}</span>`;}).join("")}</div>`;
+    return `<tr class="vrow" onclick="openVehEdit('${v.key}','${v.kind}','${esc(v.target)}')">
+      <td><span class="plate ${isV?"":"site"}">${esc(v.target)}</span>
+        ${isV&&v.fuso?`<div style="font-size:10.5px;color:var(--inkSoft);margin-top:5px">${esc(v.fuso.body)}${v.fuso.reefer&&v.fuso.reefer!=="なし"?" / "+esc(v.fuso.reefer):""}</div>`:""}</td>
+      <td>${mtag}</td>
+      <td style="min-width:200px">${bar}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--inkSoft)">${v.last}<div style="margin-top:3px">${v.count}明細</div></td>
+      <td class="r total">${yen(v.total)}</td>
+      <td style="text-align:right"><button class="veh-edit-btn" onclick="event.stopPropagation();openVehEdit('${v.key}','${v.kind}','${esc(v.target)}')">${I.pencil("#0E7A4B",13)} 編集</button></td>
+    </tr>`;
+  }).join("");
+
+  const table=`<div class="veh-card"><div class="tscroll"><table class="vt">
+    <thead><tr>${thVeh('target','車番・拠点')}${thVeh('master','マスタ')}<th>コスト内訳</th>${thVeh('last','最終発生 / 明細数')}${thVeh('total','累計コスト','r')}<th style="text-align:right">操作</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>${pager("veh",info)}</div>`;
+  return head+kpis+table;
+}
+function setVehSort(key){const s=state.vehSort;
+  if(s.key===key) s.dir=s.dir==="asc"?"desc":"asc";
+  else {s.key=key; s.dir=(key==="total"||key==="count")?"desc":"asc";}
+  state.vehPage=1; render();}
+function thVeh(key,label,cls){
+  const a=state.vehSort.key===key;
+  const ar=a?(state.vehSort.dir==="asc"?`<span class="ar">▲</span>`:`<span class="ar">▼</span>`):`<span class="ar-dim">⇅</span>`;
+  return `<th class="sortable ${cls||""} ${a?"sorted":""}" onclick="setVehSort('${key}')"><span class="th-in">${label}${ar}</span></th>`;
+}
+function toggleVeh(k){if(state.vehExpanded.has(k))state.vehExpanded.delete(k);else state.vehExpanded.add(k);render();}
+function setVehCategoryFilter(v){ state.vehCategoryFilter=v; state.vehPage=1; render(); }
+
+/* ───── 設定 ───── */
+function renderSettings(){
+  const s=state.settings;
+  const sw=(on,fn)=>`<div class="switch ${on?"on":""}" onclick="${fn}"><div class="knob"></div></div>`;
+  const catChips=CATS.map(c=>`<span class="set-chip">${esc(c)}<button title="削除" onclick="removeCat('${esc(c)}')">×</button></span>`).join("");
+  const officeChips=CATEGORIES.map(c=>`<span class="set-chip">${esc(c)}<button title="削除" onclick="removeCategory('${esc(c)}')">×</button></span>`).join("");
+  const plates=[...MASTER].sort();
+  const plateChips=plates.map(p=>`<span class="set-chip mono">${esc(p)}<button title="削除" onclick="removePlate('${esc(p)}')">×</button></span>`).join("");
+  return `<div class="pagehead"><div><h1>設定</h1><p>AI Conecta のデータ化・突合・ロジポケ連携に関する設定です。変更は画面全体に即時反映されます。</p></div></div>
+  <div class="settings-wrap">
+    <div class="set-card">
+      <div class="set-h">${I.file("#16A571",16)} 会社情報</div>
+      <div class="set-row"><div class="set-l"><div class="set-t">自社名</div><div class="set-d">請求書プレビューの宛名や画面右上に表示されます。</div></div>
+        <div class="set-c"><input class="in" style="max-width:300px" value="${esc(s.companyName)}" onchange="setSetting('companyName',this.value)"></div></div>
+    </div>
+
+    <div class="set-card">
+      <div class="set-h">${I.search("#16A571",15)} AI-OCR・突合</div>
+      <div class="set-row"><div class="set-l"><div class="set-t">アップロード時に既定でAI-OCRを使う</div><div class="set-d">新規アップロード画面の初期状態を切り替えます。</div></div>
+        <div class="set-c">${sw(s.defaultOcr,"toggleSetting('defaultOcr')")}</div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">突合の信頼度しきい値</div><div class="set-d">読み取り信頼度がこの値を下回る明細を「要確認」にします（現在 ${Math.round(s.matchThreshold*100)}%）。</div></div>
+        <div class="set-c set-range"><input type="range" min="50" max="99" value="${Math.round(s.matchThreshold*100)}" oninput="document.getElementById('mt-val').textContent=this.value+'%'" onchange="setMatchThreshold(this.value)"><span id="mt-val" class="mono">${Math.round(s.matchThreshold*100)}%</span></div></div>
+    </div>
+
+    <div class="set-card">
+      <div class="set-h">${I.docs("#16A571",16)} 表示</div>
+      <div class="set-row"><div class="set-l"><div class="set-t">1ページあたりの既定表示件数</div><div class="set-d">書類一覧・車両コスト一覧の初期表示件数です。</div></div>
+        <div class="set-c"><select class="in" style="max-width:120px" onchange="setDefaultPageSize(this.value)">${[20,50,100].map(n=>`<option value="${n}" ${n===s.defaultPageSize?"selected":""}>${n} 件</option>`).join("")}</select></div></div>
+    </div>
+
+    <div class="set-card">
+      <div class="set-h">${I.boxes("#16A571",15)} 営業所の管理 <span class="set-count">${CATEGORIES.length}件</span></div>
+      <div class="set-d" style="margin-bottom:10px">書類に紐付く営業所です。ここで登録すると、アップロード・書類詳細で選択でき、書類一覧・車両コスト一覧で絞り込めます。</div>
+      <div class="set-chips">${officeChips||'<span class="set-d">営業所がありません。下から追加してください。</span>'}</div>
+      <div class="set-add"><input class="in" id="new-office" placeholder="営業所名（例：越谷営業所）" style="max-width:260px"><button class="btn-green" style="padding:8px 14px" onclick="addCategory()">${I.plus()} 追加</button></div>
+    </div>
+
+    <div class="set-card">
+      <div class="set-h">${I.db("#16A571",15)} コスト分類の管理</div>
+      <div class="set-d" style="margin-bottom:10px">明細のコスト分類の選択肢です。車両コスト一覧の内訳集計にも使われます。</div>
+      <div class="set-chips">${catChips}</div>
+      <div class="set-add"><input class="in" id="new-cat" placeholder="新しい分類名（例：保険料）" style="max-width:260px"><button class="btn-green" style="padding:8px 14px" onclick="addCat()">${I.plus()} 追加</button></div>
+    </div>
+
+    <div class="set-card">
+      <div class="set-h">${I.db("#16A571",16)} ロジポケ連携</div>
+      <div class="set-row"><div class="set-l"><div class="set-t">連携先エンドポイント</div><div class="set-d">反映先のロジポケAPIのURL。</div></div>
+        <div class="set-c"><input class="in mono" style="max-width:340px" value="${esc(s.logipokeUrl)}" onchange="setSetting('logipokeUrl',this.value)"></div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">APIキー</div><div class="set-d">連携用のシークレットキー。</div></div>
+        <div class="set-c"><input class="in mono" style="max-width:340px" value="${esc(s.logipokeKey)}" onchange="setSetting('logipokeKey',this.value)"></div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">入力済みの書類を自動でロジポケに反映</div><div class="set-d">保存して入力済みになった書類を自動連携します（プロトタイプでは表示のみ）。</div></div>
+        <div class="set-c">${sw(s.autoReflect,"toggleSetting('autoReflect')")}</div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">接続テスト</div><div class="set-d">現在の設定でロジポケへの接続を確認します。</div></div>
+        <div class="set-c"><button class="btn-ghost" onclick="testLogipoke()">接続をテスト</button></div></div>
+    </div>
+
+    <div class="set-card">
+      <div class="set-h">${I.truck("#16A571",15)} 車両マスタ <span class="set-count">${plates.length}台</span></div>
+      <div class="set-d" style="margin-bottom:10px">登録済みの車番です。ここに無い車番は突合時に「新規作成」と判定されます。</div>
+      <div class="set-chips">${plateChips}</div>
+      <div class="set-add"><input class="in mono" id="new-plate" placeholder="車番を追加（例：名古屋500あ9999）" style="max-width:280px"><button class="btn-green" style="padding:8px 14px" onclick="addPlate()">${I.plus()} 追加</button></div>
+    </div>
+  </div>`;
+}
+function setSetting(k,v){ state.settings[k]=v; render(); }
+function toggleSetting(k){ state.settings[k]=!state.settings[k]; render(); }
+function setMatchThreshold(pct){ state.settings.matchThreshold=Math.max(.5,Math.min(.99,(+pct)/100)); render(); toast(`突合しきい値を ${Math.round(state.settings.matchThreshold*100)}% に設定しました`); }
+function setDefaultPageSize(n){ n=+n; state.settings.defaultPageSize=n; state.docPerPage=n; state.vehPerPage=n; state.docPage=1; state.vehPage=1; render(); toast(`既定の表示件数を ${n}件 に設定しました`); }
+function addCat(){ const el=document.getElementById("new-cat"); const v=(el?el.value:"").trim();
+  if(!v){ toast("分類名を入力してください"); return; } if(CATS.includes(v)){ toast("すでに存在します"); return; }
+  CATS.push(v); render(); toast(`コスト分類「${v}」を追加しました`); }
+function removeCat(c){ const i=CATS.indexOf(c); if(i>=0) CATS.splice(i,1); render(); toast(`コスト分類「${c}」を削除しました`); }
+function addCategory(){ const el=document.getElementById("new-office"); const v=(el?el.value:"").trim();
+  if(!v){ toast("営業所名を入力してください"); return; } if(CATEGORIES.includes(v)){ toast("すでに存在します"); return; }
+  CATEGORIES.push(v); render(); toast(`営業所「${v}」を追加しました`); }
+function removeCategory(c){ const i=CATEGORIES.indexOf(c); if(i>=0) CATEGORIES.splice(i,1);
+  if(state.categoryFilter===c) state.categoryFilter="all"; if(state.vehCategoryFilter===c) state.vehCategoryFilter="all";
+  render(); toast(`営業所「${c}」を削除しました`); }
+function addPlate(){ const el=document.getElementById("new-plate"); const v=(el?el.value:"").trim();
+  if(!v){ toast("車番を入力してください"); return; } if(MASTER.has(v)){ toast("すでに登録済みです"); return; }
+  MASTER.add(v); render(); toast(`車両マスタに「${v}」を追加しました`); }
+function removePlate(p){ MASTER.delete(p); render(); toast(`車両マスタから「${p}」を削除しました`); }
+function testLogipoke(){ toast("ロジポケへの接続テストに成功しました（ダミー）"); }
+
+/* ───── オーバーレイ・トースト ───── */
+function renderOverlay(){
+  const ov=document.getElementById("overlay");
+  if(state.upload.open) ov.innerHTML=renderUploadModal();
+  else if(state.panelId){ ov.innerHTML=renderPanel(); state.panelJustOpened=false; }
+  else if(state.vehEditKey) ov.innerHTML=renderVehEditModal();
+  else ov.innerHTML="";
+}
+let _toastT=null,_toastAction=null;
+function toast(msg, action){
+  const t=document.getElementById("toast");
+  _toastAction = (action&&action.fn)||null;
+  const btn = action?`<button class="toast-btn" onclick="toastAction()">${esc(action.label)}</button>`:"";
+  t.innerHTML=`<div class="toast">${I.checkc("#6FCF97",17)}<span>${esc(msg)}</span>${btn}</div>`;
+  if(_toastT)clearTimeout(_toastT);
+  _toastT=setTimeout(()=>{t.innerHTML="";_toastAction=null;},action?6000:2600);
+}
+function toastAction(){ const f=_toastAction; _toastAction=null; const t=document.getElementById("toast"); if(t)t.innerHTML=""; if(_toastT)clearTimeout(_toastT); if(f)f(); }
+function gotoVehicles(){ state.view="vehicles"; state.vehCategoryFilter="all"; render(); }
+
+/* ───── ルート ───── */
+function render(){
+  renderNav(); renderCrumb();
+  const c=document.getElementById("content");
+  c.innerHTML = state.view==="documents" ? renderDocuments()
+              : state.view==="vehicles" ? renderVehicles()
+              : renderSettings();
+  if(state.view==="documents") setSelectAllState();
+  renderOverlay();
+}
+render();
+</script>
+</body>
+</html>
