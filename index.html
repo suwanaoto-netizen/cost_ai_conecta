@@ -590,6 +590,8 @@
   .vd-hl td{animation:hlpulse 2s ease}
   .vd-hl .vd-in{border-color:var(--amber)}
   /* ───── 期間絞り込みカレンダー ───── */
+  .veh-filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:var(--space-rel)}
+  .vf-l{font-size:11.5px;font-weight:800;color:var(--inkSoft);letter-spacing:.3px}
   .vcal-wrap{position:relative;display:inline-flex}
   .vcal-field{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:6px 11px;font-size:12.5px;font-weight:700;color:var(--ink);cursor:pointer}
   .vcal-field:hover,.vcal-field.open{border-color:var(--green)}
@@ -597,7 +599,7 @@
   .vcal-field .vcal-x{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:999px;background:#EEF0F3;color:var(--inkSoft);font-size:12px;margin-left:1px}
   .vcal-field .vcal-x:hover{background:var(--alertSoft);color:var(--alert)}
   .vcal-backdrop{position:fixed;inset:0;z-index:39}
-  .vcal-pop{position:absolute;top:calc(100% + 6px);right:0;width:322px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 44px rgba(20,30,40,.22);z-index:40;overflow:hidden}
+  .vcal-pop{position:absolute;top:calc(100% + 6px);left:0;width:322px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 44px rgba(20,30,40,.22);z-index:40;overflow:hidden}
   .vcal-head{display:flex;align-items:center;justify-content:space-between;padding:11px 14px}
   .vcal-nav{background:none;border:none;font-size:13px;font-weight:800;color:var(--ink);cursor:pointer;padding:4px 2px}
   .vcal-nav:hover{color:var(--green)}
@@ -2067,17 +2069,18 @@ function renderVehicles(){
   </div>`;
   const head=`<div class="pagehead">
     <div><h1>車両コスト一覧</h1><p>反映済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}${hasRange?`<b style="color:var(--greenDark)">　期間：${state.vehDateStart}〜${state.vehDateEnd}</b>`:""}</p></div>
-    <div class="ph-spacer"></div>${periodCtrl}${catSel}
+    <div class="ph-spacer"></div>
     <button class="btn-hist" onclick="openChangelog()" title="コスト内訳の変更履歴">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>
       変更履歴${clogUnseen>0?`<span class="bh-ct">${clogUnseen}</span>`:""}</button>
   </div>`;
+  const filterBar=`<div class="veh-filters"><span class="vf-l">絞り込み</span>${catSel}${periodCtrl}</div>`;
 
   if(veh.length===0){
-    if(hasRange) return head+`<div class="veh-card"><div class="empty">${I.truckN("#9AA3AD",40)}
+    if(hasRange) return head+filterBar+`<div class="veh-card"><div class="empty">${I.truckN("#9AA3AD",40)}
       <div class="et">この期間に発生したコストはありません</div>
       <div class="es">期間（${state.vehDateStart}〜${state.vehDateEnd}）を変更するか、「全期間に戻す」で絞り込みを解除してください。</div></div></div>`;
-    return head+`<div class="veh-card"><div class="empty">${I.truckN("#9AA3AD",40)}
+    return head+filterBar+`<div class="veh-card"><div class="empty">${I.truckN("#9AA3AD",40)}
       <div class="et">${state.vehCategoryFilter==="all"?"まだ反映された車両がありません":"この営業所の反映済みコストはありません"}</div>
       <div class="es">${state.vehCategoryFilter==="all"?'書類一覧で内容を確認し「ロジポケに反映」すると、ここに車両ごとのコストが積み上がります。':"別の営業所を選ぶか、該当営業所の書類を反映してください。"}</div></div></div>`;
   }
@@ -2121,7 +2124,7 @@ function renderVehicles(){
   const table=`<div class="veh-card"><div class="tscroll"><table class="vt">
     <thead><tr>${thVeh('target','車番・拠点')}${thVeh('master','マスタ')}<th>コスト内訳</th>${thVeh('last','最終発生 / 明細数')}${thVeh('total','累計コスト','r')}<th style="text-align:right">操作</th></tr></thead>
     <tbody>${rows}</tbody></table></div>${pager("veh",info)}</div>`;
-  return head+kpis+table;
+  return head+filterBar+kpis+table;
 }
 function setVehSort(key){const s=state.vehSort;
   if(s.key===key) s.dir=s.dir==="asc"?"desc":"asc";
