@@ -1097,7 +1097,7 @@ let state={
   vehTrash:new Set(), vehTrashView:false, vehTrashAction:null,
   changelogOpen:false, changelogSeenCount:0, vehEditHighlight:null,
   vehDateStart:null, vehDateEnd:null, vehCalOpen:false, vehCalYM:"2026-06",
-  reflectConfirm:null,
+  reflectConfirm:null, enterConfirm:null,
   manualLines:[],
   justUploaded:new Set(),
   settings:{ companyName:"サンプル物流株式会社", defaultOcr:true, matchThreshold:0.85,
@@ -1313,7 +1313,29 @@ function toggleBulkMenu(){ state.bulkMenu=!state.bulkMenu; refreshDocBody(); }
 function bulkMarkEntered(){ state.bulkMenu=false;
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="未入力");
   if(t.length===0){ render(); toast("「未入力」の書類が選択されていません"); return; }
+  state.enterConfirm={count:t.length}; renderOverlay(); }
+function closeEnterConfirm(){ state.enterConfirm=null; renderOverlay(); }
+function proceedBulkMarkEntered(){ state.enterConfirm=null;
+  const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="未入力");
+  if(t.length===0){ render(); return; }
   t.forEach(d=>d.status="入力済み"); render(); toast(`${t.length}件を入力済みにしました`); }
+function renderEnterConfirm(){
+  const ec=state.enterConfirm; if(!ec) return "";
+  return `<div class="ovl anim" style="z-index:70" onclick="if(event.target===this)closeEnterConfirm()"><div class="modal" style="width:min(480px,100%)">
+    <div class="m-head"><span class="t">${I.check('#0E7A4B',18,2.6)} 入力済みにしますか？</span>
+      <button class="x" onclick="closeEnterConfirm()">${I.x("#5A6472",18)}</button></div>
+    <div class="m-body">
+      <p style="margin:0 0 13px;font-size:13.5px;color:var(--ink)">選択中の <b>${ec.count}</b> 件の書類を入力済みにします。</p>
+      <div class="ce-warn" style="background:var(--greenSoft);border-color:var(--greenLine)">${I.check("#0E7A4B",18,2.6)}<div>
+        <div class="ce-q">入力済みにすると、<b>ロジポケ（車両コスト）へ反映できる</b>ようになります。</div>
+        <div class="ce-note">内容の修正は反映前であればいつでも行えます。</div></div></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn-cancel" onclick="closeEnterConfirm()">キャンセル</button>
+      <button class="btn-green" onclick="proceedBulkMarkEntered()">${I.check('#fff',14,2.6)} 入力済みにする</button>
+    </div>
+  </div></div>`;
+}
 function bulkReflect(){ state.bulkMenu=false;
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="入力済み");
   if(t.length===0){ render(); toast("反映できる「入力済み」の書類が選択されていません"); return; }
@@ -2835,6 +2857,7 @@ function renderOverlay(){
   else if(state.vehEditKey) h=renderVehEditModal();
   else if(state.masterEdit) h=renderMasterEditModal();
   if(state.reflectConfirm) h+=renderReflectConfirm(); // 既存オーバーレイの上に確認モーダルを重ねる
+  if(state.enterConfirm) h+=renderEnterConfirm();
   if(state.pnDeleteLid!=null) h+=renderPnDeleteConfirm();
   if(state.vehTrashAction) h+=renderVehTrashConfirm();
   if(state.docTrashAction) h+=renderDocTrashConfirm();
