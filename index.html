@@ -292,6 +292,16 @@
   .cat-del{border:none;background:#EEF0EC;color:var(--inkSoft);width:22px;height:22px;border-radius:999px;cursor:pointer;font-size:14px;line-height:1}
   .cat-del:hover{background:var(--alertSoft);color:var(--alert)}
   .exp-hint{font-weight:600;font-size:11px;color:var(--green);margin-left:6px}
+  /* 金額：OCR読み取り候補ドロップダウン */
+  .amt-combo{position:relative}
+  .amt-combo .in{width:100%;padding-right:30px}
+  .amt-ck{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;display:flex;align-items:center}
+  .amt-pop{position:absolute;left:0;right:0;top:calc(100% + 5px);background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 10px 30px rgba(20,30,40,.16);z-index:40;max-height:228px;overflow:auto;display:none}
+  .amt-combo:focus-within .amt-pop{display:block}
+  .amt-pop-h{padding:10px 13px;font-size:12.5px;font-weight:800;color:var(--ink);border-bottom:1px solid var(--lineSoft);position:sticky;top:0;background:#fff}
+  .amt-opt{padding:9px 13px;font-family:var(--mono);font-size:13.5px;color:var(--inkSoft);cursor:pointer}
+  .amt-opt:hover{background:var(--greenSoft);color:var(--ink)}
+  .amt-opt.sel{color:var(--greenDark);font-weight:800}
   .set-add{display:flex;align-items:center;gap:9px}
   .pv-page{background:#fff;color:#1B2330;width:470px;padding:30px 32px;box-shadow:0 4px 20px rgba(0,0,0,.35);transform-origin:top center;flex-shrink:0}
   .iv-h{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1B2330;padding-bottom:10px}
@@ -753,6 +763,12 @@ const yen=n=>"¥"+Math.round(n).toLocaleString("ja-JP");
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const docTotal=d=>docLines(d).reduce((s,l)=>s+(+l.amount||0),0);
 const docDate=d=>docLines(d).map(l=>l.inspectedAt).sort()[0]||"";
+/* OCRが書類から読み取った金額候補（明細金額・合計・消費税・税込を集約）。書類単位で固定 */
+function ocrAmountCandidates(lines){
+  const amts=(lines||[]).map(l=>+l.amount||0).filter(a=>a>0);
+  const total=amts.reduce((s,a)=>s+a,0), tax=Math.round(total*0.1);
+  return [...new Set([...amts, total, tax, total+tax])].filter(a=>a>0).sort((a,b)=>b-a);
+}
 function nowStamp(){const d=new Date();const p=n=>String(n).padStart(2,"0");
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;}
 
@@ -1123,7 +1139,7 @@ function finishUpload(){
 /* ───── 右サイドパネル（書類詳細） ───── */
 function openPanel(id){
   const d=docs.find(x=>x.id===id); if(!d)return;
-  state.panelId=id; state.draft=Object.assign(JSON.parse(JSON.stringify(d)),{lines:JSON.parse(JSON.stringify(linesOf(id)))}); state.pvZoom=100; state.panelJustOpened=true; renderOverlay();
+  state.panelId=id; state.draft=Object.assign(JSON.parse(JSON.stringify(d)),{lines:JSON.parse(JSON.stringify(linesOf(id)))}); state.draft._ocr=ocrAmountCandidates(state.draft.lines); state.pvZoom=100; state.panelJustOpened=true; renderOverlay();
 }
 function closePanel(){state.panelId=null;state.draft=null;renderOverlay();}
 function panelNav(delta){
@@ -1132,7 +1148,7 @@ function panelNav(delta){
   if(idx<0) return;
   const ni=idx+delta; if(ni<0||ni>=list.length) return;
   const d=list[ni];
-  state.panelId=d.id; state.draft=Object.assign(JSON.parse(JSON.stringify(d)),{lines:JSON.parse(JSON.stringify(linesOf(d.id)))}); state.pvZoom=100; state.panelJustOpened=false;
+  state.panelId=d.id; state.draft=Object.assign(JSON.parse(JSON.stringify(d)),{lines:JSON.parse(JSON.stringify(linesOf(d.id)))}); state.draft._ocr=ocrAmountCandidates(state.draft.lines); state.pvZoom=100; state.panelJustOpened=false;
   state.docPage=Math.floor(ni/state.docPerPage)+1; // 背面の一覧ページも同期
   render();
 }
@@ -1187,6 +1203,7 @@ function renderPanel(){
   const legend=`<div class="legend">右の書類の読み取り箇所と対応：
     <span class="lg lg-g">項目</span><span class="lg lg-r">対象車両</span><span class="lg lg-b">金額</span></div>`;
 
+  const cand=state.draft._ocr||[];
   const lineCards=d.lines.map((l,idx)=>{
     const v=l.kind!=="共通";
     const targetFld=v
@@ -1206,7 +1223,12 @@ function renderPanel(){
       </div>
       <div class="grid2">
         ${targetFld}
-        <div class="fld"><label>金額（税抜）</label><input class="in mono b-b" value="${(+l.amount).toLocaleString('ja-JP')}" oninput="pnLine(${l.lid},'amount',this.value)"></div>
+        <div class="fld"><label>金額（税抜）</label>
+          <div class="amt-combo">
+            <input id="pn-amt-${l.lid}" class="in mono b-b" value="${(+l.amount).toLocaleString('ja-JP')}" oninput="pnLine(${l.lid},'amount',this.value)" autocomplete="off">
+            ${cand.length?`<span class="amt-ck" id="pn-amtck-${l.lid}" style="${cand.includes(+l.amount)?'':'display:none'}">${I.check('#16A571',15,3)}</span>`:''}
+            ${cand.length?`<div class="amt-pop"><div class="amt-pop-h">ファイルから読み取られた金額の一覧</div>${cand.map(a=>`<div class="amt-opt ${a===+l.amount?'sel':''}" onmousedown="pnPickAmount(${l.lid},${a})">${a.toLocaleString('ja-JP')}</div>`).join("")}</div>`:''}
+          </div></div>
       </div>
     </div>`;
   }).join("");
@@ -1274,11 +1296,21 @@ function pnDoc(field,val){state.draft[field]=val;}
 function pnVendor(val){state.draft.vendor=val;refreshPreview();}
 function pnLine(lid,field,val){
   const l=state.draft.lines.find(x=>x.lid===lid); if(!l)return;
-  if(field==="amount"){l.amount=parseInt(String(val).replace(/[^0-9]/g,""))||0;}
+  if(field==="amount"){l.amount=parseInt(String(val).replace(/[^0-9]/g,""))||0;
+    const ck=document.getElementById("pn-amtck-"+lid); if(ck) ck.style.display=(state.draft._ocr||[]).includes(l.amount)?"":"none";}
   else l[field]=val;
   if(field==="plate"||field==="site"){l.confidence=Math.max(l.confidence,.99);
     const b=document.getElementById("pn-badge-"+lid); if(b)b.innerHTML=matchBadge(l);}
   refreshPreview();
+}
+/* OCR候補一覧から金額を選択（onmousedownでblurより先に発火） */
+function pnPickAmount(lid,amount){
+  const l=state.draft.lines.find(x=>x.lid===lid); if(!l)return;
+  l.amount=+amount;
+  const inp=document.getElementById("pn-amt-"+lid); if(inp) inp.value=(+amount).toLocaleString("ja-JP");
+  const ck=document.getElementById("pn-amtck-"+lid); if(ck) ck.style.display="";
+  refreshPreview();
+  if(inp) inp.blur();
 }
 function pnToggleKind(lid){
   const l=state.draft.lines.find(x=>x.lid===lid); if(!l)return;
