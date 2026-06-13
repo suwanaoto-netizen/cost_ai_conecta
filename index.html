@@ -959,15 +959,15 @@ const STATUS_META={
 function statusChip(s){const m=STATUS_META[s];
   const lock = s==="反映済み" ? ` <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>` : "";
   return `<span class="st ${m.cls}"><span class="dot"></span>${s}${lock}</span>`;}
-/* 書類フェーズ（ステータス）の説明ツールチップ */
-function phaseHelp(){
+/* ステータスの説明ツールチップ（一覧ヘッダーの「ステータス」横） */
+function statusHelp(){
   const rows=[
     ["未入力","取り込み直後の状態。取引先・車番・金額など、内容の確認・修正が必要です。"],
     ["入力済み","内容を確認・確定した状態。ロジポケ（車両コスト）へ反映できます。"],
     ["反映済み","車両コストへ反映済みの状態。書類一覧では編集できません（🔒）。修正は車両コスト一覧から行えます。"],
   ].map(([s,d])=>`<div class="hp-row"><span class="hp-c" style="min-width:98px">${statusChip(s)}</span><span class="hp-d">${d}</span></div>`).join("");
-  return `<span class="phase-help"><span class="help" tabindex="0">?</span>各フェーズとは<span class="help-pop"><span class="hp-h">書類のフェーズ（ステータス）</span>
-    <span class="hp-intro">請求書は「未入力 → 入力済み → 反映済み」の順で進みます。</span>${rows}</span></span>`;
+  return `<span class="phase-help" onclick="event.stopPropagation()"><span class="help" tabindex="0">?</span><span class="help-pop"><span class="hp-h">ステータスの説明</span>
+    <span class="hp-intro">書類は「未入力 → 入力済み → 反映済み」の順で進みます。</span>${rows}</span></span>`;
 }
 
 /* ───── 状態 ───── */
@@ -1078,7 +1078,6 @@ function renderDocuments(){
       ${CATEGORIES.map(c=>`<option value="${esc(c)}" ${state.categoryFilter===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div>`;
   const toolbar=`<div class="toolbar">
     ${seg}
-    ${state.trash?"":phaseHelp()}
     ${catSel}
     <div class="srch">${I.search()}<input placeholder="取引先・書類名で検索" value="${esc(state.q)}" oninput="setQuery(this.value)"></div>
     <div class="tb-spacer"></div>
@@ -1173,7 +1172,7 @@ function renderDocBody(){
   }).join("");
   const cbHead=cbCol?`<th class="c" style="width:42px"><input type="checkbox" id="cb-all" onclick="event.stopPropagation();toggleSelectAll()"></th>`:"";
   const table=`<div class="twrap"><div class="tscroll"><table class="dt">
-    <thead><tr>${cbHead}${thDoc('no','No')}${thDoc('status','ステータス')}${thDoc('name','区分・書類名')}${thDoc('cat','営業所')}${thDoc('vendor','取引先')}${thDoc('date','取引日')}${thDoc('lines','明細')}${thDoc('amount','金額（税抜）','r')}<th></th></tr></thead>
+    <thead><tr>${cbHead}${thDoc('no','No')}${thDoc('status','ステータス'+statusHelp())}${thDoc('name','区分・書類名')}${thDoc('cat','営業所')}${thDoc('vendor','取引先')}${thDoc('date','取引日')}${thDoc('lines','明細')}${thDoc('amount','金額（税抜）','r')}<th></th></tr></thead>
     <tbody>${rows}</tbody></table></div>${pager("doc",info)}</div>`;
   return topbar+table;
 }
