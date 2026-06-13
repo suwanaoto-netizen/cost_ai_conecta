@@ -553,6 +553,28 @@
   .ai-metrics{display:flex;gap:22px;flex-wrap:wrap;margin-top:11px;padding-top:11px;border-top:1px solid var(--lineSoft)}
   .ai-m .l{font-size:10.5px;color:var(--inkSoft);font-weight:700}
   .ai-m .v{font-family:var(--mono);font-weight:800;font-size:14px;color:var(--ink);margin-top:2px}
+  /* ───── 変更履歴パネル ───── */
+  .clog{width:min(560px,96vw);background:var(--card);height:100vh;display:flex;flex-direction:column;box-shadow:-12px 0 40px rgba(0,0,0,.22)}
+  .clog.anim{animation:slideIn .22s cubic-bezier(.22,.61,.36,1)}
+  .clog .pn-head .set-count{margin-left:2px}
+  .clog-body{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+  .clog-note{font-size:11.5px;color:var(--inkSoft);line-height:1.6;margin-bottom:2px}
+  .clog-item{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 13px;cursor:pointer;transition:.12s}
+  .clog-item:hover{border-color:var(--greenLine);background:var(--greenSoft)}
+  .clog-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .clog-act{font-size:10.5px;font-weight:800;border-radius:5px;padding:2px 8px}
+  .clog-act.changed{color:var(--blue);background:var(--blueSoft)}
+  .clog-act.added{color:var(--greenDark);background:var(--greenSoft)}
+  .clog-act.removed{color:var(--alert);background:var(--alertSoft)}
+  .clog-ts{margin-left:auto;font-size:11px;font-family:var(--mono);color:var(--inkSoft)}
+  .clog-main{font-size:13px;color:var(--ink);line-height:1.6}
+  .clog-plate{font-family:var(--mono);font-weight:800;color:var(--greenDark)}
+  .clog-foot{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:11.5px;color:var(--inkSoft)}
+  .clog-foot>span:first-child{display:inline-flex;align-items:center;gap:4px;font-weight:700}
+  .clog-link{margin-left:auto;color:var(--greenDark);font-weight:800}
+  @keyframes hlpulse{0%{background:#FCF3CF}60%{background:#FCF3CF}100%{background:transparent}}
+  .vd-hl td{animation:hlpulse 2s ease}
+  .vd-hl .vd-in{border-color:var(--amber)}
 </style>
 </head>
 <body>
@@ -881,6 +903,7 @@ let state={
   vehExpanded:new Set(),
   vehEditKey:null, vehEditMeta:null, vehEditConfirm:false, vehEditSnapshot:null, vehViewDocId:null, vehViewLid:null,
   vehPanel:null, vehChartCat:null, vehChartGran:"month",
+  changelogOpen:false, vehEditHighlight:null,
   manualLines:[],
   justUploaded:new Set(),
   settings:{ companyName:"サンプル物流株式会社", defaultOcr:true, matchThreshold:0.85,
@@ -1526,7 +1549,7 @@ function renderVehBreakdown(v){
     const vendorCell=isM
       ? `<input class="vd-in" value="${esc(x.vendor)}" onchange="${onEdit},'vendor',this.value)">`
       : `<span class="vd-ro" title="${esc(x.vendor)}">${esc(x.vendor)}</span>`;
-    return `<tr class="${isM?"vd-manual":""}${viewing?" vd-viewing":""}">
+    return `<tr id="vdrow-${x.lid}" class="${isM?"vd-manual":""}${viewing?" vd-viewing":""}${String(x.lid)===String(state.vehEditHighlight)?" vd-hl":""}">
       <td style="width:118px"><input class="vd-in mono" value="${esc(x.date)}" onchange="${onEdit},'date',this.value)"></td>
       <td><input class="vd-in" value="${esc(x.item)}" onchange="${onEdit},'item',this.value)"></td>
       <td style="width:126px"><select class="vd-in" onchange="${onEdit},'cat',this.value)">${catOpts(x.cat)}</select></td>
@@ -1539,14 +1562,68 @@ function renderVehBreakdown(v){
     <tbody>${rows||'<tr><td colspan="6" style="text-align:center;color:var(--inkSoft);padding:16px">明細がありません。下のボタンから追加できます。</td></tr>'}</tbody></table>
     <button class="vd-add" onclick="vehAddManualLine('${v.key}','${v.kind}','${esc(v.target)}')">${I.plus("#0E7A4B",14)} 明細を追加</button>`;
 }
-function openVehEdit(key,kind,target){
+function openVehEdit(key,kind,target,hlLid){
   state.vehEditKey=key; state.vehEditMeta={key,kind,target}; state.vehEditConfirm=false;
-  state.vehViewDocId=null; state.vehViewLid=null;
+  state.vehViewDocId=null; state.vehViewLid=null; state.vehEditHighlight=hlLid?String(hlLid):null;
   const v=buildVehicles(state.vehCategoryFilter).find(x=>x.key===key);
   state.vehEditSnapshot = v ? v.lines.map(l=>({lid:String(l.lid),src:l.src,item:l.item,cat:l.cat,date:l.date,amount:+l.amount})) : [];
   render();
 }
-function closeVehEdit(){ state.vehEditKey=null; state.vehEditMeta=null; state.vehEditConfirm=false; state.vehEditSnapshot=null; state.vehViewDocId=null; state.vehViewLid=null; render(); }
+function closeVehEdit(){ state.vehEditKey=null; state.vehEditMeta=null; state.vehEditConfirm=false; state.vehEditSnapshot=null; state.vehViewDocId=null; state.vehViewLid=null; state.vehEditHighlight=null; render(); }
+/* ───── 変更履歴 ───── */
+const CHANGELOG=[];
+const CURRENT_USER="諏訪 尚杜";
+function logChange(e){ CHANGELOG.push(Object.assign({ts:nowStamp(),user:CURRENT_USER},e)); }
+/* デモ用の初期履歴（実在の車両・明細に紐付け、複数ユーザー・操作種別を用意） */
+function seedChangelog(){
+  const vs=buildVehicles("all").filter(v=>v.kind!=="共通"&&v.lines.length);
+  if(!vs.length) return;
+  const tpl=[
+    {ts:"2026-06-13 08:51:33",user:"諏訪 尚杜",action:"変更",fn:l=>`金額を ${yen(l.amount)} → ${yen(Math.round(l.amount*1.05/100)*100)} に変更`},
+    {ts:"2026-06-12 17:20:08",user:"田中 美咲",action:"変更",fn:l=>`コスト分類を 「その他」→「${l.cat}」に変更`},
+    {ts:"2026-06-11 11:03:47",user:"諏訪 尚杜",action:"追加",fn:l=>`${l.cat}・${yen(Math.round(l.amount*0.4/100)*100)} を追加`},
+    {ts:"2026-06-09 14:38:22",user:"佐藤 健",action:"変更",fn:l=>`発生日を 2026-05-30 → ${l.date} に修正`},
+    {ts:"2026-06-06 10:12:55",user:"田中 美咲",action:"削除",fn:l=>`重複明細（${yen(l.amount)}）を削除`},
+  ];
+  tpl.forEach((t,i)=>{ const v=vs[i%vs.length], l=v.lines[0];
+    CHANGELOG.push({ts:t.ts,user:t.user,action:t.action,vehKey:v.key,kind:v.kind,vehTarget:v.target,item:l.item,cat:l.cat,lid:l.lid,docId:l.docId,detail:t.fn(l)}); });
+}
+/* 編集確定時に差分（いつ・誰が・何を・どのように）を記録してから閉じる */
+function commitVehEdit(){
+  const m=state.vehEditMeta||{}; const diff=vehEditDiff();
+  diff.forEach(d=>{
+    const base={vehKey:m.key,kind:m.kind,vehTarget:m.target,item:d.l.item,cat:d.l.cat,lid:d.l.lid,docId:d.l.docId};
+    if(d.type==="added") logChange(Object.assign(base,{action:"追加",detail:`${d.l.cat}・${yen(d.l.amount)} を追加`}));
+    else if(d.type==="removed") logChange(Object.assign(base,{action:"削除",detail:`${d.l.cat}・${yen(d.l.amount)} を削除`}));
+    else logChange(Object.assign(base,{action:"変更",detail:d.fields.map(f=>`${f[0]}を ${f[1]} → ${f[2]}`).join("、")}));
+  });
+  closeVehEdit();
+}
+function openChangelog(){ state.changelogOpen=true; renderOverlay(); }
+function closeChangelog(){ state.changelogOpen=false; renderOverlay(); }
+function gotoChange(idx){ const e=CHANGELOG[idx]; if(!e) return;
+  state.changelogOpen=false;
+  openVehEdit(e.vehKey,e.kind,e.vehTarget,e.lid);
+  setTimeout(()=>{ const el=document.getElementById("vdrow-"+e.lid); if(el) el.scrollIntoView({block:"center",behavior:"smooth"}); },70);
+}
+const _CL_ACT={"変更":"changed","追加":"added","削除":"removed"};
+function renderChangelog(){
+  const list=CHANGELOG.map((e,i)=>({e,i})).sort((a,b)=>a.e.ts<b.e.ts?1:-1);
+  const rows=list.map(({e,i})=>`<button class="clog-item" onclick="gotoChange(${i})">
+      <div class="clog-top"><span class="clog-act ${_CL_ACT[e.action]||''}">${e.action}</span><span class="clog-ts">${e.ts}</span></div>
+      <div class="clog-main"><span class="clog-plate">${esc(e.vehTarget)}</span>の「${esc(e.item)}」を ${esc(e.detail)}</div>
+      <div class="clog-foot"><span>${I.user?I.user("#5A6472",12):""}${esc(e.user)}</span>${catPill(e.cat)}<span class="clog-link">変更箇所を開く ›</span></div>
+    </button>`).join("");
+  return `<div class="panel-ovl ${state._ovFresh?'anim':''}" onclick="if(event.target===this)closeChangelog()"><div class="clog ${state._ovFresh?'anim':''}">
+    <div class="pn-head"><span style="font-size:15px;font-weight:800">変更履歴</span>
+      <span class="set-count">${CHANGELOG.length}件</span>
+      <div class="pn-actions"><button class="icon-btn" style="border-color:var(--line)" title="閉じる" onclick="closeChangelog()">${I.x("#5A6472",16)}</button></div></div>
+    <div class="clog-body">
+      <div class="clog-note">コスト内訳の編集内容を新しい順に記録しています。各履歴をクリックすると、変更した明細へ移動します。</div>
+      ${rows||'<div class="chart-empty">まだ変更履歴はありません。</div>'}
+    </div>
+  </div></div>`;
+}
 function vehViewDoc(docId,lid){ state.vehViewDocId=docId; state.vehViewLid=String(lid); state.pvZoom=100; render(); }
 function closeVehView(){ state.vehViewDocId=null; state.vehViewLid=null; render(); }
 function vehEditAskConfirm(){ state.vehEditConfirm=true; render(); }
@@ -1599,7 +1676,7 @@ function renderVehEditModal(){
       </div>
       <div class="m-foot">
         <button class="btn-cancel" onclick="vehEditBack()">戻る</button>
-        <button class="btn-green" onclick="closeVehEdit()">${I.check("#fff",14,3)} 編集を完了する</button>
+        <button class="btn-green" onclick="commitVehEdit()">${I.check("#fff",14,3)} 編集を完了する</button>
       </div>
     </div></div>`;
   }
@@ -1836,6 +1913,9 @@ function renderVehicles(){
   const head=`<div class="pagehead">
     <div><h1>車両コスト一覧</h1><p>反映済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}</p></div>
     <div class="ph-spacer"></div>${catSel}
+    <button class="btn-ghost" onclick="openChangelog()" title="コスト内訳の変更履歴">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5A6472" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>
+      変更履歴${CHANGELOG.length?`<span class="set-count" style="margin-left:2px">${CHANGELOG.length}</span>`:""}</button>
   </div>`;
 
   if(veh.length===0){
@@ -1993,12 +2073,13 @@ function testLogipoke(){ toast("ロジポケへの接続テストに成功しま
 let _ovKind="";
 function renderOverlay(){
   const ov=document.getElementById("overlay");
-  const kind = state.upload.open?"upload": state.panelId?"panel": state.vehPanel?"vehpanel": state.vehEditKey?"vehedit": "";
+  const kind = state.upload.open?"upload": state.panelId?"panel": state.vehPanel?"vehpanel": state.changelogOpen?"changelog": state.vehEditKey?"vehedit": "";
   state._ovFresh = (kind!=="" && kind!==_ovKind); // 同じオーバーレイの再描画ではアニメさせない
   _ovKind=kind;
   if(state.upload.open) ov.innerHTML=renderUploadModal();
   else if(state.panelId){ ov.innerHTML=renderPanel(); state.panelJustOpened=false; }
   else if(state.vehPanel) ov.innerHTML=renderVehPanel();
+  else if(state.changelogOpen) ov.innerHTML=renderChangelog();
   else if(state.vehEditKey) ov.innerHTML=renderVehEditModal();
   else ov.innerHTML="";
 }
@@ -2024,6 +2105,7 @@ function render(){
   if(state.view==="documents") setSelectAllState();
   renderOverlay();
 }
+seedChangelog();
 render();
 </script>
 </body>
