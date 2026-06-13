@@ -169,7 +169,9 @@
   .m-head .x{margin-left:auto;background:none;border:none;cursor:pointer;padding:4px}
   .m-body{padding:18px 20px}
   .upl-tabs{display:flex;gap:22px;border-bottom:1px solid var(--lineSoft);margin-bottom:16px}
-  .upl-tab{font-size:13.5px;font-weight:800;color:var(--green);padding:0 2px 11px;border-bottom:2px solid var(--green);margin-bottom:-1px}
+  .upl-tab{font-size:13.5px;font-weight:800;color:var(--inkFaint);padding:0 2px 11px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;background:none;cursor:pointer;font-family:var(--sans)}
+  .upl-tab:hover{color:var(--inkSoft)}
+  .upl-tab.active{color:var(--green);border-bottom-color:var(--green)}
   .dropzone{border:1.5px dashed #C7CFD8;border-radius:10px;background:#FBFDFC;padding:30px 18px;text-align:center;cursor:pointer;transition:.15s;min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center}
   .dropzone:hover{border-color:var(--green);background:#F3FBF7}
   .dropzone.filled{display:block;text-align:left;padding:16px}
@@ -203,6 +205,90 @@
   .up-pct{font-size:12px;color:var(--inkSoft);font-family:var(--mono)}
   .up-track{height:7px;background:#E7EBEF;border-radius:999px;overflow:hidden}
   .up-fill{height:100%;background:var(--green);border-radius:999px;transition:width .18s linear}
+
+  /* ───── PDF分割アップロード（フォーム） ───── */
+  .sp-desc{font-size:12px;color:var(--inkSoft);line-height:1.75;margin-bottom:6px}
+  .sp-guide{color:var(--green);font-weight:700;text-decoration:none;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;margin-left:8px}
+  .sp-guide:hover{text-decoration:underline}
+  .sp-field{margin-top:18px}
+  .sp-flabel{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:9px;display:flex;align-items:center;gap:5px}
+  .sp-req{color:var(--alert);font-weight:800;font-size:13px}
+  .sp-qi{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:999px;background:#9AA3AD;color:#fff;font-size:10px;font-weight:800;cursor:help}
+  .sp-radios{display:flex;gap:26px;align-items:center;flex-wrap:wrap}
+  .sp-radio{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink);cursor:pointer}
+  .sp-radio input{accent-color:var(--blue);width:16px;height:16px;cursor:pointer;margin:0}
+  .sp-prev-btn{background:var(--blue);color:#fff;border:none;border-radius:7px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;margin-left:16px}
+  .sp-prev-btn:hover{filter:brightness(1.05)}
+  .sp-toggle-row{display:flex;align-items:center;gap:14px}
+  .sp-toggle-row .switch.disabled{opacity:.45;pointer-events:none}
+
+  /* ───── PDF分割設定モーダル ───── */
+  .spm{width:min(1180px,97vw)}
+  .spm-desc{font-size:12.5px;color:var(--inkSoft);line-height:1.8;padding:16px 22px 0}
+  .spm-link{color:var(--blue);text-decoration:underline;cursor:pointer}
+  .spm-bar{display:flex;align-items:center;justify-content:space-between;padding:16px 22px 8px}
+  .spm-count{font-size:16px;font-weight:800;color:var(--ink)}
+  .spm-bulk{position:relative}
+  .spm-bulk-btn{background:#fff;border:1px solid #DCDFE6;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;color:var(--ink)}
+  .spm-bulk-btn:hover{background:var(--panel)}
+  .spm-bulk-menu{position:absolute;right:0;top:calc(100% + 5px);background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.16);z-index:6;min-width:200px;overflow:hidden}
+  .spm-bulk-menu button{display:block;width:100%;text-align:left;background:none;border:none;padding:10px 15px;font-size:13px;cursor:pointer;color:var(--ink);font-family:var(--sans)}
+  .spm-bulk-menu button:hover{background:var(--panel)}
+  .spm-strip{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:10px 22px 20px;background:#EDEFEA;border-top:1px solid var(--lineSoft)}
+  .sp-page{flex-shrink:0;width:158px}
+  .sp-card{background:#fff;border:1px solid var(--line);border-radius:5px;height:212px;overflow:hidden;position:relative;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+  .sp-card.ex{opacity:.38}
+  .sp-pagenum{text-align:center;font-size:12px;color:var(--inkSoft);margin-top:9px}
+  .sp-chk{position:absolute;left:8px;bottom:8px;width:20px;height:20px;border-radius:4px;border:1.5px solid #B7BEC7;background:#fff;cursor:pointer;display:grid;place-items:center;padding:0}
+  .sp-chk.on{background:var(--blue);border-color:var(--blue)}
+  .sp-zoom{position:absolute;right:8px;bottom:8px;width:26px;height:26px;border-radius:999px;border:1px solid var(--line);background:#fff;cursor:pointer;display:grid;place-items:center;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .sp-zoom:hover{background:var(--panel)}
+  .sp-div{flex-shrink:0;width:46px;height:212px;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer}
+  .sp-div.boundary{width:64px}
+  .sp-div::before{content:"";position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);border-left:2px dotted #C0C7CF}
+  .sp-div.boundary::before{display:none}
+  .sp-div-ic{position:relative;z-index:1;width:34px;height:34px;border-radius:999px;background:#EDEFEA;color:#8A929C;display:grid;place-items:center;transition:.12s}
+  .sp-div:hover .sp-div-ic,.sp-div-ic.active{background:#8B5CF6;color:#fff}
+  .sp-div-tip{position:absolute;top:-30px;left:50%;transform:translateX(-50%);background:#1B2330;color:#fff;font-size:12px;font-weight:700;padding:5px 10px;border-radius:7px;white-space:nowrap;opacity:0;pointer-events:none;transition:.12s;z-index:3}
+  .sp-div:hover .sp-div-tip,.sp-div-tip.show{opacity:1}
+  /* mock thumbnail */
+  .spt{position:absolute;inset:0;padding:11px 12px;font-size:6px;color:#2A323C;line-height:1.5;overflow:hidden}
+  .spt-r1{display:flex;justify-content:space-between;align-items:flex-start}
+  .spt-h{font-size:10px;font-weight:800}
+  .spt-date{font-size:5px;color:#5A6472;text-align:right;line-height:1.4}
+  .spt-logo{display:flex;align-items:center;gap:4px;justify-content:flex-end;font-size:9px;font-weight:800;color:#16A571;margin-top:6px}
+  .spt-stamp{display:inline-grid;place-items:center;width:18px;height:18px;border:1.5px solid #D9534F;border-radius:3px;color:#D9534F;font-size:5px;font-weight:800;transform:rotate(-8deg)}
+  .spt-to{font-size:6px;margin-top:10px;color:#2A323C}
+  .spt-meta{font-size:5px;color:#5A6472;margin-top:5px;line-height:1.55}
+  .spt-total{display:flex;justify-content:space-between;align-items:center;border:1px solid #2A323C;border-radius:2px;margin-top:14px;padding:5px 7px;font-size:7px}
+  .spt-total b{font-size:9px}
+  .spt-bars{margin-top:10px}
+  .spt-bars i{display:block;height:3px;background:#E7EAE3;border-radius:2px;margin-bottom:5px}
+  .spt-dh{font-size:8px;font-weight:800;border-bottom:1px solid #C0C7CF;padding-bottom:4px;margin-bottom:6px}
+  .spt-tbl{width:100%;border-collapse:collapse}
+  .spt-tbl td{border:1px solid #DDE1DA;padding:2.5px 3px;font-size:5px;color:#3A434E}
+  .spt-tbl td:nth-child(2),.spt-tbl td:nth-child(3),.spt-tbl td:nth-child(4){text-align:right;width:22%}
+
+  /* ───── ガイド・コーチマーク ───── */
+  .coach{position:fixed;z-index:90;background:#fff;border-radius:14px;box-shadow:0 16px 48px rgba(0,0,0,.3);padding:18px 22px;width:340px}
+  .coach-txt{font-size:13.5px;color:var(--ink);line-height:1.75;white-space:pre-line}
+  .coach-txt a{color:#8B5CF6;font-weight:700;text-decoration:underline}
+  .coach-foot{display:flex;align-items:center;justify-content:space-between;margin-top:16px}
+  .coach-back{background:none;border:none;color:#9AA3AD;font-size:20px;cursor:pointer;padding:2px 8px;line-height:1}
+  .coach-back:hover{color:var(--inkSoft)}
+  .coach-next{background:#8B5CF6;color:#fff;border:none;border-radius:9px;padding:9px 24px;font-size:14px;font-weight:800;cursor:pointer}
+  .coach-next:hover{filter:brightness(1.06)}
+
+  /* ───── 拡大プレビュー ───── */
+  .sp-zoomovl{position:fixed;inset:0;background:rgba(15,20,28,.62);z-index:95;display:grid;place-items:center;padding:30px}
+  .sp-zoomcard{background:#fff;border-radius:8px;width:min(520px,90vw);height:min(700px,86vh);position:relative;box-shadow:0 24px 60px rgba(0,0,0,.45);overflow:hidden}
+  .sp-zoomcard .spt{font-size:13px;padding:32px 36px}
+  .sp-zoomcard .spt-h{font-size:24px}.sp-zoomcard .spt-logo{font-size:20px}.sp-zoomcard .spt-stamp{width:42px;height:42px;font-size:11px}
+  .sp-zoomcard .spt-date{font-size:11px}.sp-zoomcard .spt-to{font-size:14px}.sp-zoomcard .spt-meta{font-size:10px}
+  .sp-zoomcard .spt-total{font-size:16px;padding:12px 16px}.sp-zoomcard .spt-total b{font-size:20px}
+  .sp-zoomcard .spt-bars i{height:7px;margin-bottom:11px}.sp-zoomcard .spt-dh{font-size:18px}
+  .sp-zoomcard .spt-tbl td{font-size:11px;padding:6px 7px}
+  .sp-zoomclose{position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:999px;border:none;background:rgba(0,0,0,.06);cursor:pointer;display:grid;place-items:center;z-index:2}
 
   /* ───── side panel ───── */
   .panel-ovl{position:fixed;inset:0;background:rgba(15,20,28,.42);z-index:55;display:flex;justify-content:flex-end}
@@ -1090,7 +1176,8 @@ let state={
   docPage:1, docPerPage:20, vehPage:1, vehPerPage:20,
   docSort:{key:null,dir:"asc"}, vehSort:{key:null,dir:"asc"},
   panelId:null, draft:null, pvZoom:100, pnDeleteLid:null,
-  upload:{open:false, files:[], ocr:true, processing:{active:false,pct:0,label:""}, _timer:null},
+  upload:{open:false, tab:"new", files:[], ocr:true, processing:{active:false,pct:0,label:""}, _timer:null},
+  splitUpload:{method:"pdf", file:null, split:false, input:"ocr", settingsOpen:false, pages:null, bulkMenu:false, zoom:null, guide:0},
   vehExpanded:new Set(),
   vehEditKey:null, vehEditMeta:null, vehEditConfirm:false, vehEditSnapshot:null, vehViewDocId:null, vehViewLid:null,
   vehPanel:null, vehChartCat:null, vehChartGran:"month", vehTlExpanded:false,
@@ -1421,9 +1508,11 @@ function renderDocTrashConfirm(){
 }
 
 /* ───── アップロードモーダル ───── */
-function openUpload(){state.upload={open:true,files:[],ocr:state.settings.defaultOcr,category:(CATEGORIES[0]||""),processing:{active:false,pct:0,label:""},_timer:null};renderOverlay();}
+function openUpload(){state.upload={open:true,tab:"new",files:[],ocr:state.settings.defaultOcr,category:(CATEGORIES[0]||""),processing:{active:false,pct:0,label:""},_timer:null};state.splitUpload=freshSplitUpload();renderOverlay();}
+function switchUploadTab(t){if(state.upload.processing.active)return;state.upload.tab=t;state.splitUpload.bulkMenu=false;renderOverlay();}
+function freshSplitUpload(){return {method:"pdf", file:null, split:false, input:"ocr", settingsOpen:false, pages:null, bulkMenu:false, zoom:null, guide:0};}
 function setUploadCategory(v){ if(state.upload.processing.active)return; state.upload.category=v; }
-function closeUpload(){if(state.upload.processing.active)return;state.upload.open=false;renderOverlay();}
+function closeUpload(){if(state.upload.processing.active)return;state.upload.open=false;state.splitUpload=freshSplitUpload();renderOverlay();}
 function uplRemove(i){if(state.upload.processing.active)return;state.upload.files.splice(i,1);renderOverlay();}
 function toggleOcr(){if(state.upload.processing.active)return;state.upload.ocr=!state.upload.ocr;renderOverlay();}
 function renderUploadModal(){
@@ -1450,26 +1539,37 @@ function renderUploadModal(){
     </select>
     <span class="upl-cat-d">選択した営業所が書類に紐付きます。選択肢は設定の「営業所の管理」で追加できます。</span>
   </div>`;
-  const body=`<div class="m-body" ${proc?'style="opacity:.55;pointer-events:none"':""}>
-    <div class="upl-tabs"><div class="upl-tab">新規アップロード</div></div>
+  const tabs=`<div class="upl-tabs">
+    <button class="upl-tab ${u.tab==="new"?"active":""}" ${proc?"disabled":""} onclick="switchUploadTab('new')">新規アップロード</button>
+    <button class="upl-tab ${u.tab==="split"?"active":""}" ${proc?"disabled":""} onclick="switchUploadTab('split')">PDF分割アップロード</button>
+  </div>`;
+  const isSplit=u.tab==="split";
+  const newBody=`${tabs}
     ${fileInput}${dz}
     <div class="upl-help">ファイル選択（1ファイルあたり最大50MBまで、100件まで複数選択可能）${proc?"":'　<a href="javascript:void(0)" class="upl-sample" onclick="useSampleFiles()">サンプル請求書を読み込む</a>'}</div>
     ${catRow}
     <div class="ocr-row">
       <div class="switch ${u.ocr?"on":""}" onclick="toggleOcr()"><div class="knob"></div></div>
       <div><div class="txt">AI-OCRで明細を自動データ化する</div><div class="sub">取引先・金額・対象車両・コスト分類を読み取ります（pdf, png, jpg）</div></div>
-    </div></div>`;
+    </div>`;
+  const body=`<div class="m-body" ${proc?'style="opacity:.55;pointer-events:none"':""}>
+    ${isSplit?renderSplitUploadBody(tabs):newBody}</div>`;
+  const splitReady=!!state.splitUpload.file;
   const foot=proc
     ? `<div class="m-foot" style="display:block"><div class="uprog">
          <div class="up-row"><span class="up-label" id="up-label">${I.loader('#16A571',14)}<span>${esc(u.processing.label)}</span></span>
            <span class="up-pct" id="up-pct">${Math.round(u.processing.pct)}%</span></div>
          <div class="up-track"><div class="up-fill" id="up-fill" style="width:${u.processing.pct}%"></div></div>
        </div></div>`
-    : `<div class="m-foot">
-         <button class="btn-cancel" onclick="closeUpload()">キャンセル</button>
-         <button class="btn-upload" ${has?"":"disabled"} onclick="doUpload()">アップロード</button></div>`;
+    : isSplit
+      ? `<div class="m-foot">
+           <button class="btn-cancel" onclick="closeUpload()">キャンセル</button>
+           <button class="btn-upload" ${splitReady?"":"disabled"} onclick="doSplitUpload()">アップロード</button></div>`
+      : `<div class="m-foot">
+           <button class="btn-cancel" onclick="closeUpload()">キャンセル</button>
+           <button class="btn-upload" ${has?"":"disabled"} onclick="doUpload()">アップロード</button></div>`;
   return `<div class="ovl ${state._ovFresh?'anim':''}" onclick="if(event.target===this)closeUpload()"><div class="modal">
-    <div class="m-head"><span class="t">アップロード</span>
+    <div class="m-head"><span class="t">${isSplit?"請求書（PDFアップロード）の一括作成":"アップロード"}</span>
       ${proc?"":`<button class="x" onclick="closeUpload()">${I.x("#5A6472",18)}</button>`}</div>
     ${body}${foot}</div></div>`;
 }
@@ -1517,12 +1617,228 @@ function finishUpload(){
     newIds.push(id);
   });
   const added=u.files.length;
-  state.upload={open:false,files:[],ocr:true,category:"",processing:{active:false,pct:0,label:""},_timer:null};
+  state.upload={open:false,tab:"new",files:[],ocr:true,category:"",processing:{active:false,pct:0,label:""},_timer:null};
+  state.splitUpload=freshSplitUpload();
   state.trash=false; state.filterStatus="all"; state.categoryFilter="all"; state.view="documents"; state.docPage=1;
   state.justUploaded=new Set(newIds);
   render();
   toast(`${added}件の書類をデータ化しました（ステータス：未入力）`);
   setTimeout(()=>{ state.justUploaded=new Set(); if(state.view==="documents") render(); }, 3200);
+}
+
+/* ───── PDF分割アップロード ───── */
+function guideHelpIcon(){return `<span style="display:inline-grid;place-items:center;width:15px;height:15px;border-radius:999px;background:var(--green);color:#fff;font-size:10px;font-weight:800">?</span>`;}
+function SCISSORS(c,s){return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/></svg>`;}
+
+function renderSplitUploadBody(tabs){
+  const s=state.splitUpload, has=!!s.file, splitDisabled=!has;
+  const dz = has
+    ? `<div class="dropzone filled"><div class="chips"><div class="chip">${I.file("#16A571",15)}<span class="nm">${esc(s.file.name)}</span><button class="x" title="削除" onclick="splitRemoveFile()">×</button></div></div></div>`
+    : `<div class="dropzone" onclick="splitPickFile()" ondragover="uplDragOver(event)" ondragleave="uplDragLeave(event)" ondrop="splitDrop(event)">${I.cloud("#C0C7CF",44)}
+        <div class="dz-text">ファイルをドラッグ＆ドロップ、または</div>
+        <button class="btn-select" onclick="event.stopPropagation();splitPickFile()">ファイルを選択</button></div>`;
+  return `${tabs}
+    <div class="sp-desc">PDFファイルまたは、PDFをまとめたZIPファイルから一括で書類を作成することができます。<br>送付のための送付先コードや、金額・日付などの書類の情報は、ファイル名に対応する行を持つCSVファイルや、OCRにて補完することができます。
+      <a class="sp-guide" onclick="startGuide()">${guideHelpIcon()} ガイド</a></div>
+    <div class="sp-field">
+      <div class="sp-flabel">書類の作成方法 <span class="sp-req">*</span></div>
+      <div class="sp-radios">
+        <label class="sp-radio"><input type="radio" name="sp-method" ${s.method==="zip"?"checked":""} onclick="splitSetMethod('zip')">ZIPファイルで作成</label>
+        <label class="sp-radio"><input type="radio" name="sp-method" ${s.method==="pdf"?"checked":""} onclick="splitSetMethod('pdf')">PDFファイルで作成</label>
+      </div>
+    </div>
+    <div class="sp-field">
+      <div class="sp-flabel">PDFファイル <span class="sp-qi" title="取引先に送付したい請求書等のPDF">?</span><span class="sp-req">*</span></div>
+      ${dz}
+    </div>
+    <div class="sp-field">
+      <div class="sp-flabel">PDFを分割して取り込む <span class="sp-qi" title="複数の取引先宛の請求書等が同じPDFに含まれている場合に分割します">?</span></div>
+      <div class="sp-toggle-row">
+        <div class="switch ${s.split?"on":""} ${splitDisabled?"disabled":""}" onclick="splitToggleSplit()"><div class="knob"></div></div>
+        <span style="font-size:13px;color:${splitDisabled?'var(--inkFaint)':'var(--ink)'}">分割する</span>
+        ${s.split&&!splitDisabled?`<button class="sp-prev-btn" onclick="splitOpenSettings()">分割プレビュー</button>`:""}
+      </div>
+    </div>
+    <div class="sp-field">
+      <div class="sp-flabel">書類情報の入力方法 <span class="sp-qi" title="書類の金額・日付などの入力方法">?</span><span class="sp-req">*</span></div>
+      <div class="sp-radios">
+        ${s.split?"":`<label class="sp-radio"><input type="radio" name="sp-input" ${s.input==="csv"?"checked":""} onclick="splitSetInput('csv')">CSVファイルで入力</label>`}
+        <label class="sp-radio"><input type="radio" name="sp-input" ${s.input==="ocr"?"checked":""} onclick="splitSetInput('ocr')">OCR読み取りで入力</label>
+        <label class="sp-radio"><input type="radio" name="sp-input" ${s.input==="none"?"checked":""} onclick="splitSetInput('none')">入力しない（作成後に手動で編集）</label>
+      </div>
+    </div>`;
+}
+function splitSetMethod(m){state.splitUpload.method=m;renderOverlay();}
+function splitSetInput(v){state.splitUpload.input=v;renderOverlay();}
+function splitPickFile(){loadDemoSplitFile();}
+function loadDemoSplitFile(){const s=state.splitUpload;s.file={name:"デモ用 結合PDF.pdf"};s.pages=buildSplitPages();renderOverlay();}
+function splitDrop(e){e.preventDefault();const dz=e.currentTarget;if(dz)dz.classList.remove("drag");loadDemoSplitFile();}
+function splitRemoveFile(){const s=state.splitUpload;s.file=null;s.split=false;s.settingsOpen=false;s.pages=null;renderOverlay();}
+function splitToggleSplit(){const s=state.splitUpload;if(!s.file)return;s.split=!s.split;if(s.split){if(s.input==="csv")s.input="ocr";if(!s.pages)s.pages=buildSplitPages();s.settingsOpen=true;}else{s.settingsOpen=false;}renderOverlay();}
+function splitOpenSettings(){const s=state.splitUpload;if(!s.pages)s.pages=buildSplitPages();s.settingsOpen=true;s.bulkMenu=false;renderOverlay();}
+function splitCloseSettings(){const s=state.splitUpload;s.settingsOpen=false;s.bulkMenu=false;renderOverlay();}
+function splitApplySettings(){const s=state.splitUpload;const g=splitGroups(s.pages).filter(gr=>gr.some(p=>p.include)).length;s.settingsOpen=false;s.bulkMenu=false;renderOverlay();toast(`${g}書類に分割する設定を適用しました`);}
+
+function buildSplitPages(){
+  return [
+    {type:"cover", no:"IN202406-0015", to:"サンプル産業株式会社", total:"¥2,365,000"},
+    {type:"detail"},{type:"detail"},
+    {type:"cover", no:"IN202406-0016", to:"テスト株式会社", total:"¥2,611,400"},
+    {type:"detail"},{type:"detail"},{type:"detail"},
+    {type:"cover", no:"IN202406-0017", to:"株式会社デモ商会", total:"¥1,210,000"},
+    {type:"detail"},
+  ].map((p,i)=>({...p, include:true, splitAfter:(i===2||i===6)}));
+}
+function splitGroups(pages){const g=[];let cur=[];pages.forEach((p,i)=>{cur.push(p);if(p.splitAfter&&i<pages.length-1){g.push(cur);cur=[];}});if(cur.length)g.push(cur);return g;}
+
+function spThumb(p){
+  if(p.type==="cover"){
+    return `<div class="spt">
+      <div class="spt-r1"><span class="spt-h">請求書</span><span class="spt-date">2024年06月12日<br>請求番号:${esc(p.no)}</span></div>
+      <div class="spt-logo">バクラク<span class="spt-stamp">株式<br>会社<br>サンプル</span></div>
+      <div class="spt-to">${esc(p.to)} 御中</div>
+      <div class="spt-meta">〒000-0000 東京都中央区XXXXX<br>TEL:00-1111-2222</div>
+      <div class="spt-total"><span>合計(税込)</span><b>${esc(p.total)}</b></div>
+      <div class="spt-bars"><i style="width:100%"></i><i style="width:88%"></i><i style="width:94%"></i></div>
+    </div>`;
+  }
+  let rows="";for(let k=0;k<14;k++){rows+=`<tr><td>商品A</td><td>10個</td><td>5,000</td><td>50,000</td></tr>`;}
+  return `<div class="spt"><div class="spt-dh">請求書明細</div>
+    <table class="spt-tbl"><tr><td>品名</td><td>数量</td><td>単価</td><td>金額</td></tr>${rows}</table></div>`;
+}
+function spPageCard(p,i,label){
+  return `<div class="sp-page">
+    <div class="sp-card ${p.include?'':'ex'}">
+      ${spThumb(p)}
+      <button class="sp-chk ${p.include?'on':''}" title="取り込む / 取り込まない" onclick="splitTogglePage(${i})">${p.include?I.check('#fff',12,3):''}</button>
+      <button class="sp-zoom" title="拡大して確認" onclick="splitZoom(${i})">${I.search('#5A6472',13)}</button>
+    </div>
+    <div class="sp-pagenum">${label}</div>
+  </div>`;
+}
+function spDivider(i,boundary){
+  const s=state.splitUpload;
+  const tipTxt=boundary?"結合する":"分割する";
+  const ic=boundary?I.plus('currentColor',18):SCISSORS('currentColor',18);
+  const forced=(s.guide===5&&i===1&&!boundary)||(s.guide===6&&i===1&&boundary);
+  return `<div class="sp-div ${boundary?'boundary':''}" onclick="splitToggleDiv(${i})">
+    <div class="sp-div-ic ${forced?'active':''}">${ic}</div>
+    <div class="sp-div-tip ${forced?'show':''}">${tipTxt}</div>
+  </div>`;
+}
+function renderSplitSettingsModal(){
+  const s=state.splitUpload;
+  const pages=s.pages||(s.pages=buildSplitPages());
+  const groups=splitGroups(pages);
+  const inc=pages.filter(p=>p.include).length;
+  let strip="";
+  pages.forEach((p,i)=>{
+    const g=groups.find(gr=>gr.indexOf(p)>=0);
+    strip+=spPageCard(p,i,`${g.indexOf(p)+1} / ${g.length}`);
+    if(i<pages.length-1) strip+=spDivider(i,p.splitAfter);
+  });
+  const bulk=s.bulkMenu?`<div class="spm-bulk-menu">
+      <button onclick="splitBulkOp('all')">全ページを取り込む</button>
+      <button onclick="splitBulkOp('none')">全ページを取り込まない</button>
+    </div>`:"";
+  return `<div class="ovl" onclick="if(event.target===this)splitCloseSettings()"><div class="modal spm">
+    <div class="m-head"><span class="t">PDF分割設定</span>
+      <a class="sp-guide" style="margin-left:10px" onclick="startGuide()">${guideHelpIcon()} ガイド</a>
+      <button class="x" style="margin-left:auto" onclick="splitCloseSettings()">${I.x("#5A6472",18)}</button></div>
+    <div class="spm-desc">PDFファイルを、任意の位置でファイル分割したり、特定のページを取り込まないなどが設定できます。<br>プレビューを拡大して確認したい場合は、右下のアイコンをクリックください。<br><br>分割のルールについては <span class="spm-link">自動分割設定</span> より設定してください。</div>
+    <div class="spm-bar">
+      <div class="spm-count">${groups.length}書類に分割（計：${inc}ページ）</div>
+      <div class="spm-bulk"><button class="spm-bulk-btn" onclick="splitToggleBulk()">ページ一括操作 <span style="display:inline-flex;transform:rotate(90deg)">${I.chev('#5A6472',13)}</span></button>${bulk}</div>
+    </div>
+    <div class="spm-strip">${strip}</div>
+    <div style="padding:12px 22px 4px"><a class="spm-link" onclick="return false" style="font-size:13px">${esc(s.file?s.file.name:"")} ↗</a></div>
+    <div class="m-foot">
+      <button class="btn-cancel" onclick="splitCloseSettings()">キャンセル</button>
+      <button class="btn-upload" style="background:var(--blue)" onclick="splitApplySettings()">設定する</button>
+    </div></div></div>`;
+}
+function splitTogglePage(i){state.splitUpload.pages[i].include=!state.splitUpload.pages[i].include;renderOverlay();}
+function splitToggleDiv(i){const p=state.splitUpload.pages[i];p.splitAfter=!p.splitAfter;renderOverlay();}
+function splitToggleBulk(){state.splitUpload.bulkMenu=!state.splitUpload.bulkMenu;renderOverlay();}
+function splitBulkOp(op){state.splitUpload.pages.forEach(p=>p.include=(op==='all'));state.splitUpload.bulkMenu=false;renderOverlay();}
+function splitZoom(i){state.splitUpload.zoom=i;renderOverlay();}
+function splitCloseZoom(){state.splitUpload.zoom=null;renderOverlay();}
+function renderSplitZoom(){
+  const s=state.splitUpload, p=s.pages[s.zoom];
+  return `<div class="sp-zoomovl" onclick="if(event.target===this)splitCloseZoom()">
+    <div class="sp-zoomcard">${spThumb(p)}<button class="sp-zoomclose" onclick="splitCloseZoom()">${I.x('#5A6472',16)}</button></div></div>`;
+}
+function doSplitUpload(){
+  const s=state.splitUpload; if(!s.file)return;
+  const u=state.upload;
+  u.processing={active:true,pct:0,label:s.input==="ocr"?"データ化中（AI-OCR / 明細OCR）":"ファイルを保存中…"};
+  renderOverlay();
+  u._timer=setInterval(()=>{
+    u.processing.pct=Math.min(100,u.processing.pct+5+Math.random()*6);
+    const fill=document.getElementById("up-fill"); if(fill)fill.style.width=u.processing.pct+"%";
+    const pct=document.getElementById("up-pct"); if(pct)pct.textContent=Math.round(u.processing.pct)+"%";
+    if(u.processing.pct>=100){clearInterval(u._timer);setTimeout(finishSplitUpload,360);}
+  },170);
+}
+function finishSplitUpload(){
+  const s=state.splitUpload, ocr=s.input==="ocr";
+  const groups = (s.split&&s.pages) ? splitGroups(s.pages).filter(g=>g.some(p=>p.include)) : [null];
+  const base=(s.file&&s.file.name||"無題.pdf").replace(/\.pdf$/i,"");
+  const newIds=[];
+  groups.forEach((g,gi)=>{
+    const ent=makeUploadEntry(base+(groups.length>1?`（${gi+1}）.pdf`:".pdf"));
+    const id="d"+(docs.length+1)+"-"+Date.now()+"-"+newIds.length;
+    docs.push({id, no:NEXT_NO++, deleted:false, reflectedAt:null,
+      name:ent.name, vendor:ocr?ent.vendor:"", cat:"請求書", category:"", status:"未入力"});
+    const fl=ocr?ent.lines:ent.lines.map(l=>({...l,plate:"",vendor:""}));
+    fl.forEach(l=>{ l.docId=id; LINES.push(l); });
+    newIds.push(id);
+  });
+  const added=groups.length;
+  state.upload={open:false,tab:"new",files:[],ocr:true,category:"",processing:{active:false,pct:0,label:""},_timer:null};
+  state.splitUpload=freshSplitUpload();
+  state.trash=false; state.filterStatus="all"; state.categoryFilter="all"; state.view="documents"; state.docPage=1;
+  state.justUploaded=new Set(newIds);
+  render();
+  toast(`${added}件の書類をデータ化しました（ステータス：未入力）`);
+  setTimeout(()=>{ state.justUploaded=new Set(); if(state.view==="documents") render(); }, 3200);
+}
+
+/* ───── ガイド（コーチマーク） ───── */
+const GUIDE_COACH={
+ 1:{pos:"top:78px;right:38px;",txt:'取引先に送付したい請求書等のPDFを<a>ドラッグ＆ドロップまたはファイルから選択</a>して取り込みます。'},
+ 2:{pos:"top:300px;left:34px;",txt:'複数の取引先宛の請求書等が同じPDFに含まれている場合は、<a>取引先ごとに自動で分割する</a>ことができます。\n\n※取引先ごとにPDFがわかれている場合は複数のPDFファイルをアップロードしてください。'},
+ 3:{pos:"top:30px;left:50%;transform:translateX(-50%);",txt:'事前に設定されたルールに基づいて、<a>数秒で自動分割</a>されます。'},
+ 4:{pos:"top:24px;left:54%;",txt:'自動分割されたPDFについてはスクロールをしながら内容を確認することもできます。'},
+ 5:{pos:"top:44%;left:44%;",txt:'プレビューをみながら追加で分割したい場合は<a>手動で分割</a>することもできます。'},
+ 6:{pos:"top:44%;left:38%;",txt:'同様に<a>手動で結合</a>することも可能です。'},
+ 7:{pos:"bottom:86px;right:40px;",txt:'内容を確認し、問題なければ「設定する」をクリックします。'},
+ 8:{pos:"bottom:86px;right:40px;",txt:'続いて、アップロードをクリックすると書類が取り込まれます。'},
+};
+function startGuide(){const s=state.splitUpload;if(!s.file)s.file={name:"デモ用 結合PDF.pdf"};if(!s.pages)s.pages=buildSplitPages();guideGo(1);}
+function guideGo(n){
+  const s=state.splitUpload; s.guide=n;
+  if(n===0){renderOverlay();return;}
+  state.upload.open=true; state.upload.tab="split";
+  if(!s.file)s.file={name:"デモ用 結合PDF.pdf"};
+  if(!s.pages)s.pages=buildSplitPages();
+  if(n>=2){ s.split=true; if(s.input==="csv")s.input="ocr"; }
+  if(s.pages&&s.pages.length>1) s.pages[1].splitAfter=(n>=6); // 手動分割のデモ（step6で結合可能に）
+  s.settingsOpen=(n>=3&&n<=7);
+  s.bulkMenu=false;
+  renderOverlay();
+}
+function guideNext(){const n=state.splitUpload.guide;guideGo(n>=8?0:n+1);}
+function guidePrev(){const n=state.splitUpload.guide;guideGo(n<=1?0:n-1);}
+function renderCoach(){
+  const n=state.splitUpload.guide; if(!n||!GUIDE_COACH[n])return "";
+  const c=GUIDE_COACH[n];
+  return `<div class="coach" style="${c.pos}">
+    <div class="coach-txt">${c.txt}</div>
+    <div class="coach-foot">
+      <button class="coach-back" onclick="guidePrev()">←</button>
+      <button class="coach-next" onclick="guideNext()">${n>=8?"完了":"次へ"}</button>
+    </div></div>`;
 }
 
 /* ───── 右サイドパネル（書類詳細） ───── */
@@ -2880,7 +3196,11 @@ function renderOverlay(){
   state._ovFresh = (kind!=="" && kind!==_ovKind); // 同じオーバーレイの再描画ではアニメさせない
   _ovKind=kind;
   let h="";
-  if(state.upload.open) h=renderUploadModal();
+  if(state.upload.open){ h=renderUploadModal();
+    if(state.splitUpload.settingsOpen) h+=renderSplitSettingsModal();
+    if(state.splitUpload.zoom!=null) h+=renderSplitZoom();
+    if(state.splitUpload.guide) h+=renderCoach();
+  }
   else if(state.panelId){ h=renderPanel(); state.panelJustOpened=false; }
   else if(state.vehPanel) h=renderVehPanel();
   else if(state.changelogOpen) h=renderChangelog();
@@ -2913,9 +3233,9 @@ function gotoVehicles(){ state.view="vehicles"; state.vehCategoryFilter="all"; r
 /* ───── ルート ───── */
 /* 再描画（innerHTML 差し替え）でスクロール位置が先頭へ戻らないよう、
    既知のスクロール領域の scrollTop を保持・復元する */
-const _SCROLL_SELECTORS=[".tscroll",".settings-wrap",".vp-body",".pn-left",".pn-right",".ve-left",".ve-rprev",".tl-scroll",".clog-body",".pv-page-wrap",".chips",".log"];
-function _captureScroll(root){ const m={}; if(!root) return m; _SCROLL_SELECTORS.forEach(sel=>{ const e=root.querySelector(sel); if(e&&e.scrollTop) m[sel]=e.scrollTop; }); return m; }
-function _restoreScroll(root,m){ if(!root||!m) return; for(const sel in m){ const e=root.querySelector(sel); if(e) e.scrollTop=m[sel]; } }
+const _SCROLL_SELECTORS=[".tscroll",".settings-wrap",".vp-body",".pn-left",".pn-right",".ve-left",".ve-rprev",".tl-scroll",".clog-body",".pv-page-wrap",".chips",".log",".spm-strip"];
+function _captureScroll(root){ const m={}; if(!root) return m; _SCROLL_SELECTORS.forEach(sel=>{ const e=root.querySelector(sel); if(e&&(e.scrollTop||e.scrollLeft)) m[sel]={t:e.scrollTop,l:e.scrollLeft}; }); return m; }
+function _restoreScroll(root,m){ if(!root||!m) return; for(const sel in m){ const e=root.querySelector(sel); if(e){ e.scrollTop=m[sel].t; e.scrollLeft=m[sel].l; } } }
 function render(){
   renderNav(); renderCrumb();
   const c=document.getElementById("content");
