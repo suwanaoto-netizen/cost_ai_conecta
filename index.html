@@ -493,21 +493,21 @@
   .mk-note{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--inkFaint);font-weight:700}
   .mk-ico{position:absolute;right:14px;bottom:13px;width:34px;height:34px;border-radius:999px;background:var(--greenSoft);display:flex;align-items:center;justify-content:center}
   /* コストモニター ピックアップ */
-  .pickup{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:stretch}
-  .pk-card{flex:1;min-width:248px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;display:flex;flex-direction:column}
-  .pk-h{font-size:12px;font-weight:800;color:var(--ink);margin-bottom:10px;display:flex;align-items:center;gap:6px}
-  .pk-list{display:flex;flex-direction:column;gap:7px}
-  .pk-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--lineSoft);border-radius:9px;cursor:pointer;transition:background .12s,border-color .12s}
+  .pickup{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:stretch}
+  .pk-card{flex:1;min-width:248px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column}
+  .pk-h{font-size:11.5px;font-weight:800;color:var(--ink);margin-bottom:5px;display:flex;align-items:center;gap:5px}
+  .pk-list{display:flex;flex-direction:column;gap:3px}
+  .pk-item{display:flex;align-items:center;gap:9px;padding:3px 9px;border:1px solid var(--lineSoft);border-radius:8px;cursor:pointer;transition:background .12s,border-color .12s}
   .pk-item:hover{background:#F5F8F5;border-color:var(--greenLine)}
-  .pk-rank{flex-shrink:0;width:22px;height:22px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;font-family:var(--mono);background:var(--greenSoft);color:var(--greenDark)}
-  .pk-rank.wide{width:auto;min-width:34px;padding:0 7px;border-radius:6px;font-family:var(--sans)}
-  .pk-main{flex:1;min-width:0}
-  .pk-plate{font-size:12.5px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pk-metric{font-size:11px;color:var(--inkSoft);font-weight:700;margin-top:2px}
-  .pk-amt{flex-shrink:0;font-family:var(--mono);font-size:12.5px;font-weight:800;color:var(--ink)}
-  .pk-pct{flex-shrink:0;font-family:var(--mono);font-size:15px;font-weight:800;color:var(--alert);min-width:48px}
-  .pk-detail{flex-shrink:0;display:inline-flex;align-items:center;gap:1px;font-size:11px;font-weight:700;color:var(--greenDark);white-space:nowrap}
-  .pk-empty{font-size:11.5px;color:var(--inkFaint);font-weight:700;padding:10px 4px}
+  .pk-rank{flex-shrink:0;width:18px;height:18px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;font-family:var(--mono);background:var(--greenSoft);color:var(--greenDark)}
+  .pk-rank.wide{width:auto;min-width:30px;height:18px;padding:0 6px;border-radius:5px;font-family:var(--sans)}
+  .pk-main{flex:1;min-width:0;line-height:1.25}
+  .pk-plate{font-size:12px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pk-metric{font-size:10.5px;color:var(--inkSoft);font-weight:700}
+  .pk-amt{flex-shrink:0;font-family:var(--mono);font-size:12px;font-weight:800;color:var(--ink)}
+  .pk-pct{flex-shrink:0;font-family:var(--mono);font-size:13px;font-weight:800;color:var(--alert);min-width:44px}
+  .pk-detail{flex-shrink:0;display:inline-flex;align-items:center;gap:1px;font-size:10.5px;font-weight:700;color:var(--greenDark);white-space:nowrap}
+  .pk-empty{font-size:11px;color:var(--inkFaint);font-weight:700;padding:6px 4px}
 
   /* ───── bulk select ───── */
   .dt th.c,.dt td.c{text-align:center;white-space:nowrap}
@@ -2198,7 +2198,7 @@ function renderVehicles(){
     ${renderVehCal()}
   </div>`;
   const head=`<div class="pagehead">
-    <div><h1>コストモニター</h1><p>反映済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}${hasRange?`<b style="color:var(--greenDark)">　期間：${state.vehDateStart}〜${state.vehDateEnd}</b>`:""}</p></div>
+    <div><p>反映済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}${hasRange?`<b style="color:var(--greenDark)">　期間：${state.vehDateStart}〜${state.vehDateEnd}</b>`:""}</p></div>
     <div class="ph-spacer"></div>
     <button class="trash-toggle ${inTrash?"on":""}" onclick="toggleVehTrash()" title="ゴミ箱">${I.trash(inTrash?"#B23A2E":"#5A6472",13)} ゴミ箱<span style="font-family:var(--mono);font-size:10px;background:rgba(0,0,0,.06);padding:0 6px;border-radius:999px">${trashCount}</span></button>
     <button class="btn-hist" onclick="openChangelog()" title="コスト内訳の変更履歴">
