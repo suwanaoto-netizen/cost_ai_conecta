@@ -1084,7 +1084,7 @@ let state={
   collapsed:false,
   filterStatus:"all",   // all|未入力|入力済み|反映済み
   categoryFilter:"all", vehCategoryFilter:"all",
-  trash:false,
+  trash:false, docTrashAction:null,
   q:"",
   selected:new Set(), bulkMenu:false,
   docPage:1, docPerPage:20, vehPage:1, vehPerPage:20,
@@ -1327,11 +1327,46 @@ function doBulkReflect(){
 function bulkTrash(){ state.bulkMenu=false;
   const t=visibleDocs().filter(d=>state.selected.has(d.id));
   if(t.length===0){ render(); return; }
-  t.forEach(d=>{d.deleted=true; state.selected.delete(d.id);});
-  render(); toast(`${t.length}件をゴミ箱へ移動しました`); }
+  state.docTrashAction={mode:"trash", ids:t.map(d=>d.id), label:t.length===1?t[0].name:""}; renderOverlay(); }
 function toggleTrash(){state.trash=!state.trash;state.filterStatus="all";state.selected.clear();state.bulkMenu=false;state.docPage=1;render();}
-function trashDoc(id){const d=docs.find(x=>x.id===id);if(d){d.deleted=true;toast(`「${d.name}」をゴミ箱へ移動しました`);}render();}
-function restoreDoc(id){const d=docs.find(x=>x.id===id);if(d){d.deleted=false;toast(`「${d.name}」を書類一覧に戻しました`);}render();}
+/* ───── 書類のゴミ箱（確認ステップ。コストモニターと同仕様） ───── */
+function trashDoc(id){const d=docs.find(x=>x.id===id);if(!d)return; state.docTrashAction={mode:"trash", ids:[id], label:d.name}; renderOverlay();}
+function restoreDoc(id){const d=docs.find(x=>x.id===id);if(!d)return; state.docTrashAction={mode:"restore", ids:[id], label:d.name}; renderOverlay();}
+function cancelDocTrashAction(){ state.docTrashAction=null; renderOverlay(); }
+function confirmDocTrashAction(){
+  const a=state.docTrashAction; state.docTrashAction=null; if(!a){ renderOverlay(); return; }
+  const targets=a.ids.map(id=>docs.find(d=>d.id===id)).filter(Boolean);
+  if(targets.length===0){ render(); return; }
+  const one=targets.length===1?targets[0].name:"";
+  if(a.mode==="trash"){
+    targets.forEach(d=>{d.deleted=true; state.selected.delete(d.id);});
+    render(); toast(one?`「${one}」をゴミ箱へ移動しました`:`${targets.length}件をゴミ箱へ移動しました`);
+  } else {
+    targets.forEach(d=>{d.deleted=false;});
+    render(); toast(one?`「${one}」を書類一覧に戻しました`:`${targets.length}件を書類一覧に戻しました`);
+  }
+}
+function renderDocTrashConfirm(){
+  const a=state.docTrashAction; if(!a) return "";
+  const isTrash=a.mode==="trash";
+  const n=a.ids.length;
+  const target=(n===1&&a.label)?`「${esc(a.label)}」`:`選択中の <b>${n}</b> 件の書類`;
+  return `<div class="ovl anim" style="z-index:80" onclick="if(event.target===this)cancelDocTrashAction()"><div class="modal" style="width:min(480px,100%)">
+    <div class="m-head"><span class="t">${isTrash?I.trash("#B23A2E",18):I.undo("#0E7A4B",18)} ${isTrash?"ゴミ箱へ移動しますか？":"書類一覧に戻しますか？"}</span>
+      <button class="x" onclick="cancelDocTrashAction()">${I.x("#5A6472",18)}</button></div>
+    <div class="m-body">
+      <div class="ce-warn" style="${isTrash?'background:var(--alertSoft);border-color:#E0B8B2':'background:var(--greenSoft);border-color:var(--greenLine)'}">${isTrash?I.alert("#B23A2E",18):I.check("#0E7A4B",18,2.6)}<div>
+        <div class="ce-q">${target}</div>
+        <div class="ce-note">${isTrash?"ゴミ箱へ移動すると書類一覧に表示されなくなります。ゴミ箱からいつでも元に戻せます。":"書類一覧に再表示されます。"}</div></div></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn-cancel" onclick="cancelDocTrashAction()">キャンセル</button>
+      ${isTrash
+        ? `<button class="btn-danger" onclick="confirmDocTrashAction()">${I.trash("#fff",14)} ゴミ箱へ移動</button>`
+        : `<button class="btn-green" onclick="confirmDocTrashAction()">${I.undo("#fff",15)} 一覧に戻す</button>`}
+    </div>
+  </div></div>`;
+}
 
 /* ───── アップロードモーダル ───── */
 function openUpload(){state.upload={open:true,files:[],ocr:state.settings.defaultOcr,category:(CATEGORIES[0]||""),processing:{active:false,pct:0,label:""},_timer:null};renderOverlay();}
@@ -2802,6 +2837,7 @@ function renderOverlay(){
   if(state.reflectConfirm) h+=renderReflectConfirm(); // 既存オーバーレイの上に確認モーダルを重ねる
   if(state.pnDeleteLid!=null) h+=renderPnDeleteConfirm();
   if(state.vehTrashAction) h+=renderVehTrashConfirm();
+  if(state.docTrashAction) h+=renderDocTrashConfirm();
   if(state.settingsSaveConfirm) h+=renderSettingsSaveConfirm();
   if(state.settingsLeave) h+=renderSettingsLeaveConfirm();
   const os=_captureScroll(ov);
