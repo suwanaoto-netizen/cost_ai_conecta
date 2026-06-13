@@ -2204,7 +2204,7 @@ function renderVehicles(){
   const head=`<div class="pagehead pagehead-veh">
     <div><p>反映済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}${hasRange?`<b style="color:var(--greenDark)">　期間：${state.vehDateStart}〜${state.vehDateEnd}</b>`:""}</p></div>
     <div class="ph-spacer"></div>
-    <button class="trash-toggle ${inTrash?"on":""}" onclick="toggleVehTrash()" title="ゴミ箱">${I.trash(inTrash?"#B23A2E":"#5A6472",13)} ゴミ箱<span style="font-family:var(--mono);font-size:10px;background:rgba(0,0,0,.06);padding:0 6px;border-radius:999px">${trashCount}</span></button>
+    <button class="trash-toggle ${inTrash?"on":""}" onclick="toggleVehTrash()" title="ゴミ箱に移動した車両は、モニターの集計（登録車両数・コスト合計・各ピックアップ）から除外されます。いつでも元に戻せます。">${I.trash(inTrash?"#B23A2E":"#5A6472",13)} ゴミ箱<span style="font-family:var(--mono);font-size:10px;background:rgba(0,0,0,.06);padding:0 6px;border-radius:999px">${trashCount}</span></button>
     <button class="btn-hist" onclick="openChangelog()" title="コスト内訳の変更履歴">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>
       変更履歴${clogUnseen>0?`<span class="bh-ct">${clogUnseen}</span>`:""}</button>
