@@ -311,6 +311,17 @@
   .amt-opt{padding:9px 13px;font-family:var(--mono);font-size:13.5px;color:var(--inkSoft);cursor:pointer}
   .amt-opt:hover{background:var(--greenSoft);color:var(--ink)}
   .amt-opt.sel{color:var(--greenDark);font-weight:800}
+  /* ?ヘルプ ツールチップ */
+  .help{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:999px;background:#C6CDD6;color:#fff;font-size:10px;font-weight:800;margin-left:4px;cursor:help;position:relative;vertical-align:middle}
+  .help:hover,.help:focus{background:var(--green);outline:none}
+  .help-pop{position:absolute;left:0;top:calc(100% + 9px);width:278px;background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 34px rgba(20,30,40,.20);padding:12px 13px;z-index:60;display:none;cursor:default;font-weight:400}
+  .help:hover .help-pop,.help:focus .help-pop{display:block}
+  .help-pop::before{content:"";position:absolute;left:5px;top:-6px;width:11px;height:11px;background:#fff;border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg)}
+  .hp-h{display:block;font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:5px}
+  .hp-intro{display:block;font-size:11.5px;color:var(--inkSoft);line-height:1.6;margin-bottom:8px}
+  .hp-row{display:flex;gap:9px;align-items:center;padding:5px 0;border-top:1px solid var(--lineSoft)}
+  .hp-c{flex-shrink:0;min-width:84px}
+  .hp-d{font-size:11.5px;color:var(--ink);line-height:1.5}
   .set-add{display:flex;align-items:center;gap:9px}
   .pv-page{background:#fff;color:#1B2330;width:470px;padding:30px 32px;box-shadow:0 4px 20px rgba(0,0,0,.35);transform-origin:top center;flex-shrink:0}
   .iv-h{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1B2330;padding-bottom:10px}
@@ -657,6 +668,21 @@ let CAT_DOCTYPES={
   "税金":["納付書","明細書"],
 };
 function docTypesForCat(c){ return CAT_DOCTYPES[c]||[]; }
+/* コスト分類の説明（ヘルプ用） */
+const CAT_DESC={
+  "燃料費":"ガソリン・軽油代、アドブルー代",
+  "修繕・維持費":"車検費用、定期点検、タイヤ交換、修理 など",
+  "通行料":"高速道路利用料金（ETC利用料 など）",
+  "保険料":"自賠責保険、任意保険（自動車保険）",
+  "調達コスト":"車両ローン、リース料",
+  "税金":"自動車税、重量税",
+};
+/* 「?」ヘルプ：ホバーでコスト分類の説明を表示 */
+function catHelp(){
+  const rows=CATS.map(c=>`<div class="hp-row"><span class="hp-c">${catPill(c)}</span><span class="hp-d">${esc(CAT_DESC[c]||"")}</span></div>`).join("");
+  return `<span class="help" tabindex="0">?<span class="help-pop"><span class="hp-h">コスト分類とは</span>
+    <span class="hp-intro">車両にかかる費用を会計区分で分類したものです。明細ごとに該当する分類を選択します。</span>${rows}</span></span>`;
+}
 /* 書類内の明細のコスト分類から想定書類タイプを集約（重複排除・主たる順を優先） */
 function expectedDocTypes(d){
   const out=[]; [...new Set(docLines(d).map(l=>l.cat))].forEach(c=>docTypesForCat(c).forEach(t=>{ if(!out.includes(t)) out.push(t); }));
@@ -1310,7 +1336,7 @@ function renderPanel(){
         <span class="match-badge" id="pn-badge-${l.lid}">${matchBadge(l)}</span></div>
       <div class="fld"><label>項目</label><input class="in b-g" value="${esc(l.item)}" oninput="pnLine(${l.lid},'item',this.value)"></div>
       <div class="grid2">
-        <div class="fld"><label>コスト分類</label>
+        <div class="fld"><label>コスト分類 ${catHelp()}</label>
           <select class="in" onchange="pnLine(${l.lid},'cat',this.value)">${CATS.map(c=>`<option ${c===l.cat?"selected":""}>${c}</option>`).join("")}</select></div>
         <div class="fld"><label>発生日</label><input class="in mono" value="${esc(l.inspectedAt)}" oninput="pnLine(${l.lid},'inspectedAt',this.value)"></div>
       </div>
