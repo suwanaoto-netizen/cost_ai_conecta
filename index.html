@@ -523,6 +523,10 @@
   .ve-sum{font-size:12.5px;color:var(--inkSoft)}
   .ve-sum b{font-family:var(--mono);font-size:15px;color:var(--ink)}
   .ve-note{font-size:11px;font-weight:700;color:var(--greenDark);background:var(--greenSoft);border:1px solid var(--greenLine);border-radius:999px;padding:2px 9px}
+  .ve-office{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:9px 12px;background:var(--panel,#F7F8FA);border:1px solid var(--line);border-radius:10px}
+  .ve-office-l{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:var(--inkSoft);white-space:nowrap}
+  .ve-office-sel{border:1px solid var(--line);border-radius:8px;outline:none;font-family:var(--sans);font-size:13px;font-weight:700;color:var(--ink);background:#fff;padding:5px 9px;cursor:pointer;min-width:150px}
+  .ve-office-note{font-size:11px;color:var(--inkSoft)}
   /* 編集内容の確認 */
   .ce-warn{display:flex;gap:11px;align-items:flex-start;background:var(--amberSoft);border:1px solid rgba(184,117,20,.3);border-radius:10px;padding:13px 15px;margin-bottom:14px}
   .ce-q{font-size:15px;font-weight:800;color:var(--ink)}
@@ -2198,7 +2202,7 @@ function buildVehicles(catFilter, range){
     });
   });
   state.manualLines.forEach(m=>{ if(cf!=="all" && (m.office||"")!==cf) return; if(!inR(m.date)) return;
-    add(ensure(m.vkey,m.kind,m.target),{lid:m.id,src:"manual",item:m.item,cat:m.cat,date:m.date,amount:+m.amount,vendor:m.vendor||"手動追加",doc:"手動追加"});
+    add(ensure(m.vkey,m.kind,m.target),{lid:m.id,src:"manual",item:m.item,cat:m.cat,date:m.date,amount:+m.amount,vendor:m.vendor||"手動追加",doc:"手動追加",office:m.office||""});
   });
   return [...map.values()].sort((a,b)=>b.total-a.total);
 }
@@ -2223,6 +2227,23 @@ function vehAddManualLine(vkey,kind,target){
   render();
 }
 function vehDeleteManualLine(id){ state.manualLines=state.manualLines.filter(x=>x.id!==id); render(); }
+/* 車両の営業所を設定（明細の営業所を一括更新。主にコストモニターの絞り込みに使用） */
+function vehCurrentOffice(key){
+  const v=buildVehicles("all").find(x=>x.key===key); if(!v) return "";
+  const set=new Set(v.lines.map(l=>l.office||""));
+  return set.size===1?[...set][0]:"";
+}
+function vehEditVehicleOffice(key,office){
+  const v=buildVehicles("all").find(x=>x.key===key); if(!v) return;
+  const docIds=new Set();
+  v.lines.forEach(l=>{
+    if(l.src==="manual"){ const m=state.manualLines.find(x=>String(x.id)===String(l.lid)); if(m) m.office=office; }
+    else if(l.docId) docIds.add(l.docId);
+  });
+  docIds.forEach(id=>{ const d=docs.find(x=>x.id===id); if(d) d.category=office; });
+  if(state.vehCategoryFilter!=="all") state.vehCategoryFilter=office||"all";
+  render();
+}
 
 /* 内訳の編集テーブル（モーダル内で使用） */
 function renderVehBreakdown(v){
@@ -2376,7 +2397,18 @@ function renderVehEditModal(){
 
   const previewing = !!state.vehViewDocId;
   const vdoc = previewing ? docs.find(d=>d.id===state.vehViewDocId) : null;
+  const curOffice=vehCurrentOffice(v.key);
+  const officeRow=`
+      <div class="ve-office">
+        <span class="ve-office-l">${I.boxes("#5A6472",15)} 営業所</span>
+        <select class="ve-office-sel" onchange="vehEditVehicleOffice('${v.key}',this.value)">
+          <option value="" ${curOffice===""?"selected":""}>（未選択）</option>
+          ${CATEGORIES.map(c=>`<option value="${esc(c)}" ${curOffice===c?"selected":""}>${esc(c)}</option>`).join("")}
+        </select>
+        <span class="ve-office-note">この車両の営業所を設定します（コストモニターの絞り込みに使用）</span>
+      </div>`;
   const editPane=`
+      ${officeRow}
       <div class="ve-meta">${mtag}<span class="ve-sum">合計 <b>${yen(v.total)}</b>（明細 ${v.count}件）</span>${filterNote}</div>
       <div class="vd-sub" style="margin:0 2px 12px">行を直接編集できます。請求書由来の明細は ${I.eye("#0E7A4B",13)} で証憑（請求書）を右に表示できます。変更は元の書類にも反映されます。</div>
       ${renderVehBreakdown(v)}`;
