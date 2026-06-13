@@ -795,7 +795,7 @@ function expectedDocTypes(d){
   return out;
 }
 /* カテゴリー（主に営業所名）。設定で管理し、書類に紐付く */
-let CATEGORIES=["城北営業所","大宮営業所","浦和営業所","柏営業所","船橋営業所"];
+let CATEGORIES=["名古屋営業所","岡崎営業所","一宮営業所","岐阜営業所","四日市営業所"];
 function officeChip(name){ return name?`<span class="office-chip">${esc(name)}</span>`:`<span class="office-none">未分類</span>`; }
 
 /* ───── 書類データ（請求書1枚 ＝ 1レコード、明細を内包） ───── */
@@ -2482,7 +2482,7 @@ function renderSettings(){
       <div class="set-h">${I.boxes("#16A571",15)} 営業所の管理 <span class="set-count">${CATEGORIES.length}件</span></div>
       <div class="set-d" style="margin-bottom:10px">書類に紐付く営業所です。ここで登録すると、アップロード・書類詳細で選択でき、書類一覧・コストモニターで絞り込めます。</div>
       <div class="set-chips">${officeChips||'<span class="set-d">営業所がありません。下から追加してください。</span>'}</div>
-      <div class="set-add"><input class="in" id="new-office" placeholder="営業所名（例：越谷営業所）" style="max-width:260px"><button class="btn-green" style="padding:8px 14px" onclick="addCategory()">${I.plus()} 追加</button></div>
+      <div class="set-add"><input class="in" id="new-office" placeholder="営業所名（例：豊橋営業所）" style="max-width:260px"><button class="btn-green" style="padding:8px 14px" onclick="addCategory()">${I.plus()} 追加</button></div>
     </div>
 
     <div class="set-card">
