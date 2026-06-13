@@ -1014,13 +1014,19 @@ function lookupJikenkyo(chassis){
 /* ───── 車両マスタ（マスタデータ画面のソース） ───── */
 /* MASTER（車番の集合）が突合の真実源であり続けるよう、編集後は syncMaster() で同期する。 */
 const VEHICLE_MASTER=[];
+/* ナンバープレートの地名から営業所を推定（一致する営業所がなければ空） */
+function officeFromPlate(plate){
+  const m=String(plate||"").match(/^[^0-9]+/);
+  const city=m?m[0]:"";
+  return CATEGORIES.find(c=>city&&c.startsWith(city))||"";
+}
 (function initVehicleMaster(){
   let no=1001, idx=0;
   FLEET.forEach(p=>{
     if(NEW_PLATES.has(p)) return;
     const chassis=_genChassis(p);
     const spec=lookupJikenkyo(chassis)||{maxLoad:"",gross:"",size:"",klass:""};
-    VEHICLE_MASTER.push({ no:no++, plate:p, chassis, code:`V${String(++idx).padStart(3,"0")}`, name:"", note:"",
+    VEHICLE_MASTER.push({ no:no++, plate:p, chassis, code:`V${String(++idx).padStart(3,"0")}`, name:"", note:"", office:officeFromPlate(p),
       maxLoad:spec.maxLoad, grossWeight:spec.gross, size:spec.size, klass:spec.klass });
   });
 })();
@@ -2228,10 +2234,18 @@ function vehAddManualLine(vkey,kind,target){
 }
 function vehDeleteManualLine(id){ state.manualLines=state.manualLines.filter(x=>x.id!==id); render(); }
 /* 車両の営業所を設定（明細の営業所を一括更新。主にコストモニターの絞り込みに使用） */
+/* 初期値：車両マスタの営業所と連動。マスタ未設定なら明細で最も多い営業所を採用する。 */
 function vehCurrentOffice(key){
-  const v=buildVehicles("all").find(x=>x.key===key); if(!v) return "";
-  const set=new Set(v.lines.map(l=>l.office||""));
-  return set.size===1?[...set][0]:"";
+  const v=buildVehicles("all").find(x=>x.key===key);
+  const plate=v?v.target:String(key).replace(/^[VS]:/,"");
+  const mv=VEHICLE_MASTER.find(x=>x.plate===plate);
+  if(mv&&mv.office) return mv.office;
+  if(!v) return "";
+  const counts={};
+  v.lines.forEach(l=>{ const o=l.office||""; if(o) counts[o]=(counts[o]||0)+1; });
+  let best="",bestN=0;
+  Object.keys(counts).forEach(o=>{ if(counts[o]>bestN){ bestN=counts[o]; best=o; } });
+  return best;
 }
 function vehEditVehicleOffice(key,office){
   const v=buildVehicles("all").find(x=>x.key===key); if(!v) return;
@@ -2241,6 +2255,7 @@ function vehEditVehicleOffice(key,office){
     else if(l.docId) docIds.add(l.docId);
   });
   docIds.forEach(id=>{ const d=docs.find(x=>x.id===id); if(d) d.category=office; });
+  const mv=VEHICLE_MASTER.find(x=>x.plate===v.target); if(mv) mv.office=office; // 車両マスタと連動
   if(state.vehCategoryFilter!=="all") state.vehCategoryFilter=office||"all";
   render();
 }
@@ -2405,7 +2420,7 @@ function renderVehEditModal(){
           <option value="" ${curOffice===""?"selected":""}>（未選択）</option>
           ${CATEGORIES.map(c=>`<option value="${esc(c)}" ${curOffice===c?"selected":""}>${esc(c)}</option>`).join("")}
         </select>
-        <span class="ve-office-note">この車両の営業所を設定します（コストモニターの絞り込みに使用）</span>
+        <span class="ve-office-note">この車両の営業所を設定します（車両マスタと連動・コストモニターの絞り込みに使用）</span>
       </div>`;
   const editPane=`
       ${officeRow}
@@ -3117,6 +3132,7 @@ function renderMaster(){
     <td style="font-family:var(--mono);font-size:11.5px;color:var(--inkSoft)">${cell(v.chassis)}</td>
     <td>${cell(v.code)}</td>
     <td>${cell(v.name)}</td>
+    <td>${cell(v.office)}</td>
     <td class="r">${kg(v.maxLoad)}</td>
     <td class="r">${kg(v.grossWeight)}</td>
     <td style="white-space:nowrap;font-size:11.5px;color:var(--inkSoft)">${cell(v.size)}</td>
@@ -3129,18 +3145,18 @@ function renderMaster(){
       <button class="btn-green" onclick="openMasterNew()">${I.plus()} 新しい車両を登録</button>
     </div></div>`;
   const table=`<div class="veh-card"><div class="tscroll"><table class="vt">
-    <thead><tr><th>No</th><th>車両番号</th><th>車台番号</th><th>車両コード</th><th>社内名称</th><th class="r">最大積載量</th><th class="r">車両総重量</th><th>サイズ</th><th style="text-align:right">操作</th></tr></thead>
-    <tbody>${rows||`<tr><td colspan="9" style="text-align:center;padding:34px;color:var(--inkSoft)">登録済みの車両がありません。右上から登録してください。</td></tr>`}</tbody></table></div>${pager("master",info)}</div>`;
+    <thead><tr><th>No</th><th>車両番号</th><th>車台番号</th><th>車両コード</th><th>社内名称</th><th>営業所</th><th class="r">最大積載量</th><th class="r">車両総重量</th><th>サイズ</th><th style="text-align:right">操作</th></tr></thead>
+    <tbody>${rows||`<tr><td colspan="10" style="text-align:center;padding:34px;color:var(--inkSoft)">登録済みの車両がありません。右上から登録してください。</td></tr>`}</tbody></table></div>${pager("master",info)}</div>`;
   return head+table;
 }
 function openMasterNew(){
-  state.masterEdit={mode:"new", no:null, plate:"", chassis:"", code:"", name:"", note:"",
+  state.masterEdit={mode:"new", no:null, plate:"", chassis:"", code:"", name:"", note:"", office:"",
     maxLoad:"", grossWeight:"", size:"", klass:"", matched:false};
   renderOverlay();
 }
 function openMasterEdit(no){
   const v=VEHICLE_MASTER.find(x=>x.no===+no); if(!v) return;
-  state.masterEdit={mode:"edit", no:v.no, plate:v.plate, chassis:v.chassis, code:v.code, name:v.name, note:v.note,
+  state.masterEdit={mode:"edit", no:v.no, plate:v.plate, chassis:v.chassis, code:v.code, name:v.name, note:v.note, office:v.office||"",
     maxLoad:v.maxLoad, grossWeight:v.grossWeight, size:v.size, klass:v.klass, matched:!!v.klass};
   renderOverlay();
 }
@@ -3168,7 +3184,7 @@ function saveMasterEdit(){
   if(!plate){ toast("車両番号を入力してください"); return; }
   if(VEHICLE_MASTER.find(v=>v.plate===plate && v.no!==e.no)){ toast("同じ車両番号がすでに登録されています"); return; }
   const fields={ plate, chassis:(e.chassis||"").trim(), code:(e.code||"").trim(), name:(e.name||"").trim(),
-    note:(e.note||"").trim(), maxLoad:e.maxLoad, grossWeight:e.grossWeight, size:e.size, klass:e.klass };
+    note:(e.note||"").trim(), office:e.office||"", maxLoad:e.maxLoad, grossWeight:e.grossWeight, size:e.size, klass:e.klass };
   if(e.mode==="new"){ VEHICLE_MASTER.push(Object.assign({no:nextMasterNo()},fields)); }
   else { const v=VEHICLE_MASTER.find(x=>x.no===e.no); if(v) Object.assign(v,fields); }
   syncMaster();
@@ -3200,6 +3216,11 @@ function renderMasterEditModal(){
         <input class="in" value="${esc(e.code)}" oninput="masterEditField('code',this.value)" placeholder="Enter vehicle code"></div>
       <div class="fld"><label>社内名称（任意）</label>
         <input class="in" value="${esc(e.name)}" oninput="masterEditField('name',this.value)" placeholder="例：1号車"></div>
+      <div class="fld"><label>営業所（任意）</label>
+        <select class="in" onchange="masterEditField('office',this.value)">
+          <option value="" ${!e.office?"selected":""}>（未選択）</option>
+          ${CATEGORIES.map(c=>`<option value="${esc(c)}" ${e.office===c?"selected":""}>${esc(c)}</option>`).join("")}
+        </select></div>
       <div class="fld"><label>備考（任意）</label>
         <textarea class="in" rows="2" style="resize:vertical" oninput="masterEditField('note',this.value)" placeholder="メモ">${esc(e.note)}</textarea></div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:4px">
@@ -3216,10 +3237,10 @@ function renderMasterEditModal(){
   </div></div>`;
 }
 function downloadMasterCsv(){
-  const cols=["No","車両番号","車台番号","車両コード","社内名称","備考","最大積載量(kg)","車両総重量(kg)","サイズ","車格"];
+  const cols=["No","車両番号","車台番号","車両コード","社内名称","営業所","備考","最大積載量(kg)","車両総重量(kg)","サイズ","車格"];
   const q=s=>`"${String(s==null?"":s).replace(/"/g,'""')}"`;
   const body=VEHICLE_MASTER.slice().sort((a,b)=>a.no-b.no)
-    .map(v=>[v.no,v.plate,v.chassis,v.code,v.name,v.note,v.maxLoad,v.grossWeight,v.size,v.klass].map(q).join(","));
+    .map(v=>[v.no,v.plate,v.chassis,v.code,v.name,v.office,v.note,v.maxLoad,v.grossWeight,v.size,v.klass].map(q).join(","));
   const csv="﻿"+cols.map(q).join(",")+"\r\n"+body.join("\r\n");
   const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
   const url=URL.createObjectURL(blob);
