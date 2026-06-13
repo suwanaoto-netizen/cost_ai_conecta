@@ -84,6 +84,8 @@
   .pagehead{display:flex;align-items:flex-end;gap:14px;margin-bottom:var(--space-key);flex-wrap:wrap;flex-shrink:0}
   .pagehead h1{font-size:var(--fs-key);margin:0;font-weight:800;letter-spacing:.3px}
   .pagehead p{margin:4px 0 0;color:var(--inkSoft);font-size:13px}
+  .pagehead-veh{margin-bottom:8px;align-items:center}
+  .pagehead-veh p{margin:0;font-size:12.5px}
   .pagehead .page-desc{margin:0;color:var(--inkSoft);font-size:12.5px;max-width:560px}
   .ph-spacer{flex:1}
 
@@ -2198,7 +2200,7 @@ function renderVehicles(){
     </button>
     ${renderVehCal()}
   </div>`;
-  const head=`<div class="pagehead">
+  const head=`<div class="pagehead pagehead-veh">
     <div><p>反映済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}${hasRange?`<b style="color:var(--greenDark)">　期間：${state.vehDateStart}〜${state.vehDateEnd}</b>`:""}</p></div>
     <div class="ph-spacer"></div>
     <button class="trash-toggle ${inTrash?"on":""}" onclick="toggleVehTrash()" title="ゴミ箱">${I.trash(inTrash?"#B23A2E":"#5A6472",13)} ゴミ箱<span style="font-family:var(--mono);font-size:10px;background:rgba(0,0,0,.06);padding:0 6px;border-radius:999px">${trashCount}</span></button>
