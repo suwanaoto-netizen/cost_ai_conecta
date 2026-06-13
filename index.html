@@ -1741,7 +1741,7 @@ function renderSplitSettingsModal(){
   return `<div class="ovl" onclick="if(event.target===this)splitCloseSettings()"><div class="modal spm">
     <div class="m-head"><span class="t">PDF分割設定</span>
       <button class="x" style="margin-left:auto" onclick="splitCloseSettings()">${I.x("#5A6472",18)}</button></div>
-    <div class="spm-desc">PDFファイルを、任意の位置でファイル分割したり、特定のページを取り込まないなどが設定できます。<br>プレビューを拡大して確認したい場合は、右下のアイコンをクリックください。<br><br>分割のルールについては <span class="spm-link">自動分割設定</span> より設定してください。</div>
+    <div class="spm-desc">PDFファイルを、任意の位置でファイル分割したり、特定のページを取り込まないなどが設定できます。<br>プレビューを拡大して確認したい場合は、右下のアイコンをクリックください。</div>
     <div class="spm-bar">
       <div class="spm-count">${groups.length}書類に分割（計：${inc}ページ）</div>
       <div class="spm-bulk"><button class="spm-bulk-btn" onclick="splitToggleBulk()">ページ一括操作 <span style="display:inline-flex;transform:rotate(90deg)">${I.chev('#5A6472',13)}</span></button>${bulk}</div>
