@@ -930,6 +930,7 @@ let state={
   vehEditKey:null, vehEditMeta:null, vehEditConfirm:false, vehEditSnapshot:null, vehViewDocId:null, vehViewLid:null,
   vehPanel:null, vehChartCat:null, vehChartGran:"month",
   changelogOpen:false, vehEditHighlight:null,
+  reflectConfirm:null,
   manualLines:[],
   justUploaded:new Set(),
   settings:{ companyName:"サンプル物流株式会社", defaultOcr:true, matchThreshold:0.85,
@@ -1138,6 +1139,10 @@ function bulkMarkEntered(){ state.bulkMenu=false;
 function bulkReflect(){ state.bulkMenu=false;
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="入力済み");
   if(t.length===0){ render(); toast("反映できる「入力済み」の書類が選択されていません"); return; }
+  state.reflectConfirm={kind:"bulk", count:t.length, label:""}; renderOverlay(); }
+function doBulkReflect(){
+  const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="入力済み");
+  if(t.length===0){ render(); return; }
   runReflect(t.map(d=>({name:d.name,lines:docLines(d)})), `${t.length}件の書類をロジポケに反映しました`, ()=>{
     const ts=nowStamp(); t.forEach(d=>{d.status="反映済み";d.reflectedAt=ts;state.selected.delete(d.id);});
     render(); toast(`${t.length}件をロジポケ（車両コスト）へ反映しました`, {label:"車両コスト一覧を見る", fn:gotoVehicles}); }); }
@@ -1323,30 +1328,31 @@ function renderPanel(){
     <span class="lg lg-g">項目</span><span class="lg lg-r">対象車両</span><span class="lg lg-b">金額</span></div>`;
 
   const cand=state.draft._ocr||[];
+  const ro=isReflected?"readonly":"", dis=isReflected?"disabled":"";
   const lineCards=d.lines.map((l,idx)=>{
     const v=l.kind!=="共通";
     const targetFld=v
       ? `<div class="fld"><label>対象車両（車番）</label>
-           <input class="in mono b-r" value="${esc(l.plate)}" placeholder="（車両なし）" oninput="pnLine(${l.lid},'plate',this.value)"></div>`
+           <input class="in mono b-r" ${ro} value="${esc(l.plate)}" placeholder="（車両なし）" oninput="pnLine(${l.lid},'plate',this.value)"></div>`
       : `<div class="fld"><label>拠点・機器</label>
-           <input class="in b-r" value="${esc(l.site)}" placeholder="春日井拠点 など" oninput="pnLine(${l.lid},'site',this.value)"></div>`;
+           <input class="in b-r" ${ro} value="${esc(l.site)}" placeholder="春日井拠点 など" oninput="pnLine(${l.lid},'site',this.value)"></div>`;
     return `<div class="line-card">
       <div class="lc-head"><span class="lc-no">明細 ${idx+1}</span>
-        <button class="btn-ghost" style="padding:3px 9px;font-size:11px" onclick="pnToggleKind(${l.lid})">区分：${v?"車両":"拠点共通"}</button>
+        <button class="btn-ghost" style="padding:3px 9px;font-size:11px" ${dis} onclick="pnToggleKind(${l.lid})">区分：${v?"車両":"拠点共通"}</button>
         <span class="match-badge" id="pn-badge-${l.lid}">${matchBadge(l)}</span></div>
-      <div class="fld"><label>項目</label><input class="in b-g" value="${esc(l.item)}" oninput="pnLine(${l.lid},'item',this.value)"></div>
+      <div class="fld"><label>項目</label><input class="in b-g" ${ro} value="${esc(l.item)}" oninput="pnLine(${l.lid},'item',this.value)"></div>
       <div class="grid2">
         <div class="fld"><label>コスト分類 ${catHelp()}</label>
-          <select class="in" onchange="pnLine(${l.lid},'cat',this.value)">${CATS.map(c=>`<option ${c===l.cat?"selected":""}>${c}</option>`).join("")}</select></div>
-        <div class="fld"><label>発生日</label><input class="in mono" value="${esc(l.inspectedAt)}" oninput="pnLine(${l.lid},'inspectedAt',this.value)"></div>
+          <select class="in" ${dis} onchange="pnLine(${l.lid},'cat',this.value)">${CATS.map(c=>`<option ${c===l.cat?"selected":""}>${c}</option>`).join("")}</select></div>
+        <div class="fld"><label>発生日</label><input class="in mono" ${ro} value="${esc(l.inspectedAt)}" oninput="pnLine(${l.lid},'inspectedAt',this.value)"></div>
       </div>
       <div class="grid2">
         ${targetFld}
         <div class="fld"><label>金額（税抜）</label>
           <div class="amt-combo">
-            <input id="pn-amt-${l.lid}" class="in mono b-b" value="${(+l.amount).toLocaleString('ja-JP')}" oninput="pnLine(${l.lid},'amount',this.value)" autocomplete="off">
+            <input id="pn-amt-${l.lid}" class="in mono b-b" ${ro} value="${(+l.amount).toLocaleString('ja-JP')}" oninput="pnLine(${l.lid},'amount',this.value)" autocomplete="off">
             ${cand.length?`<span class="amt-ck" id="pn-amtck-${l.lid}" style="${cand.includes(+l.amount)?'':'display:none'}">${I.check('#16A571',15,3)}</span>`:''}
-            ${cand.length?`<div class="amt-pop"><div class="amt-pop-h">ファイルから読み取られた金額の一覧</div>${cand.map(a=>`<div class="amt-opt ${a===+l.amount?'sel':''}" onmousedown="pnPickAmount(${l.lid},${a})">${a.toLocaleString('ja-JP')}</div>`).join("")}</div>`:''}
+            ${(!isReflected&&cand.length)?`<div class="amt-pop"><div class="amt-pop-h">ファイルから読み取られた金額の一覧</div>${cand.map(a=>`<div class="amt-opt ${a===+l.amount?'sel':''}" onmousedown="pnPickAmount(${l.lid},${a})">${a.toLocaleString('ja-JP')}</div>`).join("")}</div>`:''}
           </div></div>
       </div>
     </div>`;
@@ -1509,12 +1515,36 @@ function closeReflect(){ const f=state._reflectFinish; state._reflectFinish=null
 
 function reflectPanel(){
   const d=docs.find(x=>x.id===state.panelId); if(!d||d.status!=="入力済み")return;
+  state.reflectConfirm={kind:"panel", count:1, label:state.draft?state.draft.name:d.name}; renderOverlay(); }
+function doReflectPanel(){
+  const d=docs.find(x=>x.id===state.panelId); if(!d||d.status!=="入力済み")return;
   runReflect([{name:state.draft.name,lines:state.draft.lines}], `${state.draft.name} を反映しました`, ()=>{
     Object.assign(d,{cat:state.draft.cat,category:state.draft.category,vendor:state.draft.vendor}); writeLines(d.id, state.draft.lines);
     d.status="反映済み"; d.reflectedAt=nowStamp(); state.draft.status="反映済み"; state.draft.reflectedAt=d.reflectedAt;
     state.selected.delete(d.id);
     render(); renderNav(); toast("ロジポケ（車両コスト）へ反映しました", {label:"車両コスト一覧を見る", fn:()=>{ closePanel(); gotoVehicles(); }});
   });
+}
+function closeReflectConfirm(){ state.reflectConfirm=null; renderOverlay(); }
+function proceedReflect(){ const rc=state.reflectConfirm; state.reflectConfirm=null;
+  if(!rc) return; if(rc.kind==="bulk") doBulkReflect(); else doReflectPanel(); }
+function renderReflectConfirm(){
+  const rc=state.reflectConfirm; if(!rc) return "";
+  const target = rc.kind==="bulk" ? `選択中の <b>${rc.count}</b> 件の書類` : `「${esc(rc.label)}」`;
+  return `<div class="ovl anim" style="z-index:70" onclick="if(event.target===this)closeReflectConfirm()"><div class="modal" style="width:min(480px,100%)">
+    <div class="m-head"><span class="t">${I.send('#0E7A4B',18)} ロジポケに反映しますか？</span>
+      <button class="x" onclick="closeReflectConfirm()">${I.x("#5A6472",18)}</button></div>
+    <div class="m-body">
+      <p style="margin:0 0 13px;font-size:13.5px;color:var(--ink)">${target}を車両コストへ反映します。</p>
+      <div class="ce-warn">${I.alert("#B87514",18)}<div>
+        <div class="ce-q">反映すると、<b>書類一覧画面では書類情報・明細の修正ができなくなります。</b></div>
+        <div class="ce-note">修正が必要になった場合も、反映後は<b>車両コスト一覧画面</b>から内訳を編集できます。</div></div></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn-cancel" onclick="closeReflectConfirm()">キャンセル</button>
+      <button class="btn-green" onclick="proceedReflect()">${I.send('#fff',14)} 反映する</button>
+    </div>
+  </div></div>`;
 }
 
 /* ───── 車両コスト一覧（反映済み書類＋手動明細を集計） ───── */
@@ -2102,12 +2132,14 @@ function renderOverlay(){
   const kind = state.upload.open?"upload": state.panelId?"panel": state.vehPanel?"vehpanel": state.changelogOpen?"changelog": state.vehEditKey?"vehedit": "";
   state._ovFresh = (kind!=="" && kind!==_ovKind); // 同じオーバーレイの再描画ではアニメさせない
   _ovKind=kind;
-  if(state.upload.open) ov.innerHTML=renderUploadModal();
-  else if(state.panelId){ ov.innerHTML=renderPanel(); state.panelJustOpened=false; }
-  else if(state.vehPanel) ov.innerHTML=renderVehPanel();
-  else if(state.changelogOpen) ov.innerHTML=renderChangelog();
-  else if(state.vehEditKey) ov.innerHTML=renderVehEditModal();
-  else ov.innerHTML="";
+  let h="";
+  if(state.upload.open) h=renderUploadModal();
+  else if(state.panelId){ h=renderPanel(); state.panelJustOpened=false; }
+  else if(state.vehPanel) h=renderVehPanel();
+  else if(state.changelogOpen) h=renderChangelog();
+  else if(state.vehEditKey) h=renderVehEditModal();
+  if(state.reflectConfirm) h+=renderReflectConfirm(); // 既存オーバーレイの上に確認モーダルを重ねる
+  ov.innerHTML=h;
 }
 let _toastT=null,_toastAction=null;
 function toast(msg, action){
