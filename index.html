@@ -2100,6 +2100,19 @@ function openVehPanel(key,kind,target){
   renderOverlay();
 }
 function closeVehPanel(){ state.vehPanel=null; renderOverlay(); }
+function vehPanelNav(delta){
+  const p=state.vehPanel; if(!p) return;
+  const list=visibleVehicles();
+  const idx=list.findIndex(v=>v.key===p.key); if(idx<0) return;
+  const ni=idx+delta; if(ni<0||ni>=list.length) return;
+  const v=list[ni];
+  state.vehPage=Math.floor(ni/state.vehPerPage)+1; // 背面の一覧ページも同期
+  state.vehPanel={key:v.key,kind:v.kind,target:v.target}; state.vehTlExpanded=false;
+  const cats=Object.keys(v.byCat);
+  state.vehChartCat = cats.includes("修繕・維持費") ? "修繕・維持費" : (cats.slice().sort((a,b)=>v.byCat[b]-v.byCat[a])[0]||"修繕・維持費");
+  state.vehChartGran="month";
+  render();
+}
 function toggleVehTl(){ state.vehTlExpanded=!state.vehTlExpanded; renderOverlay(); }
 function _vehPanelData(){ const p=state.vehPanel; if(!p) return null;
   const v=buildVehicles(state.vehCategoryFilter).find(x=>x.key===p.key)||{key:p.key,kind:p.kind,target:p.target,total:0,byCat:{},count:0,last:"",lines:[],fuso:null};
@@ -2141,10 +2154,18 @@ function renderVehPanel(){
   const ins=vehInsight(events);
   const badgeCls={ok:'ok',warn:'warn',alert:'bad'}[ins.level], cardCls={ok:'',warn:'amber',alert:'alert'}[ins.level];
   const mtag=isMaster?`<span class="mtag exist">${I.check("#157F73",11,2.6)}既存マスタ</span>`:`<span class="mtag newv">${I.truck("#B87514",11)}新規作成</span>`;
+  const _vl=visibleVehicles(); const _vi=_vl.findIndex(x=>x.key===v.key);
+  const hasPrev=_vi>0, hasNext=_vi>=0&&_vi<_vl.length-1;
+  const navPos=_vi>=0?`<span class="pn-navpos">${_vi+1} / ${_vl.length}</span>`:"";
   return `<div class="panel-ovl ${state._ovFresh?'anim':''}" onclick="if(event.target===this)closeVehPanel()"><div class="vp ${state._ovFresh?'anim':''}">
     <div class="pn-head">
       <span class="vp-htitle">車両カルテ</span>
       <span class="plate">${esc(v.target)}</span>${mtag}
+      <div class="pn-nav">
+        <button class="pn-navbtn" ${hasPrev?"":"disabled"} title="前の車両" onclick="vehPanelNav(-1)"><span class="ic-l">${I.chev("#5A6472",13)}</span>前へ</button>
+        ${navPos}
+        <button class="pn-navbtn" ${hasNext?"":"disabled"} title="次の車両" onclick="vehPanelNav(1)">次へ<span class="ic-r">${I.chev("#5A6472",13)}</span></button>
+      </div>
       <div class="pn-actions">
         <button class="btn-ghost" onclick="closeVehPanel();openVehEdit('${v.key}','${v.kind}','${esc(v.target)}')">${I.pencil("#5A6472",13)} 明細を編集</button>
         <button class="icon-btn" style="border-color:var(--line)" title="閉じる" onclick="closeVehPanel()">${I.x("#5A6472",16)}</button>
@@ -2240,16 +2261,12 @@ function renderVehCal(){
     <div class="vcal-foot"><button class="vcal-clear" onclick="clearVehCal()">全期間に戻す</button><button class="vcal-close" onclick="closeVehCal()">閉じる</button></div>
   </div>`;
 }
-function renderVehicles(){
+/* 一覧に表示されている車両を、絞り込み・ゴミ箱・並び替えを反映した順序で返す（カルテの前へ／次へ送りにも使用） */
+function visibleVehicles(){
   const vehRange=(state.vehDateStart&&state.vehDateEnd)?{start:state.vehDateStart,end:state.vehDateEnd}:null;
   const allVeh=buildVehicles(state.vehCategoryFilter, vehRange);
-  const trashCount=allVeh.filter(v=>state.vehTrash.has(v.key)).length;
   const inTrash=state.vehTrashView;
   let veh=allVeh.filter(v=>inTrash?state.vehTrash.has(v.key):!state.vehTrash.has(v.key));
-  const vehicles=veh;
-  const grand=veh.reduce((s,v)=>s+v.total,0);
-  const newCount=vehicles.filter(v=>!MASTER.has(v.target)).length;
-  /* 並び替え */
   if(state.vehSort.key){
     const dir=state.vehSort.dir==="asc"?1:-1;
     const val=v=>({target:v.target,
@@ -2258,6 +2275,17 @@ function renderVehicles(){
     veh=veh.slice().sort((a,b)=>{const va=val(a),vb=val(b);
       if(va<vb)return -dir; if(va>vb)return dir; return b.total-a.total;});
   }
+  return veh;
+}
+function renderVehicles(){
+  const vehRange=(state.vehDateStart&&state.vehDateEnd)?{start:state.vehDateStart,end:state.vehDateEnd}:null;
+  const allVeh=buildVehicles(state.vehCategoryFilter, vehRange);
+  const trashCount=allVeh.filter(v=>state.vehTrash.has(v.key)).length;
+  const inTrash=state.vehTrashView;
+  let veh=visibleVehicles();
+  const vehicles=veh;
+  const grand=veh.reduce((s,v)=>s+v.total,0);
+  const newCount=vehicles.filter(v=>!MASTER.has(v.target)).length;
 
   const clogUnseen=CHANGELOG.length-(state.changelogSeenCount||0);
   const catSel=`<div class="filter-sel"><span class="fs-l">${I.boxes("#5A6472",14)} 営業所</span>
