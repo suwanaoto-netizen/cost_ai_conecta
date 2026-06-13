@@ -1109,11 +1109,10 @@ let state={
 /* ───── ナビ・トップ ───── */
 function renderNav(){
   const todoDocs=docs.filter(d=>!d.deleted && d.status==="未入力").length;
-  const veh=buildVehicles().length;
   const items=[
     {k:"documents",l:"書類一覧",ic:I.docs("#fff",18),ct:todoDocs,hideZero:true},
-    {k:"vehicles",l:"コストモニター",ic:I.truckN("#fff",18),ct:veh},
-    {k:"master",l:"マスタデータ",ic:I.db("#fff",18),ct:VEHICLE_MASTER.length},
+    {k:"vehicles",l:"コストモニター",ic:I.truckN("#fff",18)},
+    {k:"master",l:"マスタデータ",ic:I.db("#fff",18)},
     {k:"settings",l:"設定",ic:I.gear("#fff",18)},
   ];
   document.getElementById("nav").innerHTML=
