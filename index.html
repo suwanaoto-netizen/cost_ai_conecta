@@ -314,6 +314,14 @@
   .amt-opt{padding:9px 13px;font-family:var(--mono);font-size:13.5px;color:var(--inkSoft);cursor:pointer}
   .amt-opt:hover{background:var(--greenSoft);color:var(--ink)}
   .amt-opt.sel{color:var(--greenDark);font-weight:800}
+  /* 車番オートコンプリート */
+  .sug-combo{position:relative}
+  .sug-pop{position:absolute;left:0;right:0;top:calc(100% + 5px);background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 10px 30px rgba(20,30,40,.16);z-index:45;max-height:216px;overflow:auto;display:none}
+  .sug-combo:focus-within .sug-pop{display:block}
+  .sug-opt{padding:9px 12px;font-family:var(--mono);font-size:13px;color:var(--ink);cursor:pointer}
+  .sug-opt:hover{background:var(--greenSoft)}
+  .sug-opt.none{font-family:var(--sans);color:var(--inkSoft);font-weight:700;border-bottom:1px solid var(--lineSoft)}
+  .sug-empty{padding:9px 12px;font-size:11.5px;color:var(--inkFaint)}
   /* ?ヘルプ ツールチップ */
   .help{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:999px;background:#C6CDD6;color:#fff;font-size:10px;font-weight:800;margin-left:4px;cursor:help;position:relative;vertical-align:middle}
   .help:hover,.help:focus{background:var(--green);outline:none}
@@ -373,7 +381,6 @@
   .vt tbody tr.vrow{cursor:pointer}
   .vt tbody tr.vrow:hover{background:#F6FBF8}
   .vt .plate{display:inline-block;font-family:var(--mono);font-weight:800;font-size:13px;color:var(--greenDark);background:#fff;border:1.5px solid var(--greenLine);border-radius:6px;padding:3px 9px;letter-spacing:.5px}
-  .vt .plate.site{color:var(--inkSoft);border-color:var(--line);font-family:var(--sans)}
   .vt .r{text-align:right;font-family:var(--mono);font-weight:700;white-space:nowrap}
   .vt .total{font-size:15px;color:var(--ink)}
   .mtag{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:800;white-space:nowrap}
@@ -515,7 +522,6 @@
   .vp{width:min(880px,96vw);background:var(--card);height:100vh;display:flex;flex-direction:column;box-shadow:-12px 0 40px rgba(0,0,0,.22)}
   .vp.anim{animation:slideIn .22s cubic-bezier(.22,.61,.36,1)}
   .vp .plate{font-family:var(--mono);font-weight:800;font-size:14px;color:var(--greenDark);background:#fff;border:1.5px solid var(--greenLine);border-radius:7px;padding:4px 11px;letter-spacing:.5px}
-  .vp .plate.site{color:var(--inkSoft);border-color:var(--line);font-family:var(--sans)}
   .vp-body{flex:1;overflow-y:auto;padding:20px 22px}
   .vp-hero{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
   .vp-spec{font-size:11.5px;color:var(--inkSoft);margin-top:4px}
@@ -688,7 +694,6 @@ const I = {
 
 /* ───── マスタ ───── */
 const MASTER = new Set(["名古屋100あ1234","名古屋100か5678","三河800さ9012","名古屋800さ8706","岡崎100か2233","豊橋800せ4455","名古屋130す6677","一宮800そ8899"]);
-const SITE_MASTER = new Set(["春日井拠点","名古屋第一倉庫"]);
 const CATS=["燃料費","修繕・維持費","通行料","保険料","調達コスト","税金"];
 const CAT_STYLE={
   "燃料費":{fg:"#1E55C8",bg:"#E5EDFB"},
@@ -736,7 +741,7 @@ function officeChip(name){ return name?`<span class="office-chip">${esc(name)}</
 
 /* ───── 書類データ（請求書1枚 ＝ 1レコード、明細を内包） ───── */
 let UID=300;
-function L(item,plate,cat,date,amount,conf,extra){ return Object.assign({lid:UID++,item,plate:plate||"",site:extra&&extra.site||"",kind:plate?"単車":(extra&&extra.site?"共通":"単車"),cat,inspectedAt:date,amount,confidence:conf==null?.97:conf}, extra&&extra.fuso?{fuso:extra.fuso}:{}); }
+function L(item,plate,cat,date,amount,conf,extra){ return Object.assign({lid:UID++,item,plate:plate||"",kind:"単車",cat,inspectedAt:date,amount,confidence:conf==null?.97:conf}, extra&&extra.fuso?{fuso:extra.fuso}:{}); }
 
 const SEED = [
   {name:"月次整備まとめ_中部マツダ_202605.pdf", vendor:"中部マツダ整備", cat:"請求書", status:"反映済み", lines:[
@@ -772,7 +777,7 @@ const SEED = [
     L("新車納車整備","岐阜100か7890","修繕・維持費","2026-05-28",132000,.97,{fuso:{body:"アルミバン（標準ドライ）",reefer:"三菱重工 TF410（冷凍）",digitacho:true,drarecorder:true}}),
   ]},
   {name:"タイヤ一括_オートバックス_春日井.pdf", vendor:"オートバックス法人", cat:"請求書", status:"未入力", lines:[
-    L("タイヤ一括購入（春日井拠点）","","修繕・維持費","2026-05-15",248000,1,{site:"春日井拠点"}),
+    L("タイヤ4本交換（一括）","名古屋100か5679","修繕・維持費","2026-05-15",248000,1),
   ]},
   {name:"板金塗装_中日本ボデー_202605.pdf", vendor:"中日本ボデー", cat:"請求書", status:"未入力", lines:[
     L("左サイドパネル 板金塗装","三河800さ901O","修繕・維持費","2026-05-22",78000,.73),
@@ -931,21 +936,19 @@ function ocrAmountCandidates(lines){
 function nowStamp(){const d=new Date();const p=n=>String(n).padStart(2,"0");
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;}
 
-/* 突合：明細の対象（車番/拠点）をロジポケマスタと照合 */
+/* 突合：明細の対象（車番）をロジポケマスタと照合 */
 function matchOf(l){
   const th=state.settings.matchThreshold;
-  if(l.kind==="共通"){const k=(l.site||"").trim();
-    if(!k) return "missing"; if((+l.confidence)<th) return "suspect"; return SITE_MASTER.has(k)?"existing":"new";}
   const p=(l.plate||"").trim();
   if(!p) return "missing"; if(MASTER.has(p)) return "existing"; if((+l.confidence)<th) return "suspect"; return "new";
 }
 function matchBadge(l){
-  const st=matchOf(l), v=l.kind!=="共通";
+  const st=matchOf(l);
   const m={
-    existing:{t:v?"既存車両に紐付け":"既存拠点に計上",fg:"var(--teal)",bg:"var(--tealSoft)",ic:I.check("#157F73",12,2.6)},
-    new:{t:v?"新規車両を作成":"新規拠点を作成",fg:"var(--amber)",bg:"var(--amberSoft)",ic:v?I.truck("#B87514",12):I.boxes("#B87514",12)},
+    existing:{t:"既存車両に紐付け",fg:"var(--teal)",bg:"var(--tealSoft)",ic:I.check("#157F73",12,2.6)},
+    new:{t:"新規車両を作成",fg:"var(--amber)",bg:"var(--amberSoft)",ic:I.truck("#B87514",12)},
     suspect:{t:"要確認：読み取り疑い",fg:"var(--alert)",bg:"var(--alertSoft)",ic:I.alert("#B23A2E",12)},
-    missing:{t:v?"車番が未入力":"拠点が未入力",fg:"var(--alert)",bg:"var(--alertSoft)",ic:I.alert("#B23A2E",12)},
+    missing:{t:"対象車両が未選択",fg:"var(--inkSoft)",bg:"#EEF0F3",ic:I.alert("#5A6472",12)},
   }[st];
   return `<span class="badge" style="color:${m.fg};background:${m.bg}">${m.ic}${m.t}</span>`;
 }
@@ -1303,7 +1306,7 @@ function finishUpload(){
     const id="d"+(docs.length+1)+"-"+Date.now()+"-"+newIds.length;
     docs.push({id, no:NEXT_NO++, deleted:false, reflectedAt:null,
       name:f.name, vendor:u.ocr?f.vendor:"", cat:f.cat, category:u.category||"", status:"未入力"});
-    const fl=u.ocr?f.lines:f.lines.map(l=>({...l,plate:"",site:"",vendor:""}));
+    const fl=u.ocr?f.lines:f.lines.map(l=>({...l,plate:"",vendor:""}));
     fl.forEach(l=>{ l.docId=id; LINES.push(l); });
     newIds.push(id);
   });
@@ -1386,15 +1389,13 @@ function renderPanel(){
   const cand=state.draft._ocr||[];
   const ro=isReflected?"readonly":"", dis=isReflected?"disabled":"";
   const lineCards=d.lines.map((l,idx)=>{
-    const v=l.kind!=="共通";
-    const targetFld=v
-      ? `<div class="fld"><label>対象車両（車番）</label>
-           <input class="in mono b-r" ${ro} value="${esc(l.plate)}" placeholder="（車両なし）" oninput="pnLine(${l.lid},'plate',this.value)"></div>`
-      : `<div class="fld"><label>拠点・機器</label>
-           <input class="in b-r" ${ro} value="${esc(l.site)}" placeholder="春日井拠点 など" oninput="pnLine(${l.lid},'site',this.value)"></div>`;
+    const targetFld=`<div class="fld"><label>対象車両（車番）</label>
+           <div class="sug-combo">
+             <input id="pn-plate-${l.lid}" class="in mono b-r" ${ro} value="${esc(l.plate)}" placeholder="（対象なし）" autocomplete="off" oninput="pnPlateInput(${l.lid},this.value)">
+             ${!isReflected?`<div class="sug-pop" id="pn-sug-${l.lid}">${plateSuggestHTML(l.lid,l.plate)}</div>`:''}
+           </div></div>`;
     return `<div class="line-card">
       <div class="lc-head"><span class="lc-no">明細 ${idx+1}</span>
-        <button class="btn-ghost" style="padding:3px 9px;font-size:11px" ${dis} onclick="pnToggleKind(${l.lid})">区分：${v?"車両":"拠点共通"}</button>
         <span class="match-badge" id="pn-badge-${l.lid}">${matchBadge(l)}</span></div>
       <div class="fld"><label>項目</label><input class="in b-g" ${ro} value="${esc(l.item)}" oninput="pnLine(${l.lid},'item',this.value)"></div>
       <div class="grid2">
@@ -1432,7 +1433,7 @@ function renderPanel(){
 function buildPreview(d){
   const sub=docTotal(d), tax=Math.round(sub*0.1), total=sub+tax;
   const lines=d.lines.map(l=>`<tr><td><span class="mk mk-g">${esc(l.item)}</span>
-      <div class="iv-veh"><span class="mk mk-r">${l.kind==="共通"?("拠点 "+(l.site||"—")):("車番 "+(l.plate||"—"))}</span></div></td>
+      <div class="iv-veh"><span class="mk mk-r">車番 ${esc(l.plate||"—")}</span></div></td>
     <td class="r">1</td><td class="r"><span class="mk mk-b">${yen(l.amount)}</span></td></tr>`).join("");
   const z=state.pvZoom/100;
   return `<div class="pv-page" style="transform:scale(${z})">
@@ -1453,7 +1454,7 @@ function downloadOriginal(docId){
   const d=docs.find(x=>x.id===docId)||state.draft; if(!d)return;
   try{
     const sub=docTotal(d),tax=Math.round(sub*0.1),total=sub+tax;
-    const rows=docLines(d).map(l=>`<tr><td>${esc(l.item)}</td><td>${l.kind==="共通"?("拠点 "+(l.site||"-")):("車番 "+(l.plate||"-"))}</td><td style="text-align:right">${yen(l.amount)}</td></tr>`).join("");
+    const rows=docLines(d).map(l=>`<tr><td>${esc(l.item)}</td><td>車番 ${esc(l.plate||"-")}</td><td style="text-align:right">${yen(l.amount)}</td></tr>`).join("");
     const html=`<!DOCTYPE html><html lang="ja"><meta charset="utf-8"><title>${esc(d.name)}</title>
 <body style="font-family:sans-serif;max-width:680px;margin:30px auto;color:#1B2330">
 <h1 style="text-align:center;letter-spacing:4px">請求書</h1>
@@ -1480,9 +1481,36 @@ function pnLine(lid,field,val){
   if(field==="amount"){l.amount=parseInt(String(val).replace(/[^0-9]/g,""))||0;
     const ck=document.getElementById("pn-amtck-"+lid); if(ck) ck.style.display=(state.draft._ocr||[]).includes(l.amount)?"":"none";}
   else l[field]=val;
-  if(field==="plate"||field==="site"){l.confidence=Math.max(l.confidence,.99);
-    const b=document.getElementById("pn-badge-"+lid); if(b)b.innerHTML=matchBadge(l);}
   refreshPreview();
+}
+/* 車番：2文字以上一致する登録車番の候補（一致順）＋「対象なし」 */
+function _lcsLen(a,b){ a=a||""; b=b||""; if(!a||!b) return 0; let best=0; const dp=Array(b.length+1).fill(0);
+  for(let i=1;i<=a.length;i++){ let prev=0; for(let j=1;j<=b.length;j++){ const tmp=dp[j];
+    dp[j]= a[i-1]===b[j-1] ? prev+1 : 0; if(dp[j]>best)best=dp[j]; prev=tmp; } }
+  return best; }
+function plateSuggestHTML(lid,val){
+  const v=(val||"").trim();
+  let html=`<div class="sug-opt none" onmousedown="pnPickPlate(${lid},'')">対象なし</div>`;
+  const matches=[...MASTER].map(p=>({p,s:_lcsLen(v,p)})).filter(x=>x.s>=2).sort((a,b)=>b.s-a.s);
+  html+=matches.map(x=>`<div class="sug-opt" onmousedown="pnPickPlate(${lid},'${esc(x.p)}')">${esc(x.p)}</div>`).join("");
+  if(matches.length===0 && v.length>=2) html+=`<div class="sug-empty">一致する登録車番がありません</div>`;
+  return html;
+}
+function pnPlateInput(lid,val){
+  const l=state.draft.lines.find(x=>x.lid===lid); if(!l)return;
+  l.plate=val; l.confidence=Math.max(l.confidence,.99);
+  const b=document.getElementById("pn-badge-"+lid); if(b)b.innerHTML=matchBadge(l);
+  const sug=document.getElementById("pn-sug-"+lid); if(sug)sug.innerHTML=plateSuggestHTML(lid,val);
+  refreshPreview();
+}
+function pnPickPlate(lid,plate){
+  const l=state.draft.lines.find(x=>x.lid===lid); if(!l)return;
+  l.plate=plate; l.confidence=Math.max(l.confidence,.99);
+  const inp=document.getElementById("pn-plate-"+lid); if(inp) inp.value=plate;
+  const b=document.getElementById("pn-badge-"+lid); if(b)b.innerHTML=matchBadge(l);
+  const sug=document.getElementById("pn-sug-"+lid); if(sug)sug.innerHTML=plateSuggestHTML(lid,plate);
+  refreshPreview();
+  if(inp) inp.blur();
 }
 /* OCR候補一覧から金額を選択（onmousedownでblurより先に発火） */
 function pnPickAmount(lid,amount){
@@ -1492,10 +1520,6 @@ function pnPickAmount(lid,amount){
   const ck=document.getElementById("pn-amtck-"+lid); if(ck) ck.style.display="";
   refreshPreview();
   if(inp) inp.blur();
-}
-function pnToggleKind(lid){
-  const l=state.draft.lines.find(x=>x.lid===lid); if(!l)return;
-  l.kind=l.kind==="共通"?"単車":"共通"; renderOverlay();
 }
 function savePanel(){
   const d=docs.find(x=>x.id===state.panelId); if(!d)return;
@@ -1509,18 +1533,13 @@ function savePanel(){
 
 /* ───── ロジポケ反映 ───── */
 function buildPlanFromLines(allLines){
-  const lines=[]; let vid=10290, sid=5400;
+  const lines=[]; let vid=10290;
   const ws=allLines.map(l=>({l,st:matchOf(l)}));
-  const vNew=ws.filter(x=>x.l.kind!=="共通"&&(x.st==="new"||x.st==="suspect")&&(x.l.plate||"").trim());
+  const vNew=ws.filter(x=>(x.st==="new"||x.st==="suspect")&&(x.l.plate||"").trim());
   [...new Set(vNew.map(x=>x.l.plate))].forEach(p=>{vid++;
     lines.push({phase:1,text:`POST /vehicles  新規車両マスタ ${p}`,ok:`→ vehicle_id: V-${vid} を発行`});
     vNew.filter(x=>x.l.plate===p).forEach(x=>lines.push({phase:2,text:`POST /costs  V-${vid} ← ${x.l.item}`,ok:`→ ${yen(x.l.amount)} を紐付け`}));});
-  const cNew=ws.filter(x=>x.l.kind==="共通"&&(x.st==="new"||x.st==="suspect")&&(x.l.site||"").trim());
-  [...new Set(cNew.map(x=>x.l.site))].forEach(sn=>{sid++;
-    lines.push({phase:1,text:`POST /sites  新規拠点マスタ ${sn}`,ok:`→ site_id: S-${sid} を発行`});
-    cNew.filter(x=>x.l.site===sn).forEach(x=>lines.push({phase:2,text:`POST /costs  S-${sid} ← ${x.l.item}`,ok:`→ ${yen(x.l.amount)} を計上`}));});
-  ws.filter(x=>x.l.kind!=="共通"&&x.st==="existing").forEach(x=>lines.push({phase:2,text:`POST /costs  ${x.l.plate} ← ${x.l.item}`,ok:`→ ${yen(x.l.amount)} を既存マスタに追記`}));
-  ws.filter(x=>x.l.kind==="共通"&&x.st==="existing").forEach(x=>lines.push({phase:2,text:`POST /costs  ${x.l.site} ← ${x.l.item}`,ok:`→ ${yen(x.l.amount)} を計上`}));
+  ws.filter(x=>x.st==="existing").forEach(x=>lines.push({phase:2,text:`POST /costs  ${x.l.plate} ← ${x.l.item}`,ok:`→ ${yen(x.l.amount)} を既存マスタに追記`}));
   return lines;
 }
 
@@ -1615,18 +1634,14 @@ function buildVehicles(catFilter, range){
     if(cf!=="all" && (d.category||"")!==cf) return;
     linesOf(d.id).forEach(l=>{
       if(!inR(l.inspectedAt)) return;
-      const kind=l.kind, target=kind==="共通"?(l.site||"未設定"):(l.plate||"未設定");
-      const key=(kind==="共通"?"S:":"V:")+target;
-      add(ensure(key,kind,target),{lid:l.lid,src:"doc",docId:d.id,item:l.item,cat:l.cat,date:l.inspectedAt,amount:+l.amount,vendor:d.vendor,doc:d.name,office:d.category,fuso:l.fuso});
+      const target=(l.plate||"未設定"), key="V:"+target;
+      add(ensure(key,"単車",target),{lid:l.lid,src:"doc",docId:d.id,item:l.item,cat:l.cat,date:l.inspectedAt,amount:+l.amount,vendor:d.vendor,doc:d.name,office:d.category,fuso:l.fuso});
     });
   });
   state.manualLines.forEach(m=>{ if(cf!=="all" && (m.office||"")!==cf) return; if(!inR(m.date)) return;
     add(ensure(m.vkey,m.kind,m.target),{lid:m.id,src:"manual",item:m.item,cat:m.cat,date:m.date,amount:+m.amount,vendor:m.vendor||"手動追加",doc:"手動追加"});
   });
-  return [...map.values()].sort((a,b)=>{
-    if(a.kind!==b.kind)return a.kind==="共通"?1:-1;
-    return b.total-a.total;
-  });
+  return [...map.values()].sort((a,b)=>b.total-a.total);
 }
 /* 車両内訳の編集（元データに反映） */
 function vehEditDocLine(docId,lid,field,val){
@@ -1690,7 +1705,7 @@ const CURRENT_USER="諏訪 尚杜";
 function logChange(e){ CHANGELOG.push(Object.assign({ts:nowStamp(),user:CURRENT_USER},e)); }
 /* デモ用の初期履歴（実在の車両・明細に紐付け、複数ユーザー・操作種別を用意） */
 function seedChangelog(){
-  const vs=buildVehicles("all").filter(v=>v.kind!=="共通"&&v.lines.length);
+  const vs=buildVehicles("all").filter(v=>v.lines.length);
   if(!vs.length) return;
   const tpl=[
     {ts:"2026-06-13 08:51:33",user:"諏訪 尚杜",action:"変更",fn:l=>`金額を ${yen(l.amount)} → ${yen(Math.round(l.amount*1.05/100)*100)} に変更`},
@@ -1765,12 +1780,11 @@ function renderVehEditModal(){
   let v=list.find(x=>x.key===key);
   if(!v){ const m=state.vehEditMeta||{key,kind:"単車",target:key.replace(/^[VS]:/,"")};
     v={key:m.key,kind:m.kind,target:m.target,total:0,byCat:{},count:0,last:"",lines:[],fuso:null}; }
-  const isV=v.kind!=="共通";
-  const isMaster=isV?MASTER.has(v.target):SITE_MASTER.has(v.target);
+  const isMaster=MASTER.has(v.target);
   const mtag=isMaster?`<span class="mtag exist">${I.check("#157F73",11,2.6)}既存マスタ</span>`
-                     :`<span class="mtag newv">${isV?I.truck("#B87514",11):I.boxes("#B87514",11)}新規作成</span>`;
+                     :`<span class="mtag newv">${I.truck("#B87514",11)}新規作成</span>`;
   const filterNote=state.vehCategoryFilter!=="all"?`<span class="ve-note">絞り込み中：${esc(state.vehCategoryFilter)}</span>`:"";
-  const titlePlate=`<span class="plate ${isV?"":"site"}" style="margin-right:9px">${esc(v.target)}</span>`;
+  const titlePlate=`<span class="plate" style="margin-right:9px">${esc(v.target)}</span>`;
 
   if(state.vehEditConfirm){
     const diff=vehEditDiff();
@@ -1953,7 +1967,7 @@ function setVehChartGran(g){ state.vehChartGran=g; refreshVehChart(); }
 function renderVehPanel(){
   const p=state.vehPanel; if(!p) return "";
   const v=buildVehicles(state.vehCategoryFilter).find(x=>x.key===p.key)||{key:p.key,kind:p.kind,target:p.target,total:0,byCat:{},count:0,last:"",lines:[],fuso:null};
-  const isV=v.kind!=="共通", isMaster=isV?MASTER.has(v.target):SITE_MASTER.has(v.target);
+  const isMaster=MASTER.has(v.target);
   const events=genVehEvents(v);
   let availCats=[...new Set(events.map(e=>e.cat))].sort((a,b)=>(v.byCat[b]||0)-(v.byCat[a]||0));
   if(availCats.includes("修繕・維持費")) availCats=["修繕・維持費",...availCats.filter(c=>c!=="修繕・維持費")];
@@ -1969,10 +1983,10 @@ function renderVehPanel(){
   const moreN=Math.max(0,events.length-18);
   const ins=vehInsight(events);
   const badgeCls={ok:'ok',warn:'warn',alert:'bad'}[ins.level], cardCls={ok:'',warn:'amber',alert:'alert'}[ins.level];
-  const mtag=isMaster?`<span class="mtag exist">${I.check("#157F73",11,2.6)}既存マスタ</span>`:`<span class="mtag newv">${isV?I.truck("#B87514",11):I.boxes("#B87514",11)}新規作成</span>`;
+  const mtag=isMaster?`<span class="mtag exist">${I.check("#157F73",11,2.6)}既存マスタ</span>`:`<span class="mtag newv">${I.truck("#B87514",11)}新規作成</span>`;
   return `<div class="panel-ovl ${state._ovFresh?'anim':''}" onclick="if(event.target===this)closeVehPanel()"><div class="vp ${state._ovFresh?'anim':''}">
     <div class="pn-head">
-      <span class="plate ${isV?'':'site'}">${esc(v.target)}</span>${mtag}
+      <span class="plate">${esc(v.target)}</span>${mtag}
       <div class="pn-actions">
         <button class="btn-ghost" onclick="closeVehPanel();openVehEdit('${v.key}','${v.kind}','${esc(v.target)}')">${I.pencil("#5A6472",13)} 明細を編集</button>
         <button class="icon-btn" style="border-color:var(--line)" title="閉じる" onclick="closeVehPanel()">${I.x("#5A6472",16)}</button>
@@ -1980,7 +1994,7 @@ function renderVehPanel(){
     </div>
     <div class="vp-body">
       <div class="vp-hero">
-        <div>${isV&&v.fuso?`<div class="vp-spec">${esc(v.fuso.body||'')}${v.fuso.reefer&&v.fuso.reefer!=="なし"?" / "+esc(v.fuso.reefer):""}</div>`:''}
+        <div>${v.fuso?`<div class="vp-spec">${esc(v.fuso.body||'')}${v.fuso.reefer&&v.fuso.reefer!=="なし"?" / "+esc(v.fuso.reefer):""}</div>`:''}
           <div class="vp-spec">${v.count}明細 ・ 最終発生 ${v.last||'—'}</div></div>
         <div class="vp-total"><div class="l">累計コスト</div><div class="v">${yen(v.total)}</div></div>
       </div>
@@ -2059,14 +2073,14 @@ function renderVehCal(){
 function renderVehicles(){
   const vehRange=(state.vehDateStart&&state.vehDateEnd)?{start:state.vehDateStart,end:state.vehDateEnd}:null;
   let veh=buildVehicles(state.vehCategoryFilter, vehRange);
-  const vehicles=veh.filter(v=>v.kind!=="共通");
+  const vehicles=veh;
   const grand=veh.reduce((s,v)=>s+v.total,0);
   const newCount=vehicles.filter(v=>!MASTER.has(v.target)).length;
   /* 並び替え */
   if(state.vehSort.key){
     const dir=state.vehSort.dir==="asc"?1:-1;
     const val=v=>({target:v.target,
-      master:(MASTER.has(v.target)||SITE_MASTER.has(v.target))?1:0,
+      master:MASTER.has(v.target)?1:0,
       total:v.total,last:v.last,count:v.count})[state.vehSort.key];
     veh=veh.slice().sort((a,b)=>{const va=val(a),vb=val(b);
       if(va<vb)return -dir; if(va>vb)return dir; return b.total-a.total;});
@@ -2119,18 +2133,17 @@ function renderVehicles(){
   const pageVeh=veh.slice(start,start+per);
 
   const rows=pageVeh.map(v=>{
-    const isV=v.kind!=="共通";
-    const isMaster=isV?MASTER.has(v.target):SITE_MASTER.has(v.target);
+    const isMaster=MASTER.has(v.target);
     const mtag=isMaster?`<span class="mtag exist">${I.check("#157F73",11,2.6)}既存マスタ</span>`
-                       :`<span class="mtag newv">${isV?I.truck("#B87514",11):I.boxes("#B87514",11)}新規作成</span>`;
+                       :`<span class="mtag newv">${I.truck("#B87514",11)}新規作成</span>`;
     const cats=Object.keys(v.byCat).sort((a,b)=>v.byCat[b]-v.byCat[a]);
     const bar=`<div class="bar">${cats.map(c=>{const s=CAT_STYLE[c]||CAT_STYLE["税金"];
       return `<span style="width:${(v.byCat[c]/v.total*100).toFixed(1)}%;background:${s.fg}"></span>`;}).join("")}</div>
       <div class="breakdown">${cats.map(c=>{const s=CAT_STYLE[c]||CAT_STYLE["税金"];
       return `<span class="bd"><span class="sw" style="background:${s.fg}"></span>${esc(c)} ${yen(v.byCat[c])}</span>`;}).join("")}</div>`;
     return `<tr class="vrow" onclick="openVehPanel('${v.key}','${v.kind}','${esc(v.target)}')">
-      <td><span class="plate ${isV?"":"site"}">${esc(v.target)}</span>
-        ${isV&&v.fuso?`<div style="font-size:10.5px;color:var(--inkSoft);margin-top:5px">${esc(v.fuso.body)}${v.fuso.reefer&&v.fuso.reefer!=="なし"?" / "+esc(v.fuso.reefer):""}</div>`:""}</td>
+      <td><span class="plate">${esc(v.target)}</span>
+        ${v.fuso?`<div style="font-size:10.5px;color:var(--inkSoft);margin-top:5px">${esc(v.fuso.body)}${v.fuso.reefer&&v.fuso.reefer!=="なし"?" / "+esc(v.fuso.reefer):""}</div>`:""}</td>
       <td>${mtag}</td>
       <td style="min-width:200px">${bar}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--inkSoft)">${v.last}<div style="margin-top:3px">${v.count}明細</div></td>
@@ -2140,7 +2153,7 @@ function renderVehicles(){
   }).join("");
 
   const table=`<div class="veh-card"><div class="tscroll"><table class="vt">
-    <thead><tr>${thVeh('target','車番・拠点')}${thVeh('master','マスタ')}<th>コスト内訳</th>${thVeh('last','最終発生 / 明細数')}${thVeh('total','累計コスト','r')}<th style="text-align:right">操作</th></tr></thead>
+    <thead><tr>${thVeh('target','車番')}${thVeh('master','マスタ')}<th>コスト内訳</th>${thVeh('last','最終発生 / 明細数')}${thVeh('total','累計コスト','r')}<th style="text-align:right">操作</th></tr></thead>
     <tbody>${rows}</tbody></table></div>${pager("veh",info)}</div>`;
   return head+filterBar+kpis+table;
 }
