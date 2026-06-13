@@ -950,7 +950,9 @@ function catPill(c){const s=CAT_STYLE[c]||CAT_STYLE["税金"];return `<span clas
 const STATUS_META={
   "未入力":{cls:"st-todo"}, "入力済み":{cls:"st-done"}, "反映済み":{cls:"st-reflected"},
 };
-function statusChip(s){const m=STATUS_META[s];return `<span class="st ${m.cls}"><span class="dot"></span>${s}</span>`;}
+function statusChip(s){const m=STATUS_META[s];
+  const lock = s==="反映済み" ? ` <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>` : "";
+  return `<span class="st ${m.cls}"><span class="dot"></span>${s}${lock}</span>`;}
 
 /* ───── 状態 ───── */
 let state={
