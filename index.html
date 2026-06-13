@@ -1638,8 +1638,7 @@ function renderSplitUploadBody(tabs){
         <div class="dz-text">ファイルをドラッグ＆ドロップ、または</div>
         <button class="btn-select" onclick="event.stopPropagation();splitPickFile()">ファイルを選択</button></div>`;
   return `${tabs}
-    <div class="sp-desc">PDFファイルまたは、PDFをまとめたZIPファイルから一括で書類を作成することができます。<br>送付のための送付先コードや、金額・日付などの書類の情報は、ファイル名に対応する行を持つCSVファイルや、OCRにて補完することができます。
-      <a class="sp-guide" onclick="startGuide()">${guideHelpIcon()} ガイド</a></div>
+    <div class="sp-desc">PDFファイルまたは、PDFをまとめたZIPファイルから一括で書類を作成することができます。<br>送付のための送付先コードや、金額・日付などの書類の情報は、ファイル名に対応する行を持つCSVファイルや、OCRにて補完することができます。</div>
     <div class="sp-field">
       <div class="sp-flabel">書類の作成方法 <span class="sp-req">*</span></div>
       <div class="sp-radios">
@@ -1743,7 +1742,6 @@ function renderSplitSettingsModal(){
     </div>`:"";
   return `<div class="ovl" onclick="if(event.target===this)splitCloseSettings()"><div class="modal spm">
     <div class="m-head"><span class="t">PDF分割設定</span>
-      <a class="sp-guide" style="margin-left:10px" onclick="startGuide()">${guideHelpIcon()} ガイド</a>
       <button class="x" style="margin-left:auto" onclick="splitCloseSettings()">${I.x("#5A6472",18)}</button></div>
     <div class="spm-desc">PDFファイルを、任意の位置でファイル分割したり、特定のページを取り込まないなどが設定できます。<br>プレビューを拡大して確認したい場合は、右下のアイコンをクリックください。<br><br>分割のルールについては <span class="spm-link">自動分割設定</span> より設定してください。</div>
     <div class="spm-bar">
