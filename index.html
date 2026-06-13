@@ -491,6 +491,65 @@
   .pg-btn:hover:not(:disabled){border-color:var(--greenLine);color:var(--greenDark);background:var(--greenSoft)}
   .pg-btn:disabled{color:#C2C9C0;cursor:not-allowed;background:#F7F8F5}
   .pg-cur{font-family:var(--mono);font-weight:700;color:var(--ink);min-width:54px;text-align:center}
+
+  /* ───── 車両分析サイドパネル ───── */
+  .vp{width:min(880px,96vw);background:var(--card);height:100vh;display:flex;flex-direction:column;box-shadow:-12px 0 40px rgba(0,0,0,.22);animation:slideIn .22s cubic-bezier(.22,.61,.36,1)}
+  .vp .plate{font-family:var(--mono);font-weight:800;font-size:14px;color:var(--greenDark);background:#fff;border:1.5px solid var(--greenLine);border-radius:7px;padding:4px 11px;letter-spacing:.5px}
+  .vp .plate.site{color:var(--inkSoft);border-color:var(--line);font-family:var(--sans)}
+  .vp-body{flex:1;overflow-y:auto;padding:20px 22px}
+  .vp-hero{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+  .vp-spec{font-size:11.5px;color:var(--inkSoft);margin-top:4px}
+  .vp-total{margin-left:auto;text-align:right}
+  .vp-total .l{font-size:11px;color:var(--inkSoft);font-weight:700}
+  .vp-total .v{font-family:var(--mono);font-weight:800;font-size:var(--fs-key);color:var(--ink)}
+  .vp-sec{font-size:11px;font-weight:800;color:var(--inkSoft);letter-spacing:.4px;margin:var(--space-key) 0 var(--space-det);display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .vp-sec .sp{flex:1}
+  .vp-ctrl{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--inkSoft);font-weight:700}
+  .vp-ctrl select{font-family:var(--sans);font-size:12.5px;font-weight:700;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:#fff;cursor:pointer;outline:none}
+  .gran{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+  .gran button{background:#fff;border:none;padding:6px 12px;font-size:12px;font-weight:700;color:var(--inkSoft);cursor:pointer;border-right:1px solid var(--line)}
+  .gran button:last-child{border-right:none}
+  .gran button.on{background:var(--greenSoft);color:var(--greenDark)}
+  .vp-chartcard{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--panel)}
+  .vp-chart-h{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+  .vp-chart-h .ct{font-size:13.5px;font-weight:800;color:var(--ink)}
+  .vp-chart-h .rg{font-size:11px;color:var(--inkSoft);margin-left:auto;font-family:var(--mono)}
+  .chart svg{display:block;width:100%;height:auto}
+  .chart .gl{stroke:var(--lineSoft);stroke-width:1}
+  .chart .axt{fill:var(--inkFaint);font-size:9px;font-family:var(--mono)}
+  .chart .ar{fill:var(--green);opacity:.10;stroke:none}
+  .chart .ln{fill:none;stroke:var(--green);stroke-width:2;stroke-linejoin:round}
+  .chart .dot{fill:#fff;stroke:var(--green);stroke-width:2}
+  .chart .vlab{fill:var(--greenDark);font-size:9.5px;font-family:var(--mono);font-weight:700;text-anchor:middle}
+  .chart .bar{fill:#C8D7CE}
+  .chart .bar.cur{fill:var(--green)}
+  .chart-empty{text-align:center;color:var(--inkFaint);font-size:12px;padding:34px 0}
+  .tl{position:relative;margin-top:2px;padding-left:16px}
+  .tl::before{content:"";position:absolute;left:5px;top:5px;bottom:6px;width:2px;background:var(--lineSoft)}
+  .tl-item{position:relative;padding:0 0 var(--space-rel) 8px}
+  .tl-item:last-child{padding-bottom:0}
+  .tl-dot{position:absolute;left:-15px;top:3px;width:10px;height:10px;border-radius:999px;background:#fff;border:2px solid var(--green)}
+  .tl-item.manual .tl-dot{border-color:var(--amber)}
+  .tl-d{font-size:11px;font-family:var(--mono);color:var(--inkSoft)}
+  .tl-row{display:flex;align-items:center;gap:8px;margin-top:2px}
+  .tl-row .it{font-size:13px;font-weight:700;color:var(--ink)}
+  .tl-amt{margin-left:auto;font-family:var(--mono);font-weight:800;font-size:13px;color:var(--ink)}
+  .tl-tag{font-size:10px;font-weight:800;color:var(--greenDark);background:var(--greenSoft);border:1px solid var(--greenLine);border-radius:5px;padding:1px 7px}
+  .tl-tag.m{color:var(--amber);background:var(--amberSoft);border-color:rgba(184,117,20,.3)}
+  .tl-more{font-size:11.5px;color:var(--inkSoft);padding:6px 0 0 8px}
+  .ai{border:1px solid var(--greenLine);border-radius:12px;padding:16px;background:linear-gradient(180deg,#F3FBF7,#fff)}
+  .ai.amber{border-color:rgba(184,117,20,.4);background:linear-gradient(180deg,#FDF6E9,#fff)}
+  .ai.alert{border-color:rgba(178,58,46,.4);background:linear-gradient(180deg,#FBEEEC,#fff)}
+  .ai-h{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+  .ai-h .ttl{font-size:13px;font-weight:800;color:var(--ink)}
+  .ai-badge{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;border-radius:999px;padding:5px 13px}
+  .ai-badge.ok{color:var(--greenDark);background:var(--greenSoft);border:1px solid var(--greenLine)}
+  .ai-badge.warn{color:var(--amber);background:var(--amberSoft);border:1px solid rgba(184,117,20,.3)}
+  .ai-badge.bad{color:var(--alert);background:var(--alertSoft);border:1px solid rgba(178,58,46,.3)}
+  .ai-txt{font-size:12.5px;color:var(--ink);line-height:1.75}
+  .ai-metrics{display:flex;gap:22px;flex-wrap:wrap;margin-top:11px;padding-top:11px;border-top:1px solid var(--lineSoft)}
+  .ai-m .l{font-size:10.5px;color:var(--inkSoft);font-weight:700}
+  .ai-m .v{font-family:var(--mono);font-weight:800;font-size:14px;color:var(--ink);margin-top:2px}
 </style>
 </head>
 <body>
@@ -818,6 +877,7 @@ let state={
   upload:{open:false, files:[], ocr:true, processing:{active:false,pct:0,label:""}, _timer:null},
   vehExpanded:new Set(),
   vehEditKey:null, vehEditMeta:null, vehEditConfirm:false, vehEditSnapshot:null, vehViewDocId:null, vehViewLid:null,
+  vehPanel:null, vehChartCat:null, vehChartGran:"month",
   manualLines:[],
   justUploaded:new Set(),
   settings:{ companyName:"サンプル物流株式会社", defaultOcr:true, matchThreshold:0.85,
@@ -1569,6 +1629,181 @@ function renderVehEditModal(){
     <div class="m-foot"><button class="btn-green" onclick="vehEditAskConfirm()">${I.check("#fff",14,3)} 完了</button></div>
   </div></div>`;
 }
+/* ───── 車両分析サイドパネル ───── */
+function _hash(s){ let h=2166136261>>>0; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function _mulberry(seed){ let a=seed>>>0; return ()=>{ a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+/* コスト分類ごとの月次目安額・発生特性（デモ用の決定論ジェネレータ） */
+const CAT_BASE={
+  "燃料費":{amt:52000,freq:1.0,jit:.28},
+  "修繕・維持費":{amt:36000,freq:.55,jit:.5,spike:.12,spikeAmt:118000},
+  "通行料":{amt:24000,freq:.92,jit:.3},
+  "保険料":{amt:13500,freq:.16,jit:.12},
+  "調達コスト":{amt:82000,freq:1.0,jit:.05},
+  "税金":{amt:39500,freq:0,jit:.1,yearMonth:5},
+};
+/* 実明細＋約3年分の決定論的な履歴イベントを生成（実データのある月×分類は実データを優先） */
+function genVehEvents(v){
+  const rnd=_mulberry(_hash("veh:"+v.target));
+  const slope=(rnd()*0.03)-0.006; // 車両ごとに修繕費の増減傾向を変える
+  const cats=Object.keys(v.byCat).length?Object.keys(v.byCat):["修繕・維持費","燃料費"];
+  const real=v.lines.map(l=>({date:l.date,cat:l.cat,amount:+l.amount||0,item:l.item,vendor:l.vendor||"",src:l.src==="manual"?"manual":"doc"}));
+  const realKey=new Set(real.map(r=>(r.date||"").slice(0,7)+"|"+r.cat));
+  const ev=real.slice();
+  for(let back=35;back>=0;back--){
+    const d=new Date(2026,5-back,1);
+    const ym=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+    const mi=35-back;
+    cats.forEach(cat=>{
+      const b=CAT_BASE[cat]; if(!b) return;
+      if(realKey.has(ym+"|"+cat)) return;
+      if(b.yearMonth){ if(d.getMonth()+1!==b.yearMonth) return; }
+      else if(rnd()>b.freq) return;
+      const items=GEN_ITEMS[cat]||["コスト"];
+      let amt;
+      if(b.spike && rnd()<b.spike){ amt=b.spikeAmt*(0.8+rnd()*0.5); }
+      else { const trend=Math.max(.6,1+mi*slope); amt=b.amt*trend*(1-b.jit+rnd()*b.jit*2); }
+      const vn=(GEN_VENDORS.find(g=>g.cat.includes(cat))||{}).n||"";
+      ev.push({date:`${ym}-${String(1+Math.floor(rnd()*27)).padStart(2,"0")}`,cat,amount:Math.max(500,Math.round(amt/100)*100),item:items[Math.floor(rnd()*items.length)],vendor:vn,src:"doc"});
+    });
+  }
+  return ev.sort((a,b)=>a.date<b.date?1:-1);
+}
+function _niceCeil(v){ if(v<=0)return 1; const p=Math.pow(10,Math.floor(Math.log10(v))); const n=v/p; const m=n<=1?1:n<=2?2:n<=5?5:10; return m*p; }
+/* 指定分類・粒度（日/週/月/年）で連続バケットに集計 */
+function vehChartData(events,cat,gran){
+  const today=new Date(2026,5,13);
+  const filt=events.filter(e=>cat==="all"||e.cat===cat);
+  const wkStart=dt=>{ const x=new Date(dt); const off=(x.getDay()+6)%7; x.setDate(x.getDate()-off); return x; };
+  const keyOf=date=>{ const [y,m,dd]=date.split("-").map(Number);
+    if(gran==="year") return String(y);
+    if(gran==="month") return `${y}-${String(m).padStart(2,"0")}`;
+    if(gran==="day") return date;
+    const w=wkStart(new Date(y,m-1,dd)); return `${w.getFullYear()}-${String(w.getMonth()+1).padStart(2,"0")}-${String(w.getDate()).padStart(2,"0")}`; };
+  const map={}; filt.forEach(e=>{ const k=keyOf(e.date); map[k]=(map[k]||0)+e.amount; });
+  const keys=[],labels=[];
+  if(gran==="year"){ const cy=today.getFullYear(); for(let y=cy-2;y<=cy;y++){keys.push(String(y));labels.push(y+"年");} }
+  else if(gran==="month"){ for(let i=11;i>=0;i--){ const d=new Date(2026,5-i,1); keys.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`); labels.push((d.getMonth()+1)+"月"); } }
+  else if(gran==="week"){ const b=wkStart(today); for(let i=15;i>=0;i--){ const dt=new Date(b); dt.setDate(dt.getDate()-i*7); keys.push(`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`); labels.push(`${dt.getMonth()+1}/${dt.getDate()}`); } }
+  else { for(let i=29;i>=0;i--){ const dt=new Date(today); dt.setDate(dt.getDate()-i); keys.push(`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`); labels.push(`${dt.getMonth()+1}/${dt.getDate()}`); } }
+  return {labels,vals:keys.map(k=>map[k]||0),gran};
+}
+function buildVehChart(cd){
+  const W=620,H=200,PL=50,PR=14,PT=14,PB=26,iw=W-PL-PR,ih=H-PT-PB;
+  const n=cd.vals.length,max=Math.max(1,...cd.vals),nm=_niceCeil(max);
+  const ylab=x=> x>=10000?(Math.round(x/1000)/10)+"万":String(x);
+  let grid=""; [0,.5,1].forEach(f=>{ const gy=PT+ih*(1-f); grid+=`<line class="gl" x1="${PL}" y1="${gy.toFixed(1)}" x2="${W-PR}" y2="${gy.toFixed(1)}"/><text class="axt" x="${PL-6}" y="${(gy+3).toFixed(1)}" text-anchor="end">${ylab(Math.round(nm*f))}</text>`; });
+  if(cd.gran==="year"){
+    const bw=Math.min(64,iw/n*0.5);
+    const bars=cd.vals.map((v,i)=>{ const cx=PL+iw*(i+0.5)/n,bh=ih*v/nm,cur=i===n-1;
+      return `<rect class="bar ${cur?'cur':''}" x="${(cx-bw/2).toFixed(1)}" y="${(PT+ih-bh).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="3"/>`+
+        (v?`<text class="vlab" x="${cx.toFixed(1)}" y="${(PT+ih-bh-5).toFixed(1)}">${yen(v)}</text>`:'')+
+        `<text class="axt" x="${cx.toFixed(1)}" y="${H-9}" text-anchor="middle">${cd.labels[i]}</text>`; }).join("");
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${grid}${bars}</svg>`;
+  }
+  const X=i=> n<=1?PL+iw/2:PL+iw*i/(n-1), Y=v=>PT+ih*(1-v/nm);
+  const pts=cd.vals.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+  const area=`${X(0).toFixed(1)},${(PT+ih).toFixed(1)} ${pts} ${X(n-1).toFixed(1)},${(PT+ih).toFixed(1)}`;
+  const dots=cd.vals.map((v,i)=>`<circle class="dot" cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3"/>`).join("");
+  const step=Math.max(1,Math.ceil(n/13));
+  const xlabs=cd.labels.map((l,i)=>(i%step===0||i===n-1)?`<text class="axt" x="${X(i).toFixed(1)}" y="${H-9}" text-anchor="middle">${l}</text>`:'').join("");
+  const li=n-1,lv=cd.vals[li];
+  const lastLab=lv?`<text class="vlab" x="${X(li).toFixed(1)}" y="${(Y(lv)-7).toFixed(1)}" text-anchor="${n>1?'end':'middle'}">${yen(lv)}</text>`:'';
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${grid}<polygon class="ar" points="${area}"/><polyline class="ln" points="${pts}"/>${dots}${lastLab}${xlabs}</svg>`;
+}
+/* AIインサイト：修繕・維持費の水準と前年比トレンドから判定 */
+function vehInsight(events){
+  const f=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-01`;
+  const rStart=f(new Date(2026,5-12,1)), pStart=f(new Date(2026,5-24,1));
+  const maint=events.filter(e=>e.cat==="修繕・維持費");
+  const recent=maint.filter(e=>e.date>=rStart).reduce((s,e)=>s+e.amount,0);
+  const prior=maint.filter(e=>e.date>=pStart&&e.date<rStart).reduce((s,e)=>s+e.amount,0);
+  const totalRecent=events.filter(e=>e.date>=rStart).reduce((s,e)=>s+e.amount,0);
+  const ratio=prior>0?recent/prior:(recent>0?1.5:1);
+  const pct=Math.round((ratio-1)*100);
+  let level,judge,txt;
+  if(recent>=420000 && ratio>=1.4){ level="alert"; judge="買い替え推奨";
+    txt=`直近1年の修繕・維持費は <b>${yen(recent)}</b>（前年比 約${pct>=0?'+':''}${pct}%）と高水準かつ増加傾向が顕著です。今後も整備コストの上昇が見込まれるため、車両更新（買い替え）の検討を推奨します。`; }
+  else if(ratio>=1.18 || recent>=240000){ level="warn"; judge="精密点検";
+    txt=`直近1年の修繕・維持費は <b>${yen(recent)}</b>（前年比 約${pct>=0?'+':''}${pct}%）です。部品摩耗の進行が疑われます。早めの精密点検を推奨します。`; }
+  else { level="ok"; judge="継続稼働";
+    txt=`直近1年の修繕・維持費は <b>${yen(recent)}</b>（前年比 約${pct>=0?'+':''}${pct}%）で安定しています。大きな異常傾向は見られず、このまま継続稼働で問題ありません。`; }
+  return {level,judge,txt,recent,pct,totalRecent};
+}
+function openVehPanel(key,kind,target){
+  state.vehPanel={key,kind,target};
+  const v=buildVehicles(state.vehCategoryFilter).find(x=>x.key===key);
+  const cats=v?Object.keys(v.byCat).sort((a,b)=>v.byCat[b]-v.byCat[a]):[];
+  state.vehChartCat=cats[0]||"修繕・維持費"; state.vehChartGran="month";
+  renderOverlay();
+}
+function closeVehPanel(){ state.vehPanel=null; renderOverlay(); }
+function setVehChartCat(c){ state.vehChartCat=c; renderOverlay(); }
+function setVehChartGran(g){ state.vehChartGran=g; renderOverlay(); }
+function renderVehPanel(){
+  const p=state.vehPanel; if(!p) return "";
+  const v=buildVehicles(state.vehCategoryFilter).find(x=>x.key===p.key)||{key:p.key,kind:p.kind,target:p.target,total:0,byCat:{},count:0,last:"",lines:[],fuso:null};
+  const isV=v.kind!=="共通", isMaster=isV?MASTER.has(v.target):SITE_MASTER.has(v.target);
+  const events=genVehEvents(v);
+  const availCats=[...new Set(events.map(e=>e.cat))].sort((a,b)=>(v.byCat[b]||0)-(v.byCat[a]||0));
+  if(!availCats.includes(state.vehChartCat)) state.vehChartCat=availCats[0]||"修繕・維持費";
+  const cat=state.vehChartCat, gran=state.vehChartGran;
+  const cd=vehChartData(events,cat,gran);
+  const chart=cd.vals.some(x=>x>0)?`<div class="chart">${buildVehChart(cd)}</div>`:`<div class="chart-empty">この期間のデータはありません</div>`;
+  const granBtns=[["day","日"],["week","週"],["month","月"],["year","年"]].map(([g,l])=>`<button class="${gran===g?'on':''}" onclick="setVehChartGran('${g}')">${l}</button>`).join("");
+  const catOpts=availCats.map(c=>`<option ${c===cat?'selected':''}>${esc(c)}</option>`).join("");
+  const rangeNote={day:"直近30日",week:"直近16週",month:"直近12ヶ月",year:"直近3年"}[gran];
+  const chartType=gran==="year"?"棒グラフ":"折れ線グラフ";
+  const tl=events.slice(0,18).map(e=>{ const m=e.src==="manual";
+    return `<div class="tl-item ${m?'manual':''}"><span class="tl-dot"></span>
+      <div class="tl-d">${e.date}</div>
+      <div class="tl-row"><span class="it">${esc(e.item)}</span>${catPill(e.cat)}<span class="tl-amt">${yen(e.amount)}</span></div>
+      <div style="margin-top:4px"><span class="tl-tag ${m?'m':''}">${m?'手動追加':'請求書より自動記録'}</span>${e.vendor?` <span style="font-size:10.5px;color:var(--inkSoft)">${esc(e.vendor)}</span>`:''}</div>
+    </div>`; }).join("");
+  const moreN=Math.max(0,events.length-18);
+  const ins=vehInsight(events);
+  const badgeCls={ok:'ok',warn:'warn',alert:'bad'}[ins.level], cardCls={ok:'',warn:'amber',alert:'alert'}[ins.level];
+  const mtag=isMaster?`<span class="mtag exist">${I.check("#157F73",11,2.6)}既存マスタ</span>`:`<span class="mtag newv">${isV?I.truck("#B87514",11):I.boxes("#B87514",11)}新規作成</span>`;
+  return `<div class="panel-ovl" onclick="if(event.target===this)closeVehPanel()"><div class="vp">
+    <div class="pn-head">
+      <span class="plate ${isV?'':'site'}">${esc(v.target)}</span>${mtag}
+      <div class="pn-actions">
+        <button class="btn-ghost" onclick="closeVehPanel();openVehEdit('${v.key}','${v.kind}','${esc(v.target)}')">${I.pencil("#5A6472",13)} 明細を編集</button>
+        <button class="icon-btn" style="border-color:var(--line)" title="閉じる" onclick="closeVehPanel()">${I.x("#5A6472",16)}</button>
+      </div>
+    </div>
+    <div class="vp-body">
+      <div class="vp-hero">
+        <div>${isV&&v.fuso?`<div class="vp-spec">${esc(v.fuso.body||'')}${v.fuso.reefer&&v.fuso.reefer!=="なし"?" / "+esc(v.fuso.reefer):""}</div>`:''}
+          <div class="vp-spec">${v.count}明細 ・ 最終発生 ${v.last||'—'}</div></div>
+        <div class="vp-total"><div class="l">累計コスト</div><div class="v">${yen(v.total)}</div></div>
+      </div>
+
+      <div class="vp-sec">${I.db("#5A6472",14)} コスト推移<span class="sp"></span>
+        <span class="vp-ctrl">分類 <select onchange="setVehChartCat(this.value)">${catOpts}</select></span>
+        <span class="gran">${granBtns}</span>
+      </div>
+      <div class="vp-chartcard">
+        <div class="vp-chart-h"><span class="ct">${esc(cat)}の${chartType}</span><span class="rg">${rangeNote}</span></div>
+        ${chart}
+      </div>
+
+      <div class="vp-sec">${I.docs("#5A6472",14)} 整備・コスト履歴</div>
+      <div class="tl">${tl||'<div class="chart-empty">履歴がありません</div>'}</div>
+      ${moreN>0?`<div class="tl-more">ほか ${moreN}件…</div>`:''}
+
+      <div class="vp-sec">AIインサイト</div>
+      <div class="ai ${cardCls}">
+        <div class="ai-h">${I.db("#16A571",16)}<span class="ttl">車両状況の自動診断</span><span class="ai-badge ${badgeCls}">${ins.judge}</span></div>
+        <div class="ai-txt">${ins.txt}</div>
+        <div class="ai-metrics">
+          <div class="ai-m"><div class="l">直近1年の修繕・維持費</div><div class="v">${yen(ins.recent)}</div></div>
+          <div class="ai-m"><div class="l">前年比</div><div class="v">${ins.pct>=0?'+':''}${ins.pct}%</div></div>
+          <div class="ai-m"><div class="l">直近1年の総コスト</div><div class="v">${yen(ins.totalRecent)}</div></div>
+        </div>
+      </div>
+    </div>
+  </div></div>`;
+}
 function renderVehicles(){
   let veh=buildVehicles(state.vehCategoryFilter);
   const vehicles=veh.filter(v=>v.kind!=="共通");
@@ -1623,7 +1858,7 @@ function renderVehicles(){
       return `<span style="width:${(v.byCat[c]/v.total*100).toFixed(1)}%;background:${s.fg}"></span>`;}).join("")}</div>
       <div class="breakdown">${cats.map(c=>{const s=CAT_STYLE[c]||CAT_STYLE["税金"];
       return `<span class="bd"><span class="sw" style="background:${s.fg}"></span>${esc(c)} ${yen(v.byCat[c])}</span>`;}).join("")}</div>`;
-    return `<tr class="vrow" onclick="openVehEdit('${v.key}','${v.kind}','${esc(v.target)}')">
+    return `<tr class="vrow" onclick="openVehPanel('${v.key}','${v.kind}','${esc(v.target)}')">
       <td><span class="plate ${isV?"":"site"}">${esc(v.target)}</span>
         ${isV&&v.fuso?`<div style="font-size:10.5px;color:var(--inkSoft);margin-top:5px">${esc(v.fuso.body)}${v.fuso.reefer&&v.fuso.reefer!=="なし"?" / "+esc(v.fuso.reefer):""}</div>`:""}</td>
       <td>${mtag}</td>
@@ -1748,6 +1983,7 @@ function renderOverlay(){
   const ov=document.getElementById("overlay");
   if(state.upload.open) ov.innerHTML=renderUploadModal();
   else if(state.panelId){ ov.innerHTML=renderPanel(); state.panelJustOpened=false; }
+  else if(state.vehPanel) ov.innerHTML=renderVehPanel();
   else if(state.vehEditKey) ov.innerHTML=renderVehEditModal();
   else ov.innerHTML="";
 }
