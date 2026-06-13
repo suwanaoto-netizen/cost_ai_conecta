@@ -387,6 +387,8 @@
   .vt thead th{position:sticky;top:0;z-index:2;background:#F3F5F2;font-size:11px;font-weight:800;color:var(--inkSoft);letter-spacing:.3px;white-space:nowrap;box-shadow:inset 0 -1px 0 var(--line)}
   .vt tbody tr.vrow{cursor:pointer}
   .vt tbody tr.vrow:hover{background:#F6FBF8}
+  .vt tbody tr.vrow.is-trash{cursor:default}
+  .vt tbody tr.vrow.is-trash:hover{background:transparent}
   .vt .plate{display:inline-block;font-family:var(--mono);font-weight:800;font-size:13px;color:var(--ink);letter-spacing:.5px}
   .vt .r{text-align:right;font-family:var(--mono);font-weight:700;white-space:nowrap}
   .vt .total{font-size:15px;color:var(--ink)}
@@ -993,6 +995,7 @@ let state={
   vehExpanded:new Set(),
   vehEditKey:null, vehEditMeta:null, vehEditConfirm:false, vehEditSnapshot:null, vehViewDocId:null, vehViewLid:null,
   vehPanel:null, vehChartCat:null, vehChartGran:"month",
+  vehTrash:new Set(), vehTrashView:false, vehTrashAction:null,
   changelogOpen:false, changelogSeenCount:0, vehEditHighlight:null,
   vehDateStart:null, vehDateEnd:null, vehCalOpen:false, vehCalYM:"2026-06",
   reflectConfirm:null,
@@ -1775,16 +1778,22 @@ function openChangelog(){ state.changelogSeenCount=CHANGELOG.length; state.chang
 function closeChangelog(){ state.changelogOpen=false; renderOverlay(); }
 function gotoChange(idx){ const e=CHANGELOG[idx]; if(!e) return;
   state.changelogOpen=false;
+  if(e.vehTrash){ // ゴミ箱への移動／復元はコスト一覧（該当ビュー）へ移動
+    state.view="vehicles"; state.vehTrashView=state.vehTrash.has(e.vehKey); state.vehPage=1; render(); return;
+  }
   openVehEdit(e.vehKey,e.kind,e.vehTarget,e.lid);
   setTimeout(()=>{ const el=document.getElementById("vdrow-"+e.lid); if(el) el.scrollIntoView({block:"center",behavior:"smooth"}); },70);
 }
-const _CL_ACT={"変更":"changed","追加":"added","削除":"removed"};
+const _CL_ACT={"変更":"changed","追加":"added","削除":"removed","ゴミ箱":"removed","復元":"added"};
 function renderChangelog(){
   const list=CHANGELOG.map((e,i)=>({e,i})).sort((a,b)=>a.e.ts<b.e.ts?1:-1);
   const rows=list.map(({e,i})=>`<button class="clog-item" onclick="gotoChange(${i})">
       <div class="clog-top"><span class="clog-act ${_CL_ACT[e.action]||''}">${e.action}</span><span class="clog-ts">${e.ts}</span></div>
-      <div class="clog-main"><span class="clog-plate">${esc(e.vehTarget)}</span>の「${esc(e.item)}」を ${esc(e.detail)}</div>
-      <div class="clog-foot"><span>${I.user?I.user("#5A6472",12):""}${esc(e.user)}</span>${catPill(e.cat)}<span class="clog-link">変更箇所を開く ›</span></div>
+      ${e.vehTrash
+        ? `<div class="clog-main">${esc(e.detail)}</div>
+           <div class="clog-foot"><span>${I.user?I.user("#5A6472",12):""}${esc(e.user)}</span><span class="clog-link">車両コスト一覧で開く ›</span></div>`
+        : `<div class="clog-main"><span class="clog-plate">${esc(e.vehTarget)}</span>の「${esc(e.item)}」を ${esc(e.detail)}</div>
+           <div class="clog-foot"><span>${I.user?I.user("#5A6472",12):""}${esc(e.user)}</span>${catPill(e.cat)}<span class="clog-link">変更箇所を開く ›</span></div>`}
     </button>`).join("");
   return `<div class="panel-ovl ${state._ovFresh?'anim':''}" onclick="if(event.target===this)closeChangelog()"><div class="clog ${state._ovFresh?'anim':''}">
     <div class="pn-head"><span style="font-size:15px;font-weight:800">変更履歴</span>
@@ -2115,7 +2124,10 @@ function renderVehCal(){
 }
 function renderVehicles(){
   const vehRange=(state.vehDateStart&&state.vehDateEnd)?{start:state.vehDateStart,end:state.vehDateEnd}:null;
-  let veh=buildVehicles(state.vehCategoryFilter, vehRange);
+  const allVeh=buildVehicles(state.vehCategoryFilter, vehRange);
+  const trashCount=allVeh.filter(v=>state.vehTrash.has(v.key)).length;
+  const inTrash=state.vehTrashView;
+  let veh=allVeh.filter(v=>inTrash?state.vehTrash.has(v.key):!state.vehTrash.has(v.key));
   const vehicles=veh;
   const grand=veh.reduce((s,v)=>s+v.total,0);
   const newCount=vehicles.filter(v=>!MASTER.has(v.target)).length;
@@ -2145,6 +2157,7 @@ function renderVehicles(){
   const head=`<div class="pagehead">
     <div><h1>車両コスト一覧</h1><p>反映済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}${hasRange?`<b style="color:var(--greenDark)">　期間：${state.vehDateStart}〜${state.vehDateEnd}</b>`:""}</p></div>
     <div class="ph-spacer"></div>
+    <button class="trash-toggle ${inTrash?"on":""}" onclick="toggleVehTrash()" title="ゴミ箱">${I.trash(inTrash?"#B23A2E":"#5A6472",15)} ゴミ箱<span style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.06);padding:0 6px;border-radius:999px">${trashCount}</span></button>
     <button class="btn-hist" onclick="openChangelog()" title="コスト内訳の変更履歴">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>
       変更履歴${clogUnseen>0?`<span class="bh-ct">${clogUnseen}</span>`:""}</button>
@@ -2152,6 +2165,9 @@ function renderVehicles(){
   const filterBar=`<div class="veh-filters"><span class="vf-l">絞り込み</span>${catSel}${periodCtrl}</div>`;
 
   if(veh.length===0){
+    if(inTrash) return head+filterBar+`<div class="veh-card"><div class="empty">${I.trash("#9AA3AD",30)}
+      <div class="et">ゴミ箱は空です</div>
+      <div class="es">ゴミ箱へ移動した車両はここに表示されます。いつでも元に戻せます。</div></div></div>`;
     if(hasRange) return head+filterBar+`<div class="veh-card"><div class="empty">${I.truckN("#9AA3AD",40)}
       <div class="et">この期間に発生したコストはありません</div>
       <div class="es">期間（${state.vehDateStart}〜${state.vehDateEnd}）を変更するか、「全期間に戻す」で絞り込みを解除してください。</div></div></div>`;
@@ -2160,7 +2176,7 @@ function renderVehicles(){
       <div class="es">${state.vehCategoryFilter==="all"?'書類一覧で内容を確認し「ロジポケに反映」すると、ここに車両ごとのコストが積み上がります。':"別の営業所を選ぶか、該当営業所の書類を反映してください。"}</div></div></div>`;
   }
 
-  const kpis=`<div class="kpis">
+  const kpis=inTrash?`<p class="count-line" style="margin:2px 2px 12px">ゴミ箱 <b>${veh.length}</b> 台</p>`:`<div class="kpis">
     <div class="kpi"><div class="l">登録車両</div><div class="v">${vehicles.length}<small> 台</small></div></div>
     <div class="kpi"><div class="l">うち新規作成</div><div class="v" style="color:var(--amber)">${newCount}<small> 台</small></div></div>
     <div class="kpi"><div class="l">反映済みコスト合計</div><div class="v">${yen(grand)}</div></div>
@@ -2184,14 +2200,18 @@ function renderVehicles(){
       return `<span style="width:${(v.byCat[c]/v.total*100).toFixed(1)}%;background:${s.fg}"></span>`;}).join("")}</div>
       <div class="breakdown">${cats.map(c=>{const s=CAT_STYLE[c]||CAT_STYLE["税金"];
       return `<span class="bd"><span class="sw" style="background:${s.fg}"></span>${esc(c)} ${yen(v.byCat[c])}</span>`;}).join("")}</div>`;
-    return `<tr class="vrow" onclick="openVehPanel('${v.key}','${v.kind}','${esc(v.target)}')">
+    const actCell=inTrash
+      ? `<button class="icon-btn restore" title="車両コスト一覧に戻す" onclick="event.stopPropagation();vehAskRestore('${v.key}')">${I.undo("#0E7A4B",15)}</button>`
+      : `<button class="veh-edit-btn" onclick="event.stopPropagation();openVehEdit('${v.key}','${v.kind}','${esc(v.target)}')">${I.pencil("#0E7A4B",13)} 編集</button>
+         <button class="icon-btn" title="ゴミ箱へ移動" style="margin-left:6px" onclick="event.stopPropagation();vehAskTrash('${v.key}')">${I.trash("#B23A2E",15)}</button>`;
+    return `<tr class="vrow${inTrash?" is-trash":""}" ${inTrash?"":`onclick="openVehPanel('${v.key}','${v.kind}','${esc(v.target)}')"`}>
       <td><span class="plate">${esc(v.target)}</span>
         ${v.fuso?`<div style="font-size:10.5px;color:var(--inkSoft);margin-top:5px">${esc(v.fuso.body)}${v.fuso.reefer&&v.fuso.reefer!=="なし"?" / "+esc(v.fuso.reefer):""}</div>`:""}</td>
       <td>${mtag}</td>
       <td style="min-width:200px">${bar}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--inkSoft)">${v.last}<div style="margin-top:3px">${v.count}明細</div></td>
       <td class="r total">${yen(v.total)}</td>
-      <td style="text-align:right"><button class="veh-edit-btn" onclick="event.stopPropagation();openVehEdit('${v.key}','${v.kind}','${esc(v.target)}')">${I.pencil("#0E7A4B",13)} 編集</button></td>
+      <td style="text-align:right;white-space:nowrap">${actCell}</td>
     </tr>`;
   }).join("");
 
@@ -2211,6 +2231,47 @@ function thVeh(key,label,cls){
 }
 function toggleVeh(k){if(state.vehExpanded.has(k))state.vehExpanded.delete(k);else state.vehExpanded.add(k);render();}
 function setVehCategoryFilter(v){ state.vehCategoryFilter=v; state.vehPage=1; render(); }
+/* ───── 車両のゴミ箱（確認ステップ＋変更履歴） ───── */
+function toggleVehTrash(){ state.vehTrashView=!state.vehTrashView; state.vehPage=1; render(); }
+function _findVeh(key){ return buildVehicles("all").find(v=>v.key===key); }
+function vehAskTrash(key){ const v=_findVeh(key); if(!v) return;
+  state.vehTrashAction={mode:"trash",key,kind:v.kind,target:v.target,total:v.total,count:v.count}; renderOverlay(); }
+function vehAskRestore(key){ const v=_findVeh(key); if(!v) return;
+  state.vehTrashAction={mode:"restore",key,kind:v.kind,target:v.target,total:v.total,count:v.count}; renderOverlay(); }
+function cancelVehTrashAction(){ state.vehTrashAction=null; renderOverlay(); }
+function confirmVehTrashAction(){
+  const a=state.vehTrashAction; state.vehTrashAction=null; if(!a){ renderOverlay(); return; }
+  if(a.mode==="trash"){
+    state.vehTrash.add(a.key);
+    logChange({action:"ゴミ箱",vehKey:a.key,kind:a.kind,vehTarget:a.target,vehTrash:true,
+      detail:`車両「${a.target}」をゴミ箱へ移動しました（累計 ${yen(a.total)}・明細 ${a.count}件）`});
+    render(); toast(`車番 ${a.target} をゴミ箱へ移動しました`);
+  } else {
+    state.vehTrash.delete(a.key);
+    logChange({action:"復元",vehKey:a.key,kind:a.kind,vehTarget:a.target,vehTrash:true,
+      detail:`車両「${a.target}」を車両コスト一覧に戻しました`});
+    render(); toast(`車番 ${a.target} を車両コスト一覧に戻しました`);
+  }
+}
+function renderVehTrashConfirm(){
+  const a=state.vehTrashAction; if(!a) return "";
+  const isTrash=a.mode==="trash";
+  return `<div class="ovl anim" style="z-index:80" onclick="if(event.target===this)cancelVehTrashAction()"><div class="modal" style="width:min(480px,100%)">
+    <div class="m-head"><span class="t">${isTrash?I.trash("#B23A2E",18):I.undo("#0E7A4B",18)} ${isTrash?"この車両をゴミ箱へ移動しますか？":"この車両を一覧に戻しますか？"}</span>
+      <button class="x" onclick="cancelVehTrashAction()">${I.x("#5A6472",18)}</button></div>
+    <div class="m-body">
+      <div class="ce-warn" style="${isTrash?'background:var(--alertSoft);border-color:#E0B8B2':'background:var(--greenSoft);border-color:var(--greenLine)'}">${isTrash?I.alert("#B23A2E",18):I.check("#0E7A4B",18,2.6)}<div>
+        <div class="ce-q">車番 ${esc(a.target)}（累計 ${yen(a.total)}・明細 ${a.count}件）</div>
+        <div class="ce-note">${isTrash?"ゴミ箱へ移動すると車両コスト一覧に表示されなくなります。ゴミ箱からいつでも元に戻せます。":"車両コスト一覧に再表示されます。"}この操作は変更履歴に記録されます。</div></div></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn-cancel" onclick="cancelVehTrashAction()">キャンセル</button>
+      ${isTrash
+        ? `<button class="btn-danger" onclick="confirmVehTrashAction()">${I.trash("#fff",14)} ゴミ箱へ移動</button>`
+        : `<button class="btn-green" onclick="confirmVehTrashAction()">${I.undo("#fff",15)} 一覧に戻す</button>`}
+    </div>
+  </div></div>`;
+}
 
 /* ───── 設定 ───── */
 function renderSettings(){
@@ -2429,6 +2490,7 @@ function renderOverlay(){
   else if(state.vehEditKey) h=renderVehEditModal();
   if(state.reflectConfirm) h+=renderReflectConfirm(); // 既存オーバーレイの上に確認モーダルを重ねる
   if(state.pnDeleteLid!=null) h+=renderPnDeleteConfirm();
+  if(state.vehTrashAction) h+=renderVehTrashConfirm();
   if(state.settingsSaveConfirm) h+=renderSettingsSaveConfirm();
   if(state.settingsLeave) h+=renderSettingsLeaveConfirm();
   ov.innerHTML=h;
