@@ -496,6 +496,7 @@
   .pickup{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:stretch}
   .pk-card{flex:1;min-width:248px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column}
   .pk-h{font-size:11.5px;font-weight:800;color:var(--ink);margin-bottom:5px;display:flex;align-items:center;gap:5px}
+  .pk-h .pk-hsub{font-size:10px;font-weight:700;color:var(--inkFaint);margin-left:1px}
   .pk-list{display:flex;flex-direction:column;gap:3px}
   .pk-item{display:flex;align-items:center;gap:9px;padding:3px 9px;border:1px solid var(--lineSoft);border-radius:8px;cursor:pointer;transition:background .12s,border-color .12s}
   .pk-item:hover{background:#F5F8F5;border-color:var(--greenLine)}
@@ -2268,7 +2269,7 @@ function renderVehicles(){
   const pickup=inTrash?"":`<div class="pickup">
     <div class="pk-card"><div class="pk-h">${I.alert("#B23A2E",14)} 要確認車両</div><div class="pk-list">${att.join("")||emptyMsg}</div></div>
     <div class="pk-card"><div class="pk-h">${I.truckN("#0E7A4B",15)} コスト上位車両</div><div class="pk-list">${topItems.join("")||emptyMsg}</div></div>
-    <div class="pk-card"><div class="pk-h">${I.alert("#B87514",14)} コスト増加車両</div><div class="pk-list">${incItems.join("")||emptyMsg}</div></div>
+    <div class="pk-card"><div class="pk-h" title="先月（${moJP(lastYM)}）を、その前月（${moJP(prevYM)}）と比較した前月比の増加率です">${I.alert("#B87514",14)} コスト増加車両 <span class="pk-hsub">前月比（先月：${moJP(lastYM)}）</span></div><div class="pk-list">${incItems.join("")||emptyMsg}</div></div>
   </div>`;
 
   /* ページング */
