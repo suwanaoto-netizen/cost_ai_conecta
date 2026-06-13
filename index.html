@@ -110,7 +110,7 @@
   .srch{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:9px;padding:7px 11px;background:#fff;min-width:210px}
   .srch input{border:none;outline:none;font-size:13px;font-family:var(--sans);flex:1;background:none;color:var(--ink)}
   .tb-spacer{flex:1}
-  .trash-toggle{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:8px 13px;font-size:12.5px;font-weight:700;color:var(--inkSoft);cursor:pointer}
+  .trash-toggle{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 9px;font-size:11.5px;font-weight:700;color:var(--inkSoft);cursor:pointer}
   .trash-toggle:hover{border-color:#E0B8B2;color:var(--alert)}
   .trash-toggle.on{background:var(--alertSoft);border-color:#E0B8B2;color:var(--alert)}
   .filter-sel{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:5px 10px;background:#fff}
@@ -1120,7 +1120,7 @@ function renderDocuments(){
     ${catSel}
     <div class="srch">${I.search()}<input placeholder="取引先・書類名で検索" value="${esc(state.q)}" oninput="setQuery(this.value)"></div>
     <div class="tb-spacer"></div>
-    <button class="trash-toggle ${state.trash?"on":""}" onclick="toggleTrash()">${I.trash(state.trash?"#B23A2E":"#5A6472",15)} ゴミ箱<span style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.06);padding:0 6px;border-radius:999px">${trashCount}</span></button>
+    <button class="trash-toggle ${state.trash?"on":""}" onclick="toggleTrash()">${I.trash(state.trash?"#B23A2E":"#5A6472",13)} ゴミ箱<span style="font-family:var(--mono);font-size:10px;background:rgba(0,0,0,.06);padding:0 6px;border-radius:999px">${trashCount}</span></button>
   </div>`;
 
   return head+toolbar+`<div id="doc-body" class="doc-body">${renderDocBody()}</div>`;
@@ -2184,7 +2184,7 @@ function renderVehicles(){
   const head=`<div class="pagehead">
     <div><h1>コストモニター</h1><p>反映済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}${hasRange?`<b style="color:var(--greenDark)">　期間：${state.vehDateStart}〜${state.vehDateEnd}</b>`:""}</p></div>
     <div class="ph-spacer"></div>
-    <button class="trash-toggle ${inTrash?"on":""}" onclick="toggleVehTrash()" title="ゴミ箱">${I.trash(inTrash?"#B23A2E":"#5A6472",15)} ゴミ箱<span style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.06);padding:0 6px;border-radius:999px">${trashCount}</span></button>
+    <button class="trash-toggle ${inTrash?"on":""}" onclick="toggleVehTrash()" title="ゴミ箱">${I.trash(inTrash?"#B23A2E":"#5A6472",13)} ゴミ箱<span style="font-family:var(--mono);font-size:10px;background:rgba(0,0,0,.06);padding:0 6px;border-radius:999px">${trashCount}</span></button>
     <button class="btn-hist" onclick="openChangelog()" title="コスト内訳の変更履歴">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>
       変更履歴${clogUnseen>0?`<span class="bh-ct">${clogUnseen}</span>`:""}</button>
