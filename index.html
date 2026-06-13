@@ -1097,7 +1097,7 @@ let state={
   vehTrash:new Set(), vehTrashView:false, vehTrashAction:null,
   changelogOpen:false, changelogSeenCount:0, vehEditHighlight:null,
   vehDateStart:null, vehDateEnd:null, vehCalOpen:false, vehCalYM:"2026-06",
-  reflectConfirm:null, enterConfirm:null,
+  reflectConfirm:null, enterConfirm:null, officeConfirm:null,
   manualLines:[],
   justUploaded:new Set(),
   settings:{ companyName:"サンプル物流株式会社", defaultOcr:true, matchThreshold:0.85,
@@ -1246,6 +1246,7 @@ function renderDocBody(){
   if(!state.trash && sv.length>=2){
     const enterable=sv.filter(d=>d.status==="未入力").length;
     const reflectable=sv.filter(d=>d.status==="入力済み").length;
+    const officeable=sv.filter(d=>d.status!=="反映済み").length;
     topbar=`<div class="bulkbar">
       <span class="bb-count">${sv.length}件を選択中</span>
       <button class="bb-clear" onclick="clearSelection()">選択を解除</button>
@@ -1255,6 +1256,7 @@ function renderDocBody(){
           <div class="bulk-menu">
             <button ${enterable?"":"disabled"} onclick="bulkMarkEntered()"><span class="lab">${I.check(enterable?'#0E7A4B':'#9AA3AD',14,2.6)} 入力済みにする</span><span class="mc">未入力 ${enterable}件</span></button>
             <button ${reflectable?"":"disabled"} onclick="bulkReflect()"><span class="lab">${I.send(reflectable?'#0E7A4B':'#9AA3AD',14)} ロジポケに反映</span><span class="mc">入力済み ${reflectable}件</span></button>
+            <button ${officeable?"":"disabled"} onclick="bulkChangeOffice()"><span class="lab">${I.boxes(officeable?'#0E7A4B':'#9AA3AD',14)} 営業所を変更</span><span class="mc">選択 ${officeable}件</span></button>
             <button class="danger" onclick="bulkTrash()"><span class="lab">${I.trash('#B23A2E',14)} ゴミ箱へ移動</span><span class="mc">選択 ${sv.length}件</span></button>
           </div>`:""}
       </div></div>`;
@@ -1346,6 +1348,34 @@ function doBulkReflect(){
   runReflect(t.map(d=>({name:d.name,lines:docLines(d)})), `${t.length}件の書類をロジポケに反映しました`, ()=>{
     const ts=nowStamp(); t.forEach(d=>{d.status="反映済み";d.reflectedAt=ts;state.selected.delete(d.id);});
     render(); toast(`${t.length}件をロジポケ（車両コスト）へ反映しました`, {label:"コストモニターを見る", fn:gotoVehicles}); }); }
+function bulkChangeOffice(){ state.bulkMenu=false;
+  const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status!=="反映済み");
+  if(t.length===0){ render(); toast("営業所を変更できる書類が選択されていません（反映済みは変更不可）"); return; }
+  state.officeConfirm={ids:t.map(d=>d.id), office:(CATEGORIES[0]||"")}; renderOverlay(); }
+function closeOfficeConfirm(){ state.officeConfirm=null; renderOverlay(); }
+function setOfficeConfirm(v){ if(state.officeConfirm) state.officeConfirm.office=v; }
+function proceedBulkChangeOffice(){ const oc=state.officeConfirm; state.officeConfirm=null; if(!oc){ renderOverlay(); return; }
+  const targets=oc.ids.map(id=>docs.find(d=>d.id===id)).filter(d=>d&&d.status!=="反映済み");
+  if(targets.length===0){ render(); return; }
+  targets.forEach(d=>{ d.category=oc.office; });
+  render(); toast(oc.office?`${targets.length}件の営業所を「${oc.office}」に変更しました`:`${targets.length}件の営業所を未選択にしました`); }
+function renderOfficeConfirm(){
+  const oc=state.officeConfirm; if(!oc) return "";
+  const opts=`<option value="" ${!oc.office?"selected":""}>（未選択）</option>`+CATEGORIES.map(c=>`<option value="${esc(c)}" ${oc.office===c?"selected":""}>${esc(c)}</option>`).join("");
+  return `<div class="ovl anim" style="z-index:70" onclick="if(event.target===this)closeOfficeConfirm()"><div class="modal" style="width:min(480px,100%)">
+    <div class="m-head"><span class="t">${I.boxes('#0E7A4B',18)} 営業所を変更しますか？</span>
+      <button class="x" onclick="closeOfficeConfirm()">${I.x("#5A6472",18)}</button></div>
+    <div class="m-body">
+      <p style="margin:0 0 13px;font-size:13.5px;color:var(--ink)">選択中の <b>${oc.ids.length}</b> 件の書類の営業所をまとめて変更します。</p>
+      <div class="fld"><label>変更後の営業所</label>
+        <select class="in" onchange="setOfficeConfirm(this.value)">${opts}</select></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn-cancel" onclick="closeOfficeConfirm()">キャンセル</button>
+      <button class="btn-green" onclick="proceedBulkChangeOffice()">${I.check('#fff',14,2.6)} 変更する</button>
+    </div>
+  </div></div>`;
+}
 function bulkTrash(){ state.bulkMenu=false;
   const t=visibleDocs().filter(d=>state.selected.has(d.id));
   if(t.length===0){ render(); return; }
@@ -2858,6 +2888,7 @@ function renderOverlay(){
   else if(state.masterEdit) h=renderMasterEditModal();
   if(state.reflectConfirm) h+=renderReflectConfirm(); // 既存オーバーレイの上に確認モーダルを重ねる
   if(state.enterConfirm) h+=renderEnterConfirm();
+  if(state.officeConfirm) h+=renderOfficeConfirm();
   if(state.pnDeleteLid!=null) h+=renderPnDeleteConfirm();
   if(state.vehTrashAction) h+=renderVehTrashConfirm();
   if(state.docTrashAction) h+=renderDocTrashConfirm();
