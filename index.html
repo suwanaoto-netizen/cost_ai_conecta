@@ -95,6 +95,9 @@
   .btn-green:disabled{background:#C6CEC6;cursor:not-allowed;filter:none}
   .btn-ghost{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1.5px solid var(--line);color:var(--ink);border-radius:9px;padding:9px 15px;font-size:13.5px;font-weight:700;cursor:pointer}
   .btn-ghost:hover{border-color:var(--greenLine);color:var(--greenDark)}
+  .btn-hist{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--line);color:var(--inkSoft);border-radius:7px;padding:5px 9px;font-size:11.5px;font-weight:700;cursor:pointer}
+  .btn-hist:hover{background:#F5F6F8;color:var(--ink);border-color:#CFD5DD}
+  .btn-hist .bh-ct{font-size:10px;font-family:var(--mono);font-weight:700;color:var(--inkSoft);background:#EEF0F3;border-radius:999px;padding:0 6px;margin-left:1px}
 
   /* ───── toolbar / filters ───── */
   .toolbar{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 16px;margin-bottom:var(--space-rel);display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0}
@@ -1969,9 +1972,9 @@ function renderVehicles(){
   const head=`<div class="pagehead">
     <div><h1>車両コスト一覧</h1><p>反映済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}</p></div>
     <div class="ph-spacer"></div>${catSel}
-    <button class="btn-ghost" onclick="openChangelog()" title="コスト内訳の変更履歴">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5A6472" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>
-      変更履歴${CHANGELOG.length?`<span class="set-count" style="margin-left:2px">${CHANGELOG.length}</span>`:""}</button>
+    <button class="btn-hist" onclick="openChangelog()" title="コスト内訳の変更履歴">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>
+      変更履歴${CHANGELOG.length?`<span class="bh-ct">${CHANGELOG.length}</span>`:""}</button>
   </div>`;
 
   if(veh.length===0){
