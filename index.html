@@ -1510,7 +1510,7 @@ function renderDocTrashConfirm(){
 /* ───── アップロードモーダル ───── */
 function openUpload(){state.upload={open:true,tab:"new",files:[],ocr:state.settings.defaultOcr,category:(CATEGORIES[0]||""),processing:{active:false,pct:0,label:""},_timer:null};state.splitUpload=freshSplitUpload();renderOverlay();}
 function switchUploadTab(t){if(state.upload.processing.active)return;state.upload.tab=t;state.splitUpload.bulkMenu=false;renderOverlay();}
-function freshSplitUpload(){return {method:"pdf", file:null, split:false, input:"ocr", settingsOpen:false, pages:null, bulkMenu:false, zoom:null, guide:0};}
+function freshSplitUpload(){return {method:"pdf", file:null, split:false, ocr:true, settingsOpen:false, pages:null, bulkMenu:false, zoom:null, guide:0};}
 function setUploadCategory(v){ if(state.upload.processing.active)return; state.upload.category=v; }
 function closeUpload(){if(state.upload.processing.active)return;state.upload.open=false;state.splitUpload=freshSplitUpload();renderOverlay();}
 function uplRemove(i){if(state.upload.processing.active)return;state.upload.files.splice(i,1);renderOverlay();}
@@ -1659,21 +1659,19 @@ function renderSplitUploadBody(tabs){
       </div>
     </div>
     <div class="sp-field">
-      <div class="sp-flabel">書類情報の入力方法 <span class="sp-qi" title="書類の金額・日付などの入力方法">?</span><span class="sp-req">*</span></div>
-      <div class="sp-radios">
-        ${s.split?"":`<label class="sp-radio"><input type="radio" name="sp-input" ${s.input==="csv"?"checked":""} onclick="splitSetInput('csv')">CSVファイルで入力</label>`}
-        <label class="sp-radio"><input type="radio" name="sp-input" ${s.input==="ocr"?"checked":""} onclick="splitSetInput('ocr')">OCR読み取りで入力</label>
-        <label class="sp-radio"><input type="radio" name="sp-input" ${s.input==="none"?"checked":""} onclick="splitSetInput('none')">入力しない（作成後に手動で編集）</label>
+      <div class="ocr-row" style="margin-top:0">
+        <div class="switch ${s.ocr?"on":""}" onclick="toggleSplitOcr()"><div class="knob"></div></div>
+        <div><div class="txt">AI-OCRで明細を自動データ化する</div><div class="sub">取引先・金額・対象車両・コスト分類を読み取ります（pdf, png, jpg）</div></div>
       </div>
     </div>`;
 }
 function splitSetMethod(m){state.splitUpload.method=m;renderOverlay();}
-function splitSetInput(v){state.splitUpload.input=v;renderOverlay();}
+function toggleSplitOcr(){state.splitUpload.ocr=!state.splitUpload.ocr;renderOverlay();}
 function splitPickFile(){loadDemoSplitFile();}
 function loadDemoSplitFile(){const s=state.splitUpload;s.file={name:"デモ用 結合PDF.pdf"};s.pages=buildSplitPages();renderOverlay();}
 function splitDrop(e){e.preventDefault();const dz=e.currentTarget;if(dz)dz.classList.remove("drag");loadDemoSplitFile();}
 function splitRemoveFile(){const s=state.splitUpload;s.file=null;s.split=false;s.settingsOpen=false;s.pages=null;renderOverlay();}
-function splitToggleSplit(){const s=state.splitUpload;if(!s.file)return;s.split=!s.split;if(s.split){if(s.input==="csv")s.input="ocr";if(!s.pages)s.pages=buildSplitPages();s.settingsOpen=true;}else{s.settingsOpen=false;}renderOverlay();}
+function splitToggleSplit(){const s=state.splitUpload;if(!s.file)return;s.split=!s.split;if(s.split){if(!s.pages)s.pages=buildSplitPages();s.settingsOpen=true;}else{s.settingsOpen=false;}renderOverlay();}
 function splitOpenSettings(){const s=state.splitUpload;if(!s.pages)s.pages=buildSplitPages();s.settingsOpen=true;s.bulkMenu=false;renderOverlay();}
 function splitCloseSettings(){const s=state.splitUpload;s.settingsOpen=false;s.bulkMenu=false;renderOverlay();}
 function splitApplySettings(){const s=state.splitUpload;const g=splitGroups(s.pages).filter(gr=>gr.some(p=>p.include)).length;s.settingsOpen=false;s.bulkMenu=false;renderOverlay();toast(`${g}書類に分割する設定を適用しました`);}
@@ -1769,7 +1767,7 @@ function renderSplitZoom(){
 function doSplitUpload(){
   const s=state.splitUpload; if(!s.file)return;
   const u=state.upload;
-  u.processing={active:true,pct:0,label:s.input==="ocr"?"データ化中（AI-OCR / 明細OCR）":"ファイルを保存中…"};
+  u.processing={active:true,pct:0,label:s.ocr?"データ化中（AI-OCR / 明細OCR）":"ファイルを保存中…"};
   renderOverlay();
   u._timer=setInterval(()=>{
     u.processing.pct=Math.min(100,u.processing.pct+5+Math.random()*6);
@@ -1779,7 +1777,7 @@ function doSplitUpload(){
   },170);
 }
 function finishSplitUpload(){
-  const s=state.splitUpload, ocr=s.input==="ocr";
+  const s=state.splitUpload, ocr=s.ocr;
   const groups = (s.split&&s.pages) ? splitGroups(s.pages).filter(g=>g.some(p=>p.include)) : [null];
   const base=(s.file&&s.file.name||"無題.pdf").replace(/\.pdf$/i,"");
   const newIds=[];
@@ -1820,7 +1818,7 @@ function guideGo(n){
   state.upload.open=true; state.upload.tab="split";
   if(!s.file)s.file={name:"デモ用 結合PDF.pdf"};
   if(!s.pages)s.pages=buildSplitPages();
-  if(n>=2){ s.split=true; if(s.input==="csv")s.input="ocr"; }
+  if(n>=2){ s.split=true; }
   if(s.pages&&s.pages.length>1) s.pages[1].splitAfter=(n>=6); // 手動分割のデモ（step6で結合可能に）
   s.settingsOpen=(n>=3&&n<=7);
   s.bulkMenu=false;
