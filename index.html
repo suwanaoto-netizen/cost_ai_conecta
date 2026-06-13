@@ -932,7 +932,7 @@ let state={
   vehExpanded:new Set(),
   vehEditKey:null, vehEditMeta:null, vehEditConfirm:false, vehEditSnapshot:null, vehViewDocId:null, vehViewLid:null,
   vehPanel:null, vehChartCat:null, vehChartGran:"month",
-  changelogOpen:false, vehEditHighlight:null,
+  changelogOpen:false, changelogSeenCount:0, vehEditHighlight:null,
   reflectConfirm:null,
   manualLines:[],
   justUploaded:new Set(),
@@ -1658,7 +1658,7 @@ function commitVehEdit(){
   });
   closeVehEdit();
 }
-function openChangelog(){ state.changelogOpen=true; renderOverlay(); }
+function openChangelog(){ state.changelogSeenCount=CHANGELOG.length; state.changelogOpen=true; render(); }
 function closeChangelog(){ state.changelogOpen=false; renderOverlay(); }
 function gotoChange(idx){ const e=CHANGELOG[idx]; if(!e) return;
   state.changelogOpen=false;
@@ -1966,6 +1966,7 @@ function renderVehicles(){
       if(va<vb)return -dir; if(va>vb)return dir; return b.total-a.total;});
   }
 
+  const clogUnseen=CHANGELOG.length-(state.changelogSeenCount||0);
   const catSel=`<div class="filter-sel"><span class="fs-l">${I.boxes("#5A6472",14)} 営業所</span>
     <select onchange="setVehCategoryFilter(this.value)"><option value="all" ${state.vehCategoryFilter==="all"?"selected":""}>すべて</option>
       ${CATEGORIES.map(c=>`<option value="${esc(c)}" ${state.vehCategoryFilter===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div>`;
@@ -1974,7 +1975,7 @@ function renderVehicles(){
     <div class="ph-spacer"></div>${catSel}
     <button class="btn-hist" onclick="openChangelog()" title="コスト内訳の変更履歴">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>
-      変更履歴${CHANGELOG.length?`<span class="bh-ct">${CHANGELOG.length}</span>`:""}</button>
+      変更履歴${clogUnseen>0?`<span class="bh-ct">${clogUnseen}</span>`:""}</button>
   </div>`;
 
   if(veh.length===0){
