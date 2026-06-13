@@ -1431,7 +1431,7 @@ function renderPanel(){
 }
 function buildPreview(d){
   const sub=docTotal(d), tax=Math.round(sub*0.1), total=sub+tax;
-  const lines=d.lines.map(l=>`<tr><td><span class="mk mk-g">${esc(l.item)}</span>
+  const lines=docLines(d).map(l=>`<tr><td><span class="mk mk-g">${esc(l.item)}</span>
       <div class="iv-veh"><span class="mk mk-r">車番 ${esc(l.plate||"—")}</span></div></td>
     <td class="r">1</td><td class="r"><span class="mk mk-b">${yen(l.amount)}</span></td></tr>`).join("");
   const z=state.pvZoom/100;
