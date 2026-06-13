@@ -1910,8 +1910,9 @@ function vehInsight(events){
 function openVehPanel(key,kind,target){
   state.vehPanel={key,kind,target};
   const v=buildVehicles(state.vehCategoryFilter).find(x=>x.key===key);
-  const cats=v?Object.keys(v.byCat).sort((a,b)=>v.byCat[b]-v.byCat[a]):[];
-  state.vehChartCat=cats[0]||"修繕・維持費"; state.vehChartGran="month";
+  const cats=v?Object.keys(v.byCat):[];
+  state.vehChartCat = cats.includes("修繕・維持費") ? "修繕・維持費" : (cats.slice().sort((a,b)=>v.byCat[b]-v.byCat[a])[0]||"修繕・維持費");
+  state.vehChartGran="month";
   renderOverlay();
 }
 function closeVehPanel(){ state.vehPanel=null; renderOverlay(); }
@@ -1938,7 +1939,8 @@ function renderVehPanel(){
   const v=buildVehicles(state.vehCategoryFilter).find(x=>x.key===p.key)||{key:p.key,kind:p.kind,target:p.target,total:0,byCat:{},count:0,last:"",lines:[],fuso:null};
   const isV=v.kind!=="共通", isMaster=isV?MASTER.has(v.target):SITE_MASTER.has(v.target);
   const events=genVehEvents(v);
-  const availCats=[...new Set(events.map(e=>e.cat))].sort((a,b)=>(v.byCat[b]||0)-(v.byCat[a]||0));
+  let availCats=[...new Set(events.map(e=>e.cat))].sort((a,b)=>(v.byCat[b]||0)-(v.byCat[a]||0));
+  if(availCats.includes("修繕・維持費")) availCats=["修繕・維持費",...availCats.filter(c=>c!=="修繕・維持費")];
   if(!availCats.includes(state.vehChartCat)) state.vehChartCat=availCats[0]||"修繕・維持費";
   const cat=state.vehChartCat;
   const catOpts=availCats.map(c=>`<option ${c===cat?'selected':''}>${esc(c)}</option>`).join("");
