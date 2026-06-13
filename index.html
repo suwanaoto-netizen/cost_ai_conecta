@@ -589,6 +589,40 @@
   @keyframes hlpulse{0%{background:#FCF3CF}60%{background:#FCF3CF}100%{background:transparent}}
   .vd-hl td{animation:hlpulse 2s ease}
   .vd-hl .vd-in{border-color:var(--amber)}
+  /* ───── 期間絞り込みカレンダー ───── */
+  .vcal-wrap{position:relative;display:inline-flex}
+  .vcal-field{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:6px 11px;font-size:12.5px;font-weight:700;color:var(--ink);cursor:pointer}
+  .vcal-field:hover,.vcal-field.open{border-color:var(--green)}
+  .vcal-field .ph{color:var(--inkFaint);font-weight:600}
+  .vcal-field .vcal-x{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:999px;background:#EEF0F3;color:var(--inkSoft);font-size:12px;margin-left:1px}
+  .vcal-field .vcal-x:hover{background:var(--alertSoft);color:var(--alert)}
+  .vcal-backdrop{position:fixed;inset:0;z-index:39}
+  .vcal-pop{position:absolute;top:calc(100% + 6px);right:0;width:322px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 44px rgba(20,30,40,.22);z-index:40;overflow:hidden}
+  .vcal-head{display:flex;align-items:center;justify-content:space-between;padding:11px 14px}
+  .vcal-nav{background:none;border:none;font-size:13px;font-weight:800;color:var(--ink);cursor:pointer;padding:4px 2px}
+  .vcal-nav:hover{color:var(--green)}
+  .vcal-title{font-size:14px;font-weight:800;color:var(--ink)}
+  .vcal-hint{background:var(--greenSoft);color:var(--greenDark);text-align:center;font-size:12.5px;font-weight:700;padding:9px 8px}
+  .vcal-hint.done{background:#EEF1FB;color:#2A3B8F;font-family:var(--mono);font-weight:800}
+  .vcal-quick{display:flex;justify-content:center;gap:16px;padding:9px;border-bottom:1px solid var(--lineSoft)}
+  .vcal-quick button{background:none;border:none;font-size:12.5px;font-weight:700;color:var(--ink);cursor:pointer;padding:2px 4px}
+  .vcal-quick button:hover{color:var(--green)}
+  .vcal-grid{display:grid;grid-template-columns:repeat(7,1fr);padding:0 8px}
+  .vcal-wds{padding-top:8px}
+  .vcal-wd{text-align:center;font-size:11.5px;font-weight:800;color:var(--inkSoft);padding:5px 0}
+  .vcal-wd.sun{color:#D9483B} .vcal-wd.sat{color:#2563EB}
+  .vcal-days{padding:2px 8px 8px}
+  .vcal-d{position:relative;height:38px;border:none;background:none;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer}
+  .vcal-d.out{color:var(--inkFaint);opacity:.55}
+  .vcal-d.sun{color:#D9483B} .vcal-d.sat{color:#2563EB}
+  .vcal-d:hover{background:var(--greenSoft);border-radius:8px}
+  .vcal-d.today{box-shadow:inset 0 0 0 1.5px var(--inkFaint);border-radius:999px}
+  .vcal-d.in-range{background:#E6E8EC}
+  .vcal-d.range-end-pt{background:#1E2A78!important;color:#fff!important;border-radius:999px;font-weight:800}
+  .vcal-foot{display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-top:1px solid var(--lineSoft)}
+  .vcal-clear{background:none;border:none;font-size:12px;font-weight:700;color:var(--inkSoft);cursor:pointer}
+  .vcal-clear:hover{color:var(--alert)}
+  .vcal-close{background:none;border:none;font-size:12px;font-weight:800;color:var(--greenDark);cursor:pointer}
 </style>
 </head>
 <body>
@@ -933,6 +967,7 @@ let state={
   vehEditKey:null, vehEditMeta:null, vehEditConfirm:false, vehEditSnapshot:null, vehViewDocId:null, vehViewLid:null,
   vehPanel:null, vehChartCat:null, vehChartGran:"month",
   changelogOpen:false, changelogSeenCount:0, vehEditHighlight:null,
+  vehDateStart:null, vehDateEnd:null, vehCalOpen:false, vehCalYM:"2026-06",
   reflectConfirm:null,
   manualLines:[],
   justUploaded:new Set(),
@@ -1551,8 +1586,9 @@ function renderReflectConfirm(){
 }
 
 /* ───── 車両コスト一覧（反映済み書類＋手動明細を集計） ───── */
-function buildVehicles(catFilter){
+function buildVehicles(catFilter, range){
   const cf=catFilter||"all";
+  const inR = (range&&range.start&&range.end) ? (dt=>dt&&dt>=range.start&&dt<=range.end) : (()=>true);
   const map=new Map();
   const ensure=(key,kind,target)=>{ if(!map.has(key)) map.set(key,{key,kind,target,total:0,byCat:{},count:0,last:"",lines:[],fuso:null}); return map.get(key); };
   const add=(e,line)=>{ e.total+=(+line.amount||0); e.byCat[line.cat]=(e.byCat[line.cat]||0)+(+line.amount||0); e.count++;
@@ -1560,12 +1596,13 @@ function buildVehicles(catFilter){
   docs.filter(d=>d.status==="反映済み"&&!d.deleted).forEach(d=>{
     if(cf!=="all" && (d.category||"")!==cf) return;
     linesOf(d.id).forEach(l=>{
+      if(!inR(l.inspectedAt)) return;
       const kind=l.kind, target=kind==="共通"?(l.site||"未設定"):(l.plate||"未設定");
       const key=(kind==="共通"?"S:":"V:")+target;
       add(ensure(key,kind,target),{lid:l.lid,src:"doc",docId:d.id,item:l.item,cat:l.cat,date:l.inspectedAt,amount:+l.amount,vendor:d.vendor,doc:d.name,office:d.category,fuso:l.fuso});
     });
   });
-  state.manualLines.forEach(m=>{ if(cf!=="all" && (m.office||"")!==cf) return;
+  state.manualLines.forEach(m=>{ if(cf!=="all" && (m.office||"")!==cf) return; if(!inR(m.date)) return;
     add(ensure(m.vkey,m.kind,m.target),{lid:m.id,src:"manual",item:m.item,cat:m.cat,date:m.date,amount:+m.amount,vendor:m.vendor||"手動追加",doc:"手動追加"});
   });
   return [...map.values()].sort((a,b)=>{
@@ -1951,8 +1988,57 @@ function renderVehPanel(){
     </div>
   </div></div>`;
 }
+/* ───── 期間絞り込みカレンダー ───── */
+const _CAL_TODAY="2026-06-13";
+function _pad2(n){return String(n).padStart(2,"0");}
+function _ymParts(ym){const [y,m]=ym.split("-").map(Number);return {y,m};}
+function _daysIn(y,m){return new Date(y,m,0).getDate();}
+function toggleVehCal(){ state.vehCalOpen=!state.vehCalOpen; if(state.vehCalOpen){ state.vehCalYM=(state.vehDateStart||_CAL_TODAY).slice(0,7);} render(); }
+function closeVehCal(){ state.vehCalOpen=false; render(); }
+function vehCalNav(delta){ const {y,m}=_ymParts(state.vehCalYM); const d=new Date(y,m-1+delta,1); state.vehCalYM=`${d.getFullYear()}-${_pad2(d.getMonth()+1)}`; render(); }
+function vehCalPickMonth(delta){ const {y,m}=_ymParts(state.vehCalYM); const d=new Date(y,m-1+delta,1); const yy=d.getFullYear(),mm=d.getMonth()+1;
+  state.vehDateStart=`${yy}-${_pad2(mm)}-01`; state.vehDateEnd=`${yy}-${_pad2(mm)}-${_pad2(_daysIn(yy,mm))}`; state.vehCalYM=`${yy}-${_pad2(mm)}`; state.vehCalOpen=false; state.vehPage=1; render(); }
+function vehCalPickDay(iso){
+  const s=state.vehDateStart, e=state.vehDateEnd;
+  if(!s || (s&&e)){ state.vehDateStart=iso; state.vehDateEnd=null; }
+  else { if(iso<s){ state.vehDateEnd=s; state.vehDateStart=iso; } else { state.vehDateEnd=iso; } state.vehCalOpen=false; }
+  state.vehPage=1; render();
+}
+function clearVehCal(){ state.vehDateStart=null; state.vehDateEnd=null; state.vehPage=1; render(); }
+function renderVehCal(){
+  if(!state.vehCalOpen) return "";
+  const {y,m}=_ymParts(state.vehCalYM);
+  const s=state.vehDateStart, e=state.vehDateEnd;
+  const hint = (s&&e) ? `<div class="vcal-hint done">${s}〜${e}</div>` : `<div class="vcal-hint">開始日か終了日を選択してください</div>`;
+  const startDow=new Date(y,m-1,1).getDay();
+  const cells=[];
+  for(let i=0;i<42;i++){
+    const d=new Date(y,m-1,1-startDow+i);
+    const iso=`${d.getFullYear()}-${_pad2(d.getMonth()+1)}-${_pad2(d.getDate())}`;
+    const out=d.getMonth()!==(m-1), dow=d.getDay();
+    let cls="vcal-d"; if(out)cls+=" out"; else { if(dow===0)cls+=" sun"; if(dow===6)cls+=" sat"; }
+    if(iso===_CAL_TODAY)cls+=" today";
+    const isStart=s&&iso===s, isEnd=e&&iso===e;
+    if(s&&e&&iso>s&&iso<e) cls+=" in-range";
+    if(isStart||isEnd||(s&&!e&&iso===s)) cls+=" range-end-pt";
+    cells.push(`<button class="${cls}" onclick="vehCalPickDay('${iso}')">${d.getDate()}</button>`);
+  }
+  const wd=["日","月","火","水","木","金","土"].map((w,i)=>`<div class="vcal-wd ${i===0?'sun':i===6?'sat':''}">${w}</div>`).join("");
+  const pm=m===1?12:m-1, nm=m===12?1:m+1;
+  return `<div class="vcal-backdrop" onclick="closeVehCal()"></div><div class="vcal-pop" onclick="event.stopPropagation()">
+    <div class="vcal-head"><button class="vcal-nav" onclick="vehCalNav(-1)">◀前月</button>
+      <span class="vcal-title">${y}年 ${m}月</span>
+      <button class="vcal-nav" onclick="vehCalNav(1)">次月▶</button></div>
+    ${hint}
+    <div class="vcal-quick"><button onclick="vehCalPickMonth(-1)">${pm}月を選択</button><button onclick="vehCalPickMonth(0)">${m}月を選択</button><button onclick="vehCalPickMonth(1)">${nm}月を選択</button></div>
+    <div class="vcal-grid vcal-wds">${wd}</div>
+    <div class="vcal-grid vcal-days">${cells.join("")}</div>
+    <div class="vcal-foot"><button class="vcal-clear" onclick="clearVehCal()">全期間に戻す</button><button class="vcal-close" onclick="closeVehCal()">閉じる</button></div>
+  </div>`;
+}
 function renderVehicles(){
-  let veh=buildVehicles(state.vehCategoryFilter);
+  const vehRange=(state.vehDateStart&&state.vehDateEnd)?{start:state.vehDateStart,end:state.vehDateEnd}:null;
+  let veh=buildVehicles(state.vehCategoryFilter, vehRange);
   const vehicles=veh.filter(v=>v.kind!=="共通");
   const grand=veh.reduce((s,v)=>s+v.total,0);
   const newCount=vehicles.filter(v=>!MASTER.has(v.target)).length;
@@ -1970,15 +2056,27 @@ function renderVehicles(){
   const catSel=`<div class="filter-sel"><span class="fs-l">${I.boxes("#5A6472",14)} 営業所</span>
     <select onchange="setVehCategoryFilter(this.value)"><option value="all" ${state.vehCategoryFilter==="all"?"selected":""}>すべて</option>
       ${CATEGORIES.map(c=>`<option value="${esc(c)}" ${state.vehCategoryFilter===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div>`;
+  const hasRange=state.vehDateStart&&state.vehDateEnd;
+  const periodCtrl=`<div class="vcal-wrap">
+    <button class="vcal-field ${state.vehCalOpen?'open':''}" onclick="toggleVehCal()" title="発生期間で絞り込み">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5A6472" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      ${hasRange?`<span>${state.vehDateStart}〜${state.vehDateEnd}</span>`:`<span class="ph">発生期間（全期間）</span>`}
+      ${hasRange?`<span class="vcal-x" onclick="event.stopPropagation();clearVehCal()" title="クリア">×</span>`:""}
+    </button>
+    ${renderVehCal()}
+  </div>`;
   const head=`<div class="pagehead">
-    <div><h1>車両コスト一覧</h1><p>反映済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}</p></div>
-    <div class="ph-spacer"></div>${catSel}
+    <div><h1>車両コスト一覧</h1><p>反映済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}${hasRange?`<b style="color:var(--greenDark)">　期間：${state.vehDateStart}〜${state.vehDateEnd}</b>`:""}</p></div>
+    <div class="ph-spacer"></div>${periodCtrl}${catSel}
     <button class="btn-hist" onclick="openChangelog()" title="コスト内訳の変更履歴">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>
       変更履歴${clogUnseen>0?`<span class="bh-ct">${clogUnseen}</span>`:""}</button>
   </div>`;
 
   if(veh.length===0){
+    if(hasRange) return head+`<div class="veh-card"><div class="empty">${I.truckN("#9AA3AD",40)}
+      <div class="et">この期間に発生したコストはありません</div>
+      <div class="es">期間（${state.vehDateStart}〜${state.vehDateEnd}）を変更するか、「全期間に戻す」で絞り込みを解除してください。</div></div></div>`;
     return head+`<div class="veh-card"><div class="empty">${I.truckN("#9AA3AD",40)}
       <div class="et">${state.vehCategoryFilter==="all"?"まだ反映された車両がありません":"この営業所の反映済みコストはありません"}</div>
       <div class="es">${state.vehCategoryFilter==="all"?'書類一覧で内容を確認し「ロジポケに反映」すると、ここに車両ごとのコストが積み上がります。':"別の営業所を選ぶか、該当営業所の書類を反映してください。"}</div></div></div>`;
