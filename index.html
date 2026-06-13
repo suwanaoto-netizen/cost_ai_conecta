@@ -1537,7 +1537,7 @@ function renderPanel(){
       <button class="pn-navbtn" ${hasNext?"":"disabled"} title="次の書類" onclick="panelNav(1)">次へ<span class="ic-r">${I.chev("#5A6472",13)}</span></button>
     </div>
     <div class="pn-actions">
-      ${st==="未入力"?`<span class="reflect-hint">${I.alert("#B87514",12)} 入力済みにすると反映できます</span>`:""}
+      ${st==="未入力"?`<span class="reflect-hint">${I.alert("#B87514",12)} 入力済みにすると反映ボタンが押下できます</span>`:""}
       ${isReflected?"":`<button class="btn-ghost" onclick="savePanel()">${I.check("#5A6472",14,2.6)} 入力済み</button>`}
       ${isReflected?`<span class="badge" style="color:var(--greenDark);background:var(--greenSoft)">${I.check("#0E7A4B",12,2.6)}反映済み（${d.reflectedAt||""}）</span>`
         : `<button class="btn-green" ${d.status==="入力済み"?"":"disabled"} title="${d.status==="入力済み"?"":"先に入力済みにしてください"}" onclick="reflectPanel()">${I.send()} ロジポケに反映</button>`}
