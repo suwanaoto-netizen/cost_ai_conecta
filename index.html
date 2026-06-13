@@ -4,6 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>AI Fleet Pilot｜請求書データ化・車両コスト管理</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet" />
 <style>
   :root{
     --bg:#EEF0EC; --panel:#FAFBF9; --card:#fff;
@@ -16,7 +19,7 @@
     --alert:#B23A2E; --alertSoft:#F7E2DF;
     --slate:#1F2A37; --slateHi:#2C3A4B;
     --mono:ui-monospace,SFMono-Regular,Menlo,'Roboto Mono',monospace;
-    --sans:'Hiragino Kaku Gothic ProN','Yu Gothic','Noto Sans JP',system-ui,sans-serif;
+    --sans:'Inter','Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',system-ui,sans-serif;
     /* 情報階層の余白スケール：重要ほど広く → 詳細ほど詰める（全画面共通） */
     --space-key:28px;  /* 重要情報の区切り（セクション境界・主要要素） */
     --space-rel:16px;  /* 関連情報の区切り（見出し・カード間） */
@@ -28,7 +31,9 @@
   *{box-sizing:border-box}
   html,body{height:100%}
   body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--ink);
-       -webkit-font-smoothing:antialiased;font-size:14px;overflow:hidden}
+       -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+       font-feature-settings:"palt" 1;text-rendering:optimizeLegibility;
+       letter-spacing:.01em;font-size:14px;overflow:hidden}
   button{font-family:var(--sans)}
   @keyframes spin{to{transform:rotate(360deg)}}
   .spin{animation:spin .9s linear infinite}
