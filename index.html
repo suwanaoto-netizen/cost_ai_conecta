@@ -338,6 +338,8 @@
   .phase-help:hover{color:var(--green)}
   .phase-help:hover .help-pop,.phase-help:focus-within .help-pop{display:block}
   .help-pop::before{content:"";position:absolute;left:5px;top:-6px;width:11px;height:11px;background:#fff;border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg)}
+  .help-pop.pop-right{left:auto;right:0}
+  .help-pop.pop-right::before{left:auto;right:5px}
   .hp-h{display:block;font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:5px}
   .hp-intro{display:block;font-size:11.5px;color:var(--inkSoft);line-height:1.6;margin-bottom:8px}
   .hp-row{display:flex;gap:9px;align-items:center;padding:5px 0;border-top:1px solid var(--lineSoft)}
@@ -2230,7 +2232,7 @@ function renderVehicles(){
       <div class="mk-v">${incNow}<small>台</small></div>${trend(incNow-incPrev,"台")}</div>
     <div class="mk"><div class="mk-l">データ収集中の車両</div>
       <div class="mk-v">${collecting}<small>台</small></div>
-      <span class="mk-note">入力データが少ない車両 <span class="help" tabindex="0">?<span class="help-pop"><b>データ収集中の車両</b><br>反映済みの明細が2件以下で、コスト傾向の分析にはまだデータが不足している車両です。書類を追加で反映すると精度が上がります。</span></span></span></div>
+      <span class="mk-note">入力データが少ない車両 <span class="help" tabindex="0">?<span class="help-pop pop-right"><b>データ収集中の車両</b><br>反映済みの明細が2件以下で、コスト傾向の分析にはまだデータが不足している車両です。書類を追加で反映すると精度が上がります。</span></span></span></div>
   </div>`;
 
   /* ページング */
