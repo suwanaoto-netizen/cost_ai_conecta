@@ -2504,7 +2504,9 @@ function renderOverlay(){
   if(state.vehTrashAction) h+=renderVehTrashConfirm();
   if(state.settingsSaveConfirm) h+=renderSettingsSaveConfirm();
   if(state.settingsLeave) h+=renderSettingsLeaveConfirm();
+  const os=_captureScroll(ov);
   ov.innerHTML=h;
+  _restoreScroll(ov,os);
 }
 let _toastT=null,_toastAction=null;
 function toast(msg, action){
@@ -2519,13 +2521,20 @@ function toastAction(){ const f=_toastAction; _toastAction=null; const t=documen
 function gotoVehicles(){ state.view="vehicles"; state.vehCategoryFilter="all"; render(); }
 
 /* ───── ルート ───── */
+/* 再描画（innerHTML 差し替え）でスクロール位置が先頭へ戻らないよう、
+   既知のスクロール領域の scrollTop を保持・復元する */
+const _SCROLL_SELECTORS=[".tscroll",".settings-wrap",".vp-body",".pn-left",".pn-right",".ve-left",".ve-rprev",".tl-scroll",".clog-body",".pv-page-wrap",".chips",".log"];
+function _captureScroll(root){ const m={}; if(!root) return m; _SCROLL_SELECTORS.forEach(sel=>{ const e=root.querySelector(sel); if(e&&e.scrollTop) m[sel]=e.scrollTop; }); return m; }
+function _restoreScroll(root,m){ if(!root||!m) return; for(const sel in m){ const e=root.querySelector(sel); if(e) e.scrollTop=m[sel]; } }
 function render(){
   renderNav(); renderCrumb();
   const c=document.getElementById("content");
+  const cs=_captureScroll(c);
   c.innerHTML = state.view==="documents" ? renderDocuments()
               : state.view==="vehicles" ? renderVehicles()
               : renderSettings();
   if(state.view==="documents") setSelectAllState();
+  _restoreScroll(c,cs);
   renderOverlay();
 }
 seedChangelog();
