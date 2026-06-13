@@ -256,6 +256,8 @@
   .lc-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
   .lc-no{font-size:11px;font-weight:800;color:var(--inkSoft);font-family:var(--mono)}
   .match-badge{margin-left:auto}
+  .lc-del{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;flex-shrink:0;padding:0}
+  .lc-del:hover{border-color:#E0B8B2;background:var(--alertSoft)}
   .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap}
   .legend{font-size:11px;color:var(--inkSoft);display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px;align-items:center}
   .lg{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:5px}
@@ -986,7 +988,7 @@ let state={
   selected:new Set(), bulkMenu:false,
   docPage:1, docPerPage:20, vehPage:1, vehPerPage:20,
   docSort:{key:null,dir:"asc"}, vehSort:{key:null,dir:"asc"},
-  panelId:null, draft:null, pvZoom:100,
+  panelId:null, draft:null, pvZoom:100, pnDeleteLid:null,
   upload:{open:false, files:[], ocr:true, processing:{active:false,pct:0,label:""}, _timer:null},
   vehExpanded:new Set(),
   vehEditKey:null, vehEditMeta:null, vehEditConfirm:false, vehEditSnapshot:null, vehViewDocId:null, vehViewLid:null,
@@ -1336,14 +1338,14 @@ function openPanel(id){
   const d=docs.find(x=>x.id===id); if(!d)return;
   state.panelId=id; state.draft=Object.assign(JSON.parse(JSON.stringify(d)),{lines:JSON.parse(JSON.stringify(linesOf(id)))}); state.draft._ocr=ocrAmountCandidates(state.draft.lines); state.pvZoom=100; state.panelJustOpened=true; renderOverlay();
 }
-function closePanel(){state.panelId=null;state.draft=null;renderOverlay();}
+function closePanel(){state.panelId=null;state.draft=null;state.pnDeleteLid=null;renderOverlay();}
 function panelNav(delta){
   const list=visibleDocs();
   const idx=list.findIndex(d=>d.id===state.panelId);
   if(idx<0) return;
   const ni=idx+delta; if(ni<0||ni>=list.length) return;
   const d=list[ni];
-  state.panelId=d.id; state.draft=Object.assign(JSON.parse(JSON.stringify(d)),{lines:JSON.parse(JSON.stringify(linesOf(d.id)))}); state.draft._ocr=ocrAmountCandidates(state.draft.lines); state.pvZoom=100; state.panelJustOpened=false;
+  state.panelId=d.id; state.draft=Object.assign(JSON.parse(JSON.stringify(d)),{lines:JSON.parse(JSON.stringify(linesOf(d.id)))}); state.draft._ocr=ocrAmountCandidates(state.draft.lines); state.pvZoom=100; state.panelJustOpened=false; state.pnDeleteLid=null;
   state.docPage=Math.floor(ni/state.docPerPage)+1; // 背面の一覧ページも同期
   render();
 }
@@ -1408,7 +1410,8 @@ function renderPanel(){
            </div></div>`;
     return `<div class="line-card">
       <div class="lc-head"><span class="lc-no">明細 ${idx+1}</span>
-        <span class="match-badge" id="pn-badge-${l.lid}">${matchBadge(l)}</span></div>
+        <span class="match-badge" id="pn-badge-${l.lid}">${matchBadge(l)}</span>
+        ${isReflected?"":`<button class="lc-del" title="この明細を削除" onclick="pnAskDeleteLine(${l.lid})">${I.x("#B23A2E",15)}</button>`}</div>
       <div class="fld"><label>項目</label><input class="in b-g" ${ro} value="${esc(l.item)}" oninput="pnLine(${l.lid},'item',this.value)"></div>
       <div class="grid2">
         <div class="fld"><label>コスト分類 ${catHelp()}</label>
@@ -1532,6 +1535,34 @@ function pnPickAmount(lid,amount){
   const ck=document.getElementById("pn-amtck-"+lid); if(ck) ck.style.display="";
   refreshPreview();
   if(inp) inp.blur();
+}
+/* 明細カードの削除（確認ステップを挟む） */
+function pnAskDeleteLine(lid){ state.pnDeleteLid=lid; renderOverlay(); }
+function pnCancelDeleteLine(){ state.pnDeleteLid=null; renderOverlay(); }
+function pnDeleteLine(){
+  const lid=state.pnDeleteLid; state.pnDeleteLid=null;
+  if(lid!=null && state.draft){ state.draft.lines=state.draft.lines.filter(x=>x.lid!==lid); }
+  renderOverlay();
+  toast("明細を削除しました（保存または反映で確定します）");
+}
+function renderPnDeleteConfirm(){
+  if(state.pnDeleteLid==null || !state.draft) return "";
+  const l=state.draft.lines.find(x=>x.lid===state.pnDeleteLid);
+  if(!l) return "";
+  const idx=state.draft.lines.indexOf(l)+1;
+  return `<div class="ovl anim" style="z-index:80" onclick="if(event.target===this)pnCancelDeleteLine()"><div class="modal" style="width:min(460px,100%)">
+    <div class="m-head"><span class="t">${I.alert("#B23A2E",18)} この明細を削除しますか？</span>
+      <button class="x" onclick="pnCancelDeleteLine()">${I.x("#5A6472",18)}</button></div>
+    <div class="m-body">
+      <div class="ce-warn" style="background:var(--alertSoft);border-color:#E0B8B2">${I.alert("#B23A2E",18)}<div>
+        <div class="ce-q">明細 ${idx}「${esc(l.item||"（項目なし）")}」を削除します。</div>
+        <div class="ce-note">${esc(l.cat)}・${yen(l.amount)}。この操作は保存または反映で確定します。削除後は元に戻せません。</div></div></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn-cancel" onclick="pnCancelDeleteLine()">キャンセル</button>
+      <button class="btn-danger" onclick="pnDeleteLine()">${I.trash("#fff",14)} 削除する</button>
+    </div>
+  </div></div>`;
 }
 function savePanel(){
   const d=docs.find(x=>x.id===state.panelId); if(!d)return;
@@ -2397,6 +2428,7 @@ function renderOverlay(){
   else if(state.changelogOpen) h=renderChangelog();
   else if(state.vehEditKey) h=renderVehEditModal();
   if(state.reflectConfirm) h+=renderReflectConfirm(); // 既存オーバーレイの上に確認モーダルを重ねる
+  if(state.pnDeleteLid!=null) h+=renderPnDeleteConfirm();
   if(state.settingsSaveConfirm) h+=renderSettingsSaveConfirm();
   if(state.settingsLeave) h+=renderSettingsLeaveConfirm();
   ov.innerHTML=h;
