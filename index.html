@@ -277,6 +277,11 @@
 
   /* ───── settings ───── */
   .settings-wrap{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:var(--space-rel);padding-bottom:8px}
+  .set-savebar{position:sticky;bottom:0;display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--amber);border-radius:12px;padding:12px 16px;box-shadow:0 -4px 16px rgba(15,20,28,.10);margin-top:2px}
+  .ssb-msg{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;color:var(--amber)}
+  .ssb-actions{margin-left:auto;display:flex;gap:10px}
+  .btn-danger{background:var(--alert);border:none;color:#fff;border-radius:8px;padding:9px 18px;font-size:13.5px;font-weight:800;cursor:pointer}
+  .btn-danger:hover{filter:brightness(1.05)}
   .set-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
   .set-h{font-size:var(--fs-rel);font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px;margin-bottom:var(--space-rel);padding-bottom:11px;border-bottom:1px solid var(--lineSoft)}
   .set-count{font-size:11px;font-weight:700;font-family:var(--mono);color:var(--inkSoft);background:#EEF0EC;border-radius:999px;padding:1px 8px;margin-left:2px}
@@ -993,6 +998,7 @@ let state={
   justUploaded:new Set(),
   settings:{ companyName:"サンプル物流株式会社", defaultOcr:true, matchThreshold:0.85,
              defaultPageSize:20, logipokeUrl:"https://api.logipoke.example.com/v1", logipokeKey:"lpk_live_••••••••3a9f", autoReflect:false },
+  settingsDraft:null, settingsSaveConfirm:false, settingsLeave:null,
 };
 
 /* ───── ナビ・トップ ───── */
@@ -1015,7 +1021,14 @@ function renderNav(){
     }).join("");
 }
 function toggleSidebar(){ state.collapsed=!state.collapsed; document.getElementById("side").classList.toggle("collapsed",state.collapsed); }
-function setView(v){ state.view=v; render(); }
+function setView(v){
+  // 設定ページに未保存の変更があるまま離れる場合は確認アラートを挟む
+  if(state.view==="settings" && v!=="settings"){
+    if(settingsDirty()){ state.settingsLeave=v; renderOverlay(); return; }
+    state.settingsDraft=null; // 変更なしでの離脱はドラフトを破棄
+  }
+  state.view=v; render();
+}
 function renderCrumb(){
   const label={documents:"書類一覧",vehicles:"車両コスト一覧",settings:"設定"}[state.view]||"";
   document.getElementById("crumb").innerHTML=`Fleet Cost AI <span style="color:var(--inkFaint)">/</span> <b>${label}</b>`;
@@ -2170,19 +2183,27 @@ function setVehCategoryFilter(v){ state.vehCategoryFilter=v; state.vehPage=1; re
 
 /* ───── 設定 ───── */
 function renderSettings(){
-  const s=state.settings;
+  const d=ensureSettingsDraft();
+  const s=d.settings;
   const sw=(on,fn)=>`<div class="switch ${on?"on":""}" onclick="${fn}"><div class="knob"></div></div>`;
-  const catRows=CATS.map(c=>{
-    const dts=DOC_TYPES.map(t=>{const on=docTypesForCat(c).includes(t);
+  const catRows=d.cats.map(c=>{
+    const dts=DOC_TYPES.map(t=>{const on=(d.catDocTypes[c]||[]).includes(t);
       return `<span class="dt-chip ${on?"on":""}" onclick="toggleCatDocType('${esc(c)}','${esc(t)}')">${esc(t)}</span>`;}).join("");
     return `<div class="cat-row"><span class="cat-name">${catPill(c)}</span>
       <span class="cat-dts">${dts}</span>
       <button class="cat-del" title="分類を削除" onclick="removeCat('${esc(c)}')">×</button></div>`;
   }).join("");
-  const officeChips=CATEGORIES.map(c=>`<span class="set-chip">${esc(c)}<button title="削除" onclick="removeCategory('${esc(c)}')">×</button></span>`).join("");
-  const plates=[...MASTER].sort();
+  const officeChips=d.categories.map(c=>`<span class="set-chip">${esc(c)}<button title="削除" onclick="removeCategory('${esc(c)}')">×</button></span>`).join("");
+  const plates=[...d.master].sort();
   const plateChips=plates.map(p=>`<span class="set-chip mono">${esc(p)}<button title="削除" onclick="removePlate('${esc(p)}')">×</button></span>`).join("");
-  return `<div class="pagehead"><div><h1>設定</h1><p>Fleet Cost AI のデータ化・突合・ロジポケ連携に関する設定です。変更は画面全体に即時反映されます。</p></div></div>
+  const dirty=settingsDirty();
+  const saveBar=dirty?`<div class="set-savebar">
+      <span class="ssb-msg">${I.alert("#B87514",16)} 未保存の変更があります（${settingsDiff().length}件）</span>
+      <div class="ssb-actions">
+        <button class="btn-cancel" onclick="discardSettingsEdits()">変更を破棄</button>
+        <button class="btn-green" onclick="askSaveSettings()">${I.check("#fff",14,3)} 保存</button>
+      </div></div>`:"";
+  return `<div class="pagehead"><div><h1>設定</h1><p>Fleet Cost AI のデータ化・突合・ロジポケ連携に関する設定です。変更内容は<b>保存するまで反映されません</b>。編集後は下部の保存バーから確定してください。</p></div></div>
   <div class="settings-wrap">
     <div class="set-card">
       <div class="set-h">${I.file("#16A571",16)} 会社情報</div>
@@ -2236,29 +2257,132 @@ function renderSettings(){
       <div class="set-chips">${plateChips}</div>
       <div class="set-add"><input class="in mono" id="new-plate" placeholder="車番を追加（例：名古屋500あ9999）" style="max-width:280px"><button class="btn-green" style="padding:8px 14px" onclick="addPlate()">${I.plus()} 追加</button></div>
     </div>
+    ${saveBar}
   </div>`;
 }
-function setSetting(k,v){ state.settings[k]=v; render(); }
-function toggleSetting(k){ state.settings[k]=!state.settings[k]; render(); }
-function setMatchThreshold(pct){ state.settings.matchThreshold=Math.max(.5,Math.min(.99,(+pct)/100)); render(); toast(`突合しきい値を ${Math.round(state.settings.matchThreshold*100)}% に設定しました`); }
-function setDefaultPageSize(n){ n=+n; state.settings.defaultPageSize=n; state.docPerPage=n; state.vehPerPage=n; state.docPage=1; state.vehPage=1; render(); toast(`既定の表示件数を ${n}件 に設定しました`); }
-function addCat(){ const el=document.getElementById("new-cat"); const v=(el?el.value:"").trim();
-  if(!v){ toast("分類名を入力してください"); return; } if(CATS.includes(v)){ toast("すでに存在します"); return; }
-  CATS.push(v); if(!CAT_DOCTYPES[v]) CAT_DOCTYPES[v]=["請求書"]; render(); toast(`コスト分類「${v}」を追加しました`); }
-function removeCat(c){ const i=CATS.indexOf(c); if(i>=0) CATS.splice(i,1); delete CAT_DOCTYPES[c]; render(); toast(`コスト分類「${c}」を削除しました`); }
-function toggleCatDocType(cat,dtype){ const arr=CAT_DOCTYPES[cat]||(CAT_DOCTYPES[cat]=[]);
+/* 設定は編集中ドラフトに溜め、保存（確認ステップ）で初めて実データへ反映する */
+function ensureSettingsDraft(){
+  if(!state.settingsDraft){
+    state.settingsDraft={
+      settings:JSON.parse(JSON.stringify(state.settings)),
+      categories:[...CATEGORIES],
+      cats:[...CATS],
+      catDocTypes:JSON.parse(JSON.stringify(CAT_DOCTYPES)),
+      master:[...MASTER],
+    };
+  }
+  return state.settingsDraft;
+}
+function settingsDirty(){
+  const d=state.settingsDraft; if(!d) return false;
+  return JSON.stringify(d.settings)!==JSON.stringify(state.settings)
+    || JSON.stringify(d.categories)!==JSON.stringify(CATEGORIES)
+    || JSON.stringify(d.cats)!==JSON.stringify(CATS)
+    || JSON.stringify(d.catDocTypes)!==JSON.stringify(CAT_DOCTYPES)
+    || JSON.stringify([...d.master].sort())!==JSON.stringify([...MASTER].sort());
+}
+/* 変更点を人が読める差分として列挙（保存確認モーダルで使用） */
+function settingsDiff(){
+  const d=state.settingsDraft; if(!d) return [];
+  const out=[];
+  const L={companyName:"自社名",defaultOcr:"既定でAI-OCRを使う",matchThreshold:"突合しきい値",defaultPageSize:"既定の表示件数",logipokeUrl:"連携先エンドポイント",logipokeKey:"APIキー",autoReflect:"自動でロジポケに反映"};
+  Object.keys(L).forEach(k=>{
+    if(JSON.stringify(d.settings[k])===JSON.stringify(state.settings[k])) return;
+    let was=state.settings[k], now=d.settings[k];
+    if(k==="matchThreshold"){ was=Math.round(was*100)+"%"; now=Math.round(now*100)+"%"; }
+    else if(typeof was==="boolean"){ was=was?"ON":"OFF"; now=now?"ON":"OFF"; }
+    out.push(`${L[k]}：${was} → ${now}`);
+  });
+  const diffArr=(live,draft,label)=>{
+    draft.filter(x=>!live.includes(x)).forEach(x=>out.push(`${label}を追加：${x}`));
+    live.filter(x=>!draft.includes(x)).forEach(x=>out.push(`${label}を削除：${x}`));
+  };
+  diffArr(CATEGORIES,d.categories,"営業所");
+  diffArr(CATS,d.cats,"コスト分類");
+  diffArr([...MASTER],d.master,"車番");
+  d.cats.forEach(c=>{ if(!CATS.includes(c)) return;
+    const a=(CAT_DOCTYPES[c]||[]).slice().sort(), b=(d.catDocTypes[c]||[]).slice().sort();
+    if(JSON.stringify(a)!==JSON.stringify(b)) out.push(`「${c}」の想定書類タイプを変更`);
+  });
+  return out;
+}
+function setSetting(k,v){ ensureSettingsDraft().settings[k]=v; render(); }
+function toggleSetting(k){ const d=ensureSettingsDraft(); d.settings[k]=!d.settings[k]; render(); }
+function setMatchThreshold(pct){ ensureSettingsDraft().settings.matchThreshold=Math.max(.5,Math.min(.99,(+pct)/100)); render(); }
+function setDefaultPageSize(n){ ensureSettingsDraft().settings.defaultPageSize=+n; render(); }
+function addCat(){ const d=ensureSettingsDraft(); const el=document.getElementById("new-cat"); const v=(el?el.value:"").trim();
+  if(!v){ toast("分類名を入力してください"); return; } if(d.cats.includes(v)){ toast("すでに存在します"); return; }
+  d.cats.push(v); if(!d.catDocTypes[v]) d.catDocTypes[v]=["請求書"]; render(); }
+function removeCat(c){ const d=ensureSettingsDraft(); const i=d.cats.indexOf(c); if(i>=0) d.cats.splice(i,1); delete d.catDocTypes[c]; render(); }
+function toggleCatDocType(cat,dtype){ const d=ensureSettingsDraft(); const arr=d.catDocTypes[cat]||(d.catDocTypes[cat]=[]);
   const i=arr.indexOf(dtype); if(i>=0) arr.splice(i,1); else arr.push(dtype); render(); }
-function addCategory(){ const el=document.getElementById("new-office"); const v=(el?el.value:"").trim();
-  if(!v){ toast("営業所名を入力してください"); return; } if(CATEGORIES.includes(v)){ toast("すでに存在します"); return; }
-  CATEGORIES.push(v); render(); toast(`営業所「${v}」を追加しました`); }
-function removeCategory(c){ const i=CATEGORIES.indexOf(c); if(i>=0) CATEGORIES.splice(i,1);
-  if(state.categoryFilter===c) state.categoryFilter="all"; if(state.vehCategoryFilter===c) state.vehCategoryFilter="all";
-  render(); toast(`営業所「${c}」を削除しました`); }
-function addPlate(){ const el=document.getElementById("new-plate"); const v=(el?el.value:"").trim();
-  if(!v){ toast("車番を入力してください"); return; } if(MASTER.has(v)){ toast("すでに登録済みです"); return; }
-  MASTER.add(v); render(); toast(`車両マスタに「${v}」を追加しました`); }
-function removePlate(p){ MASTER.delete(p); render(); toast(`車両マスタから「${p}」を削除しました`); }
+function addCategory(){ const d=ensureSettingsDraft(); const el=document.getElementById("new-office"); const v=(el?el.value:"").trim();
+  if(!v){ toast("営業所名を入力してください"); return; } if(d.categories.includes(v)){ toast("すでに存在します"); return; }
+  d.categories.push(v); render(); }
+function removeCategory(c){ const d=ensureSettingsDraft(); const i=d.categories.indexOf(c); if(i>=0) d.categories.splice(i,1); render(); }
+function addPlate(){ const d=ensureSettingsDraft(); const el=document.getElementById("new-plate"); const v=(el?el.value:"").trim();
+  if(!v){ toast("車番を入力してください"); return; } if(d.master.includes(v)){ toast("すでに登録済みです"); return; }
+  d.master.push(v); render(); }
+function removePlate(p){ const d=ensureSettingsDraft(); const i=d.master.indexOf(p); if(i>=0) d.master.splice(i,1); render(); }
 function testLogipoke(){ toast("ロジポケへの接続テストに成功しました（ダミー）"); }
+/* 変更を破棄してドラフトを作り直す */
+function discardSettingsEdits(){ state.settingsDraft=null; render(); toast("変更を破棄しました"); }
+/* 保存ボタン → 確認ステップ */
+function askSaveSettings(){ if(!settingsDirty()) return; state.settingsSaveConfirm=true; renderOverlay(); }
+function cancelSaveSettings(){ state.settingsSaveConfirm=false; renderOverlay(); }
+/* 確認後に実データへ反映 */
+function commitSettings(){
+  const d=state.settingsDraft;
+  if(d){
+    state.settings=JSON.parse(JSON.stringify(d.settings));
+    state.docPerPage=state.settings.defaultPageSize; state.vehPerPage=state.settings.defaultPageSize; state.docPage=1; state.vehPage=1;
+    CATEGORIES.length=0; d.categories.forEach(c=>CATEGORIES.push(c));
+    if(!CATEGORIES.includes(state.categoryFilter)) state.categoryFilter="all";
+    if(!CATEGORIES.includes(state.vehCategoryFilter)) state.vehCategoryFilter="all";
+    CATS.length=0; d.cats.forEach(c=>CATS.push(c));
+    Object.keys(CAT_DOCTYPES).forEach(k=>delete CAT_DOCTYPES[k]);
+    d.cats.forEach(c=>{ CAT_DOCTYPES[c]=(d.catDocTypes[c]||["請求書"]).slice(); });
+    MASTER.clear(); d.master.forEach(p=>MASTER.add(p));
+  }
+  state.settingsDraft=null; state.settingsSaveConfirm=false;
+  render(); toast("設定を保存しました");
+}
+/* 設定ページ離脱時の確認アラート */
+function settingsLeaveStay(){ state.settingsLeave=null; renderOverlay(); }
+function settingsLeaveDiscard(){ const v=state.settingsLeave; state.settingsLeave=null; state.settingsDraft=null; state.view=v; render(); }
+function renderSettingsSaveConfirm(){
+  if(!state.settingsSaveConfirm) return "";
+  const diff=settingsDiff();
+  const list = diff.length ? diff.map(t=>`<div class="ce-row changed"><span class="ce-tag">✎</span><div class="ce-body">${esc(t)}</div></div>`).join("") : `<div class="ce-empty">変更はありません。</div>`;
+  return `<div class="ovl anim" style="z-index:80" onclick="if(event.target===this)cancelSaveSettings()"><div class="modal" style="width:min(520px,100%)">
+    <div class="m-head"><span class="t">${I.gear("#0E7A4B",18)} 設定を保存しますか？</span>
+      <button class="x" onclick="cancelSaveSettings()">${I.x("#5A6472",18)}</button></div>
+    <div class="m-body">
+      <p style="margin:0 0 12px;font-size:13.5px;color:var(--ink)">以下の内容で設定を保存します。保存すると画面全体に反映されます。</p>
+      <div class="ce-list">${list}</div>
+    </div>
+    <div class="m-foot">
+      <button class="btn-cancel" onclick="cancelSaveSettings()">キャンセル</button>
+      <button class="btn-green" onclick="commitSettings()">${I.check("#fff",14,3)} 保存する</button>
+    </div>
+  </div></div>`;
+}
+function renderSettingsLeaveConfirm(){
+  if(!state.settingsLeave) return "";
+  return `<div class="ovl anim" style="z-index:80" onclick="if(event.target===this)settingsLeaveStay()"><div class="modal" style="width:min(480px,100%)">
+    <div class="m-head"><span class="t">${I.alert("#B87514",18)} 保存されていない変更があります</span>
+      <button class="x" onclick="settingsLeaveStay()">${I.x("#5A6472",18)}</button></div>
+    <div class="m-body">
+      <div class="ce-warn">${I.alert("#B87514",18)}<div>
+        <div class="ce-q">保存されないけど大丈夫ですか？</div>
+        <div class="ce-note">このページを離れると、編集した設定は保存されずに破棄されます。</div></div></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn-cancel" onclick="settingsLeaveStay()">このページに留まる</button>
+      <button class="btn-danger" onclick="settingsLeaveDiscard()">保存せずに移動</button>
+    </div>
+  </div></div>`;
+}
 
 /* ───── オーバーレイ・トースト ───── */
 let _ovKind="";
@@ -2274,6 +2398,8 @@ function renderOverlay(){
   else if(state.changelogOpen) h=renderChangelog();
   else if(state.vehEditKey) h=renderVehEditModal();
   if(state.reflectConfirm) h+=renderReflectConfirm(); // 既存オーバーレイの上に確認モーダルを重ねる
+  if(state.settingsSaveConfirm) h+=renderSettingsSaveConfirm();
+  if(state.settingsLeave) h+=renderSettingsLeaveConfirm();
   ov.innerHTML=h;
 }
 let _toastT=null,_toastAction=null;
