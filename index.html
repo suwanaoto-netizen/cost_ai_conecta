@@ -883,6 +883,55 @@ const FLEET=[
 const NEW_PLATES=new Set(["名古屋330え4567","岐阜100か7890","浜松100か3030","春日井500あ1212","名古屋800た1010","知多300か7878"]);
 FLEET.forEach(p=>{ if(!NEW_PLATES.has(p)) MASTER.add(p); });
 
+/* ───── 自検協データ（車台番号 → 車格・諸元の突合） ───── */
+/* 車台番号の型式コードから車格を判定し、最大積載量・車両総重量・サイズを引き当てる。
+   登録車両の諸元もここから生成するため、画面表示と突合結果は常に一致する。 */
+const JIKEN_CLASSES={
+  "小型":{maxLoad:2000, gross:4965, size:"4.69 × 1.69 × 1.98 m"},
+  "中型":{maxLoad:3800, gross:7985, size:"8.18 × 2.29 × 3.10 m"},
+  "大型":{maxLoad:13600, gross:24795, size:"11.99 × 2.49 × 3.78 m"},
+};
+const JIKEN_MODELS=[
+  {code:"FE", emi:"2RG", model:"FEAV0", klass:"小型"},
+  {code:"FK", emi:"2KG", model:"FK71F", klass:"中型"},
+  {code:"FS", emi:"2PG", model:"FS70HZ", klass:"大型"},
+  {code:"FU", emi:"QPG", model:"FU54VZ", klass:"大型"},
+];
+function _genChassis(plate){
+  const h=_hash(plate); const m=JIKEN_MODELS[h%JIKEN_MODELS.length];
+  const serial=500000+(h%480000);
+  return `${m.emi}-${m.model}-${serial}`;
+}
+/* 車台番号から車格を判定（登録済みは型式一致、手入力は型式コード部分一致で突合） */
+function _classFromChassis(chassis){
+  const up=(chassis||"").replace(/\s/g,"").toUpperCase();
+  if(up.length<2) return null;
+  for(const m of JIKEN_MODELS){ if(up.includes(m.code)) return m.klass; }
+  return null;
+}
+function lookupJikenkyo(chassis){
+  const klass=_classFromChassis(chassis); if(!klass) return null;
+  const base=JIKEN_CLASSES[klass];
+  const h=_hash((chassis||"").toUpperCase());
+  return {klass, maxLoad:base.maxLoad + (h%5)*100, gross:base.gross, size:base.size};
+}
+
+/* ───── 車両マスタ（マスタデータ画面のソース） ───── */
+/* MASTER（車番の集合）が突合の真実源であり続けるよう、編集後は syncMaster() で同期する。 */
+const VEHICLE_MASTER=[];
+(function initVehicleMaster(){
+  let no=1001, idx=0;
+  FLEET.forEach(p=>{
+    if(NEW_PLATES.has(p)) return;
+    const chassis=_genChassis(p);
+    const spec=lookupJikenkyo(chassis)||{maxLoad:"",gross:"",size:"",klass:""};
+    VEHICLE_MASTER.push({ no:no++, plate:p, chassis, code:`V${String(++idx).padStart(3,"0")}`, name:"", note:"",
+      maxLoad:spec.maxLoad, grossWeight:spec.gross, size:spec.size, klass:spec.klass });
+  });
+})();
+function nextMasterNo(){ return VEHICLE_MASTER.reduce((m,v)=>Math.max(m,v.no),1000)+1; }
+function syncMaster(){ MASTER.clear(); VEHICLE_MASTER.forEach(v=>{ if(v.plate) MASTER.add(v.plate); }); }
+
 const GEN_VENDORS=[
  {n:"中部マツダ整備",cat:["修繕・維持費"]},
  {n:"トヨタL&F中部",cat:["修繕・維持費"]},
@@ -1054,6 +1103,7 @@ let state={
   settings:{ companyName:"サンプル物流株式会社", defaultOcr:true, matchThreshold:0.85,
              defaultPageSize:20, logipokeUrl:"https://api.logipoke.example.com/v1", logipokeKey:"lpk_live_••••••••3a9f", autoReflect:false },
   settingsDraft:null, settingsSaveConfirm:false, settingsLeave:null,
+  masterEdit:null, masterPage:1, masterPerPage:20,
 };
 
 /* ───── ナビ・トップ ───── */
@@ -1063,6 +1113,7 @@ function renderNav(){
   const items=[
     {k:"documents",l:"書類一覧",ic:I.docs("#fff",18),ct:todoDocs,hideZero:true},
     {k:"vehicles",l:"コストモニター",ic:I.truckN("#fff",18),ct:veh},
+    {k:"master",l:"マスタデータ",ic:I.db("#fff",18),ct:VEHICLE_MASTER.length},
     {k:"settings",l:"設定",ic:I.gear("#fff",18)},
   ];
   document.getElementById("nav").innerHTML=
@@ -1085,7 +1136,7 @@ function setView(v){
   state.view=v; render();
 }
 function renderCrumb(){
-  const label={documents:"書類一覧",vehicles:"コストモニター",settings:"設定"}[state.view]||"";
+  const label={documents:"書類一覧",vehicles:"コストモニター",master:"マスタデータ",settings:"設定"}[state.view]||"";
   document.getElementById("crumb").innerHTML=`Fleet Cost AI <span style="color:var(--inkFaint)">/</span> <b>${label}</b>`;
   const wn=document.getElementById("who-name"); if(wn) wn.textContent=state.settings.companyName;
 }
@@ -1166,8 +1217,8 @@ function docPageInfo(){
 function pager(kind,info){
   if(info.total===0) return "";
   const start=info.start+1, end=Math.min(info.start+info.per,info.total);
-  const perFn=kind==="doc"?"setDocPerPage":"setVehPerPage";
-  const pageFn=kind==="doc"?"setDocPage":"setVehPage";
+  const perFn={doc:"setDocPerPage",veh:"setVehPerPage",master:"setMasterPerPage"}[kind];
+  const pageFn={doc:"setDocPage",veh:"setVehPage",master:"setMasterPage"}[kind];
   const opts=[20,50,100].map(n=>`<option value="${n}" ${n===info.per?"selected":""}>${n}</option>`).join("");
   return `<div class="pager">
     <span class="pg-range">全 <b>${info.total}</b> 件中 <b>${start}</b>–<b>${end}</b> 件を表示</span>
@@ -1183,6 +1234,8 @@ function setDocPage(p){ state.docPage=+p; refreshDocBody(); }
 function setDocPerPage(n){ state.docPerPage=+n; state.docPage=1; refreshDocBody(); }
 function setVehPage(p){ state.vehPage=+p; render(); }
 function setVehPerPage(n){ state.vehPerPage=+n; state.vehPage=1; render(); }
+function setMasterPage(p){ state.masterPage=+p; render(); }
+function setMasterPerPage(n){ state.masterPerPage=+n; state.masterPage=1; render(); }
 
 function renderDocBody(){
   const info=docPageInfo();
@@ -2397,8 +2450,6 @@ function renderSettings(){
       <button class="cat-del" title="分類を削除" onclick="removeCat('${esc(c)}')">×</button></div>`;
   }).join("");
   const officeChips=d.categories.map(c=>`<span class="set-chip">${esc(c)}<button title="削除" onclick="removeCategory('${esc(c)}')">×</button></span>`).join("");
-  const plates=[...d.master].sort();
-  const plateChips=plates.map(p=>`<span class="set-chip mono">${esc(p)}<button title="削除" onclick="removePlate('${esc(p)}')">×</button></span>`).join("");
   const dirty=settingsDirty();
   const saveBar=dirty?`<div class="set-savebar">
       <span class="ssb-msg">${I.alert("#B87514",16)} 未保存の変更があります（${settingsDiff().length}件）</span>
@@ -2455,10 +2506,9 @@ function renderSettings(){
     </div>
 
     <div class="set-card">
-      <div class="set-h">${I.truck("#16A571",15)} 車両マスタ <span class="set-count">${plates.length}台</span></div>
-      <div class="set-d" style="margin-bottom:10px">登録済みの車番です。ここに無い車番は突合時に「新規作成」と判定されます。</div>
-      <div class="set-chips">${plateChips}</div>
-      <div class="set-add"><input class="in mono" id="new-plate" placeholder="車番を追加（例：名古屋500あ9999）" style="max-width:280px"><button class="btn-green" style="padding:8px 14px" onclick="addPlate()">${I.plus()} 追加</button></div>
+      <div class="set-h">${I.truck("#16A571",15)} 車両マスタ</div>
+      <div class="set-d">車両の登録・編集は <b>「マスタデータ」</b> ページに移動しました。車台番号から車格・諸元の突合も行えます。</div>
+      <div style="margin-top:12px"><button class="btn-ghost" onclick="setView('master')">${I.db("#0E7A4B",15)} マスタデータを開く</button></div>
     </div>
     ${saveBar}
   </div>`;
@@ -2471,7 +2521,6 @@ function ensureSettingsDraft(){
       categories:[...CATEGORIES],
       cats:[...CATS],
       catDocTypes:JSON.parse(JSON.stringify(CAT_DOCTYPES)),
-      master:[...MASTER],
     };
   }
   return state.settingsDraft;
@@ -2481,8 +2530,7 @@ function settingsDirty(){
   return JSON.stringify(d.settings)!==JSON.stringify(state.settings)
     || JSON.stringify(d.categories)!==JSON.stringify(CATEGORIES)
     || JSON.stringify(d.cats)!==JSON.stringify(CATS)
-    || JSON.stringify(d.catDocTypes)!==JSON.stringify(CAT_DOCTYPES)
-    || JSON.stringify([...d.master].sort())!==JSON.stringify([...MASTER].sort());
+    || JSON.stringify(d.catDocTypes)!==JSON.stringify(CAT_DOCTYPES);
 }
 /* 変更点を人が読める差分として列挙（保存確認モーダルで使用） */
 function settingsDiff(){
@@ -2502,7 +2550,6 @@ function settingsDiff(){
   };
   diffArr(CATEGORIES,d.categories,"営業所");
   diffArr(CATS,d.cats,"コスト分類");
-  diffArr([...MASTER],d.master,"車番");
   d.cats.forEach(c=>{ if(!CATS.includes(c)) return;
     const a=(CAT_DOCTYPES[c]||[]).slice().sort(), b=(d.catDocTypes[c]||[]).slice().sort();
     if(JSON.stringify(a)!==JSON.stringify(b)) out.push(`「${c}」の想定書類タイプを変更`);
@@ -2523,10 +2570,6 @@ function addCategory(){ const d=ensureSettingsDraft(); const el=document.getElem
   if(!v){ toast("営業所名を入力してください"); return; } if(d.categories.includes(v)){ toast("すでに存在します"); return; }
   d.categories.push(v); render(); }
 function removeCategory(c){ const d=ensureSettingsDraft(); const i=d.categories.indexOf(c); if(i>=0) d.categories.splice(i,1); render(); }
-function addPlate(){ const d=ensureSettingsDraft(); const el=document.getElementById("new-plate"); const v=(el?el.value:"").trim();
-  if(!v){ toast("車番を入力してください"); return; } if(d.master.includes(v)){ toast("すでに登録済みです"); return; }
-  d.master.push(v); render(); }
-function removePlate(p){ const d=ensureSettingsDraft(); const i=d.master.indexOf(p); if(i>=0) d.master.splice(i,1); render(); }
 function testLogipoke(){ toast("ロジポケへの接続テストに成功しました（ダミー）"); }
 /* 変更を破棄してドラフトを作り直す */
 function discardSettingsEdits(){ state.settingsDraft=null; render(); toast("変更を破棄しました"); }
@@ -2545,7 +2588,6 @@ function commitSettings(){
     CATS.length=0; d.cats.forEach(c=>CATS.push(c));
     Object.keys(CAT_DOCTYPES).forEach(k=>delete CAT_DOCTYPES[k]);
     d.cats.forEach(c=>{ CAT_DOCTYPES[c]=(d.catDocTypes[c]||["請求書"]).slice(); });
-    MASTER.clear(); d.master.forEach(p=>MASTER.add(p));
   }
   state.settingsDraft=null; state.settingsSaveConfirm=false;
   render(); toast("設定を保存しました");
@@ -2586,11 +2628,141 @@ function renderSettingsLeaveConfirm(){
   </div></div>`;
 }
 
+/* ───── マスタデータ（車両マスタ） ───── */
+function _fmtKg(n){ return (n===""||n==null||isNaN(+n))?"":Number(n).toLocaleString("ja-JP")+" kg"; }
+function renderMaster(){
+  const list=VEHICLE_MASTER.slice().sort((a,b)=>b.no-a.no);
+  const per=state.masterPerPage;
+  const pages=Math.max(1,Math.ceil(list.length/per));
+  if(state.masterPage>pages)state.masterPage=pages; if(state.masterPage<1)state.masterPage=1;
+  const start=(state.masterPage-1)*per;
+  const info={total:list.length,per,pages,page:state.masterPage,start};
+  const pageList=list.slice(start,start+per);
+  const dash='<span style="color:var(--inkFaint)">—</span>';
+  const cell=v=> (v===""||v==null)?dash:esc(v);
+  const kg=n=> _fmtKg(n)||dash;
+  const rows=pageList.map(v=>`<tr class="vrow" onclick="openMasterEdit(${v.no})">
+    <td style="font-family:var(--mono);color:var(--inkSoft)">${v.no}</td>
+    <td><span class="plate">${esc(v.plate)}</span></td>
+    <td style="font-family:var(--mono);font-size:11.5px;color:var(--inkSoft)">${cell(v.chassis)}</td>
+    <td>${cell(v.code)}</td>
+    <td>${cell(v.name)}</td>
+    <td class="r">${kg(v.maxLoad)}</td>
+    <td class="r">${kg(v.grossWeight)}</td>
+    <td style="white-space:nowrap;font-size:11.5px;color:var(--inkSoft)">${cell(v.size)}</td>
+    <td style="text-align:right;white-space:nowrap">
+      <button class="veh-edit-btn" onclick="event.stopPropagation();openMasterEdit(${v.no})">${I.pencil("#0E7A4B",13)} 編集</button>
+    </td></tr>`).join("");
+  const head=`<div class="pagehead"><div><h1>マスタデータ</h1><p>車両を登録しておくと、請求書の突合や支払申請などで選択できるようになります。車台番号を入力すると<b>自検協データと突合</b>し、車格・最大積載量・車両総重量・サイズを自動反映します。</p></div>
+    <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
+      <button class="btn-ghost" onclick="downloadMasterCsv()">${I.docs("#0E7A4B",16)} CSVダウンロード</button>
+      <button class="btn-green" onclick="openMasterNew()">${I.plus()} 新しい車両を登録</button>
+    </div></div>`;
+  const table=`<div class="veh-card"><div class="tscroll"><table class="vt">
+    <thead><tr><th>No</th><th>車両番号</th><th>車台番号</th><th>車両コード</th><th>社内名称</th><th class="r">最大積載量</th><th class="r">車両総重量</th><th>サイズ</th><th style="text-align:right">操作</th></tr></thead>
+    <tbody>${rows||`<tr><td colspan="9" style="text-align:center;padding:34px;color:var(--inkSoft)">登録済みの車両がありません。右上から登録してください。</td></tr>`}</tbody></table></div>${pager("master",info)}</div>`;
+  return head+table;
+}
+function openMasterNew(){
+  state.masterEdit={mode:"new", no:null, plate:"", chassis:"", code:"", name:"", note:"",
+    maxLoad:"", grossWeight:"", size:"", klass:"", matched:false};
+  renderOverlay();
+}
+function openMasterEdit(no){
+  const v=VEHICLE_MASTER.find(x=>x.no===+no); if(!v) return;
+  state.masterEdit={mode:"edit", no:v.no, plate:v.plate, chassis:v.chassis, code:v.code, name:v.name, note:v.note,
+    maxLoad:v.maxLoad, grossWeight:v.grossWeight, size:v.size, klass:v.klass, matched:!!v.klass};
+  renderOverlay();
+}
+function closeMasterEdit(){ state.masterEdit=null; renderOverlay(); }
+function masterEditField(k,val){ if(state.masterEdit) state.masterEdit[k]=val; }
+/* 車台番号入力 → 自検協突合。フォーカスを保つため再描画せず該当セルのみDOM更新する。 */
+function masterEditChassis(val){
+  const e=state.masterEdit; if(!e) return;
+  e.chassis=val;
+  const spec=lookupJikenkyo(val);
+  if(spec){ e.maxLoad=spec.maxLoad; e.grossWeight=spec.gross; e.size=spec.size; e.klass=spec.klass; e.matched=true; }
+  else { e.maxLoad=""; e.grossWeight=""; e.size=""; e.klass=""; e.matched=false; }
+  const setv=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=v; };
+  setv("me-maxload",_fmtKg(e.maxLoad)); setv("me-gross",_fmtKg(e.grossWeight)); setv("me-size",e.size||"");
+  const badge=document.getElementById("me-klass");
+  if(badge) badge.innerHTML=masterKlassBadge(e,val);
+}
+function masterKlassBadge(e,raw){
+  if(e.matched) return `<span class="mtag exist">${I.check("#157F73",11,2.6)} 自検協突合：車格 ${esc(e.klass)}</span>`;
+  return (raw&&raw.trim())?`<span class="mtag newv">${I.alert("#B87514",11)} 該当データなし</span>`:"";
+}
+function saveMasterEdit(){
+  const e=state.masterEdit; if(!e) return;
+  const plate=(e.plate||"").trim();
+  if(!plate){ toast("車両番号を入力してください"); return; }
+  if(VEHICLE_MASTER.find(v=>v.plate===plate && v.no!==e.no)){ toast("同じ車両番号がすでに登録されています"); return; }
+  const fields={ plate, chassis:(e.chassis||"").trim(), code:(e.code||"").trim(), name:(e.name||"").trim(),
+    note:(e.note||"").trim(), maxLoad:e.maxLoad, grossWeight:e.grossWeight, size:e.size, klass:e.klass };
+  if(e.mode==="new"){ VEHICLE_MASTER.push(Object.assign({no:nextMasterNo()},fields)); }
+  else { const v=VEHICLE_MASTER.find(x=>x.no===e.no); if(v) Object.assign(v,fields); }
+  syncMaster();
+  state.masterEdit=null;
+  render();
+  toast(e.mode==="new"?"車両を登録しました":"車両情報を更新しました");
+}
+function deleteMasterEdit(){
+  const e=state.masterEdit; if(!e||e.mode!=="edit") return;
+  const i=VEHICLE_MASTER.findIndex(x=>x.no===e.no);
+  if(i>=0) VEHICLE_MASTER.splice(i,1);
+  syncMaster();
+  state.masterEdit=null;
+  render();
+  toast("車両を削除しました");
+}
+function renderMasterEditModal(){
+  const e=state.masterEdit; if(!e) return "";
+  const title=e.mode==="new"?"新しい車両を登録":"車両情報を編集";
+  return `<div class="ovl ${state._ovFresh?'anim':''}" onclick="if(event.target===this)closeMasterEdit()"><div class="modal" style="width:min(560px,100%)">
+    <div class="m-head"><span class="t">${esc(title)}</span><button class="x" onclick="closeMasterEdit()">${I.x("#5A6472",18)}</button></div>
+    <div class="m-body">
+      <div class="fld"><label>車両番号 <span style="color:var(--alert)">*</span></label>
+        <input class="in mono" value="${esc(e.plate)}" oninput="masterEditField('plate',this.value)" placeholder="例：名古屋500あ9999"></div>
+      <div class="fld"><label>車台番号（任意）<span id="me-klass">${masterKlassBadge(e,e.chassis)}</span></label>
+        <input class="in mono" value="${esc(e.chassis)}" oninput="masterEditChassis(this.value)" placeholder="例：2KG-FK71F-590481"></div>
+      <div style="font-size:11px;color:var(--inkSoft);margin:-2px 2px 12px;line-height:1.6">車台番号を入力すると、自検協データと突合して<b>車格</b>を判定し、最大積載量・車両総重量・サイズを自動で反映します。</div>
+      <div class="fld"><label>車両コード（任意）</label>
+        <input class="in" value="${esc(e.code)}" oninput="masterEditField('code',this.value)" placeholder="Enter vehicle code"></div>
+      <div class="fld"><label>社内名称（任意）</label>
+        <input class="in" value="${esc(e.name)}" oninput="masterEditField('name',this.value)" placeholder="例：1号車"></div>
+      <div class="fld"><label>備考（任意）</label>
+        <textarea class="in" rows="2" style="resize:vertical" oninput="masterEditField('note',this.value)" placeholder="メモ">${esc(e.note)}</textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:4px">
+        <div class="fld"><label>最大積載量</label><input class="in" id="me-maxload" readonly value="${esc(_fmtKg(e.maxLoad))}" placeholder="自動反映" style="background:#F7F8F5"></div>
+        <div class="fld"><label>車両総重量</label><input class="in" id="me-gross" readonly value="${esc(_fmtKg(e.grossWeight))}" placeholder="自動反映" style="background:#F7F8F5"></div>
+        <div class="fld"><label>サイズ</label><input class="in" id="me-size" readonly value="${esc(e.size||"")}" placeholder="自動反映" style="background:#F7F8F5"></div>
+      </div>
+    </div>
+    <div class="m-foot">
+      ${e.mode==="edit"?`<button class="btn-cancel" style="margin-right:auto;color:var(--alert);border-color:#E0B8B2" onclick="deleteMasterEdit()">${I.trash("#B23A2E",14)} 削除</button>`:""}
+      <button class="btn-cancel" onclick="closeMasterEdit()">キャンセル</button>
+      <button class="btn-green" onclick="saveMasterEdit()">${I.check("#fff",14,3)} 保存する</button>
+    </div>
+  </div></div>`;
+}
+function downloadMasterCsv(){
+  const cols=["No","車両番号","車台番号","車両コード","社内名称","備考","最大積載量(kg)","車両総重量(kg)","サイズ","車格"];
+  const q=s=>`"${String(s==null?"":s).replace(/"/g,'""')}"`;
+  const body=VEHICLE_MASTER.slice().sort((a,b)=>a.no-b.no)
+    .map(v=>[v.no,v.plate,v.chassis,v.code,v.name,v.note,v.maxLoad,v.grossWeight,v.size,v.klass].map(q).join(","));
+  const csv="﻿"+cols.map(q).join(",")+"\r\n"+body.join("\r\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download="vehicle_master.csv";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast("CSVをダウンロードしました");
+}
+
 /* ───── オーバーレイ・トースト ───── */
 let _ovKind="";
 function renderOverlay(){
   const ov=document.getElementById("overlay");
-  const kind = state.upload.open?"upload": state.panelId?"panel": state.vehPanel?"vehpanel": state.changelogOpen?"changelog": state.vehEditKey?"vehedit": "";
+  const kind = state.upload.open?"upload": state.panelId?"panel": state.vehPanel?"vehpanel": state.changelogOpen?"changelog": state.vehEditKey?"vehedit": state.masterEdit?"masteredit": "";
   state._ovFresh = (kind!=="" && kind!==_ovKind); // 同じオーバーレイの再描画ではアニメさせない
   _ovKind=kind;
   let h="";
@@ -2599,6 +2771,7 @@ function renderOverlay(){
   else if(state.vehPanel) h=renderVehPanel();
   else if(state.changelogOpen) h=renderChangelog();
   else if(state.vehEditKey) h=renderVehEditModal();
+  else if(state.masterEdit) h=renderMasterEditModal();
   if(state.reflectConfirm) h+=renderReflectConfirm(); // 既存オーバーレイの上に確認モーダルを重ねる
   if(state.pnDeleteLid!=null) h+=renderPnDeleteConfirm();
   if(state.vehTrashAction) h+=renderVehTrashConfirm();
@@ -2632,6 +2805,7 @@ function render(){
   const cs=_captureScroll(c);
   c.innerHTML = state.view==="documents" ? renderDocuments()
               : state.view==="vehicles" ? renderVehicles()
+              : state.view==="master" ? renderMaster()
               : renderSettings();
   if(state.view==="documents") setSelectAllState();
   _restoreScroll(c,cs);
