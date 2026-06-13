@@ -217,8 +217,8 @@
   .sp-radios{display:flex;gap:26px;align-items:center;flex-wrap:wrap}
   .sp-radio{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink);cursor:pointer}
   .sp-radio input{accent-color:var(--blue);width:16px;height:16px;cursor:pointer;margin:0}
-  .sp-prev-btn{background:var(--blue);color:#fff;border:none;border-radius:7px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;margin-left:16px}
-  .sp-prev-btn:hover{filter:brightness(1.05)}
+  .sp-prev-btn{background:#fff;color:var(--greenDark);border:1px solid var(--line);border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;margin-left:16px;display:inline-flex;align-items:center;gap:6px}
+  .sp-prev-btn:hover{background:var(--panel);border-color:#C7CFD8}
   .sp-toggle-row{display:flex;align-items:center;gap:14px}
   .sp-toggle-row .switch.disabled{opacity:.45;pointer-events:none}
 
@@ -1655,7 +1655,7 @@ function renderSplitUploadBody(tabs){
       <div class="sp-toggle-row">
         <div class="switch ${s.split?"on":""} ${splitDisabled?"disabled":""}" onclick="splitToggleSplit()"><div class="knob"></div></div>
         <span style="font-size:13px;color:${splitDisabled?'var(--inkFaint)':'var(--ink)'}">分割する</span>
-        ${s.split&&!splitDisabled?`<button class="sp-prev-btn" onclick="splitOpenSettings()">分割プレビュー</button>`:""}
+        ${s.split&&!splitDisabled?`<button class="sp-prev-btn" onclick="splitOpenSettings()">${I.pencil('#0E7A4B',14)} 分割プレビュー</button>`:""}
       </div>
     </div>
     <div class="sp-field">
@@ -1692,7 +1692,7 @@ function spThumb(p){
   if(p.type==="cover"){
     return `<div class="spt">
       <div class="spt-r1"><span class="spt-h">請求書</span><span class="spt-date">2024年06月12日<br>請求番号:${esc(p.no)}</span></div>
-      <div class="spt-logo">バクラク<span class="spt-stamp">株式<br>会社<br>サンプル</span></div>
+      <div class="spt-logo">株式会社サンプル<span class="spt-stamp">株式<br>会社<br>サンプル</span></div>
       <div class="spt-to">${esc(p.to)} 御中</div>
       <div class="spt-meta">〒000-0000 東京都中央区XXXXX<br>TEL:00-1111-2222</div>
       <div class="spt-total"><span>合計(税込)</span><b>${esc(p.total)}</b></div>
