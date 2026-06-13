@@ -900,7 +900,7 @@ function genMultiDocs(n){
   }
   return out;
 }
-/* 全車両をカバーする反映済みの燃料費（7明細ずつ＝5〜10件帯／車両コスト一覧の母数確保） */
+/* 全車両をカバーする反映済みの燃料費（7明細ずつ＝5〜10件帯／コストモニターの母数確保） */
 function baselineDocs(){
   const out=[]; const vendors=["ENEOSウイング","出光リテール販売","ホクブトランスポート給油","コスモ石油法人"];
   for(let i=0,vi=0;i<FLEET.length;i+=7,vi++){
@@ -978,7 +978,7 @@ function statusHelp(){
   const rows=[
     ["未入力","取り込み直後の状態。取引先・車番・金額など、内容の確認・修正が必要です。"],
     ["入力済み","内容を確認・確定した状態。ロジポケ（車両コスト）へ反映できます。"],
-    ["反映済み","車両コストへ反映済みの状態。書類一覧では編集できません（🔒）。修正は車両コスト一覧から行えます。"],
+    ["反映済み","車両コストへ反映済みの状態。書類一覧では編集できません（🔒）。修正はコストモニターから行えます。"],
   ].map(([s,d])=>`<div class="hp-row"><span class="hp-c" style="min-width:98px">${statusChip(s)}</span><span class="hp-d">${d}</span></div>`).join("");
   return `<span class="phase-help" onclick="event.stopPropagation()"><span class="help" tabindex="0">?</span><span class="help-pop"><span class="hp-h">ステータスの説明</span>
     <span class="hp-intro">書類は「未入力 → 入力済み → 反映済み」の順で進みます。</span>${rows}</span></span>`;
@@ -1017,7 +1017,7 @@ function renderNav(){
   const veh=buildVehicles().length;
   const items=[
     {k:"documents",l:"書類一覧",ic:I.docs("#fff",18),ct:todoDocs,hideZero:true},
-    {k:"vehicles",l:"車両コスト一覧",ic:I.truckN("#fff",18),ct:veh},
+    {k:"vehicles",l:"コストモニター",ic:I.truckN("#fff",18),ct:veh},
     {k:"settings",l:"設定",ic:I.gear("#fff",18)},
   ];
   document.getElementById("nav").innerHTML=
@@ -1040,7 +1040,7 @@ function setView(v){
   state.view=v; render();
 }
 function renderCrumb(){
-  const label={documents:"書類一覧",vehicles:"車両コスト一覧",settings:"設定"}[state.view]||"";
+  const label={documents:"書類一覧",vehicles:"コストモニター",settings:"設定"}[state.view]||"";
   document.getElementById("crumb").innerHTML=`Fleet Cost AI <span style="color:var(--inkFaint)">/</span> <b>${label}</b>`;
   const wn=document.getElementById("who-name"); if(wn) wn.textContent=state.settings.companyName;
 }
@@ -1226,7 +1226,7 @@ function doBulkReflect(){
   if(t.length===0){ render(); return; }
   runReflect(t.map(d=>({name:d.name,lines:docLines(d)})), `${t.length}件の書類をロジポケに反映しました`, ()=>{
     const ts=nowStamp(); t.forEach(d=>{d.status="反映済み";d.reflectedAt=ts;state.selected.delete(d.id);});
-    render(); toast(`${t.length}件をロジポケ（車両コスト）へ反映しました`, {label:"車両コスト一覧を見る", fn:gotoVehicles}); }); }
+    render(); toast(`${t.length}件をロジポケ（車両コスト）へ反映しました`, {label:"コストモニターを見る", fn:gotoVehicles}); }); }
 function bulkTrash(){ state.bulkMenu=false;
   const t=visibleDocs().filter(d=>state.selected.has(d.id));
   if(t.length===0){ render(); return; }
@@ -1648,7 +1648,7 @@ function doReflectPanel(){
     Object.assign(d,{cat:state.draft.cat,category:state.draft.category,vendor:state.draft.vendor}); writeLines(d.id, state.draft.lines);
     d.status="反映済み"; d.reflectedAt=nowStamp(); state.draft.status="反映済み"; state.draft.reflectedAt=d.reflectedAt;
     state.selected.delete(d.id);
-    render(); renderNav(); toast("ロジポケ（車両コスト）へ反映しました", {label:"車両コスト一覧を見る", fn:()=>{ closePanel(); gotoVehicles(); }});
+    render(); renderNav(); toast("ロジポケ（車両コスト）へ反映しました", {label:"コストモニターを見る", fn:()=>{ closePanel(); gotoVehicles(); }});
   });
 }
 function closeReflectConfirm(){ state.reflectConfirm=null; renderOverlay(); }
@@ -1664,7 +1664,7 @@ function renderReflectConfirm(){
       <p style="margin:0 0 13px;font-size:13.5px;color:var(--ink)">${target}を車両コストへ反映します。</p>
       <div class="ce-warn">${I.alert("#B87514",18)}<div>
         <div class="ce-q">反映すると、<b>書類一覧画面では書類情報・明細の修正ができなくなります。</b></div>
-        <div class="ce-note">修正が必要になった場合も、反映後は<b>車両コスト一覧画面</b>から内訳を編集できます。</div></div></div>
+        <div class="ce-note">修正が必要になった場合も、反映後は<b>コストモニター画面</b>から内訳を編集できます。</div></div></div>
     </div>
     <div class="m-foot">
       <button class="btn-cancel" onclick="closeReflectConfirm()">キャンセル</button>
@@ -1673,7 +1673,7 @@ function renderReflectConfirm(){
   </div></div>`;
 }
 
-/* ───── 車両コスト一覧（反映済み書類＋手動明細を集計） ───── */
+/* ───── コストモニター（反映済み書類＋手動明細を集計） ───── */
 function buildVehicles(catFilter, range){
   const cf=catFilter||"all";
   const inR = (range&&range.start&&range.end) ? (dt=>dt&&dt>=range.start&&dt<=range.end) : (()=>true);
@@ -1796,7 +1796,7 @@ function renderChangelog(){
       <div class="clog-top"><span class="clog-act ${_CL_ACT[e.action]||''}">${e.action}</span><span class="clog-ts">${e.ts}</span></div>
       ${e.vehTrash
         ? `<div class="clog-main">${esc(e.detail)}</div>
-           <div class="clog-foot"><span>${I.user?I.user("#5A6472",12):""}${esc(e.user)}</span><span class="clog-link">車両コスト一覧で開く ›</span></div>`
+           <div class="clog-foot"><span>${I.user?I.user("#5A6472",12):""}${esc(e.user)}</span><span class="clog-link">コストモニターで開く ›</span></div>`
         : `<div class="clog-main"><span class="clog-plate">${esc(e.vehTarget)}</span>の「${esc(e.item)}」を ${esc(e.detail)}</div>
            <div class="clog-foot"><span>${I.user?I.user("#5A6472",12):""}${esc(e.user)}</span>${catPill(e.cat)}<span class="clog-link">変更箇所を開く ›</span></div>`}
     </button>`).join("");
@@ -2166,7 +2166,7 @@ function renderVehicles(){
     ${renderVehCal()}
   </div>`;
   const head=`<div class="pagehead">
-    <div><h1>車両コスト一覧</h1><p>反映済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}${hasRange?`<b style="color:var(--greenDark)">　期間：${state.vehDateStart}〜${state.vehDateEnd}</b>`:""}</p></div>
+    <div><h1>コストモニター</h1><p>反映済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}${hasRange?`<b style="color:var(--greenDark)">　期間：${state.vehDateStart}〜${state.vehDateEnd}</b>`:""}</p></div>
     <div class="ph-spacer"></div>
     <button class="trash-toggle ${inTrash?"on":""}" onclick="toggleVehTrash()" title="ゴミ箱">${I.trash(inTrash?"#B23A2E":"#5A6472",15)} ゴミ箱<span style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.06);padding:0 6px;border-radius:999px">${trashCount}</span></button>
     <button class="btn-hist" onclick="openChangelog()" title="コスト内訳の変更履歴">
@@ -2212,7 +2212,7 @@ function renderVehicles(){
       <div class="breakdown">${cats.map(c=>{const s=CAT_STYLE[c]||CAT_STYLE["税金"];
       return `<span class="bd"><span class="sw" style="background:${s.fg}"></span>${esc(c)} ${yen(v.byCat[c])}</span>`;}).join("")}</div>`;
     const actCell=inTrash
-      ? `<button class="icon-btn restore" title="車両コスト一覧に戻す" onclick="event.stopPropagation();vehAskRestore('${v.key}')">${I.undo("#0E7A4B",15)}</button>`
+      ? `<button class="icon-btn restore" title="コストモニターに戻す" onclick="event.stopPropagation();vehAskRestore('${v.key}')">${I.undo("#0E7A4B",15)}</button>`
       : `<button class="veh-edit-btn" onclick="event.stopPropagation();openVehEdit('${v.key}','${v.kind}','${esc(v.target)}')">${I.pencil("#0E7A4B",13)} 編集</button>
          <button class="icon-btn" title="ゴミ箱へ移動" style="margin-left:6px" onclick="event.stopPropagation();vehAskTrash('${v.key}')">${I.trash("#B23A2E",15)}</button>`;
     return `<tr class="vrow${inTrash?" is-trash":""}" ${inTrash?"":`onclick="openVehPanel('${v.key}','${v.kind}','${esc(v.target)}')"`}>
@@ -2260,8 +2260,8 @@ function confirmVehTrashAction(){
   } else {
     state.vehTrash.delete(a.key);
     logChange({action:"復元",vehKey:a.key,kind:a.kind,vehTarget:a.target,vehTrash:true,
-      detail:`車両「${a.target}」を車両コスト一覧に戻しました`});
-    render(); toast(`車番 ${a.target} を車両コスト一覧に戻しました`);
+      detail:`車両「${a.target}」をコストモニターに戻しました`});
+    render(); toast(`車番 ${a.target} をコストモニターに戻しました`);
   }
 }
 function renderVehTrashConfirm(){
@@ -2273,7 +2273,7 @@ function renderVehTrashConfirm(){
     <div class="m-body">
       <div class="ce-warn" style="${isTrash?'background:var(--alertSoft);border-color:#E0B8B2':'background:var(--greenSoft);border-color:var(--greenLine)'}">${isTrash?I.alert("#B23A2E",18):I.check("#0E7A4B",18,2.6)}<div>
         <div class="ce-q">車番 ${esc(a.target)}（累計 ${yen(a.total)}・明細 ${a.count}件）</div>
-        <div class="ce-note">${isTrash?"ゴミ箱へ移動すると車両コスト一覧に表示されなくなります。ゴミ箱からいつでも元に戻せます。":"車両コスト一覧に再表示されます。"}この操作は変更履歴に記録されます。</div></div></div>
+        <div class="ce-note">${isTrash?"ゴミ箱へ移動するとコストモニターに表示されなくなります。ゴミ箱からいつでも元に戻せます。":"コストモニターに再表示されます。"}この操作は変更履歴に記録されます。</div></div></div>
     </div>
     <div class="m-foot">
       <button class="btn-cancel" onclick="cancelVehTrashAction()">キャンセル</button>
@@ -2324,20 +2324,20 @@ function renderSettings(){
 
     <div class="set-card">
       <div class="set-h">${I.docs("#16A571",16)} 表示</div>
-      <div class="set-row"><div class="set-l"><div class="set-t">1ページあたりの既定表示件数</div><div class="set-d">書類一覧・車両コスト一覧の初期表示件数です。</div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">1ページあたりの既定表示件数</div><div class="set-d">書類一覧・コストモニターの初期表示件数です。</div></div>
         <div class="set-c"><select class="in" style="max-width:120px" onchange="setDefaultPageSize(this.value)">${[20,50,100].map(n=>`<option value="${n}" ${n===s.defaultPageSize?"selected":""}>${n} 件</option>`).join("")}</select></div></div>
     </div>
 
     <div class="set-card">
       <div class="set-h">${I.boxes("#16A571",15)} 営業所の管理 <span class="set-count">${CATEGORIES.length}件</span></div>
-      <div class="set-d" style="margin-bottom:10px">書類に紐付く営業所です。ここで登録すると、アップロード・書類詳細で選択でき、書類一覧・車両コスト一覧で絞り込めます。</div>
+      <div class="set-d" style="margin-bottom:10px">書類に紐付く営業所です。ここで登録すると、アップロード・書類詳細で選択でき、書類一覧・コストモニターで絞り込めます。</div>
       <div class="set-chips">${officeChips||'<span class="set-d">営業所がありません。下から追加してください。</span>'}</div>
       <div class="set-add"><input class="in" id="new-office" placeholder="営業所名（例：越谷営業所）" style="max-width:260px"><button class="btn-green" style="padding:8px 14px" onclick="addCategory()">${I.plus()} 追加</button></div>
     </div>
 
     <div class="set-card">
       <div class="set-h">${I.db("#16A571",15)} コスト分類と想定書類タイプ</div>
-      <div class="set-d" style="margin-bottom:10px">明細のコスト分類ごとに、想定される書類タイプを紐付けます（チップをクリックで切替）。車両コスト一覧の内訳集計にも使われます。</div>
+      <div class="set-d" style="margin-bottom:10px">明細のコスト分類ごとに、想定される書類タイプを紐付けます（チップをクリックで切替）。コストモニターの内訳集計にも使われます。</div>
       <div>${catRows}</div>
       <div class="set-add" style="margin-top:12px"><input class="in" id="new-cat" placeholder="新しい分類名（例：洗車費）" style="max-width:260px"><button class="btn-green" style="padding:8px 14px" onclick="addCat()">${I.plus()} 追加</button></div>
     </div>
