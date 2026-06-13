@@ -1177,7 +1177,7 @@ let state={
   docSort:{key:null,dir:"asc"}, vehSort:{key:null,dir:"asc"},
   panelId:null, draft:null, pvZoom:100, pnDeleteLid:null,
   upload:{open:false, tab:"new", files:[], ocr:true, processing:{active:false,pct:0,label:""}, _timer:null},
-  splitUpload:{method:"pdf", file:null, split:false, input:"ocr", settingsOpen:false, pages:null, bulkMenu:false, zoom:null, guide:0},
+  splitUpload:{method:"pdf", file:null, split:false, ocr:true, category:"", settingsOpen:false, pages:null, bulkMenu:false, zoom:null, guide:0},
   vehExpanded:new Set(),
   vehEditKey:null, vehEditMeta:null, vehEditConfirm:false, vehEditSnapshot:null, vehViewDocId:null, vehViewLid:null,
   vehPanel:null, vehChartCat:null, vehChartGran:"month", vehTlExpanded:false,
@@ -1510,8 +1510,18 @@ function renderDocTrashConfirm(){
 /* ───── アップロードモーダル ───── */
 function openUpload(){state.upload={open:true,tab:"new",files:[],ocr:state.settings.defaultOcr,category:(CATEGORIES[0]||""),processing:{active:false,pct:0,label:""},_timer:null};state.splitUpload=freshSplitUpload();renderOverlay();}
 function switchUploadTab(t){if(state.upload.processing.active)return;state.upload.tab=t;state.splitUpload.bulkMenu=false;renderOverlay();}
-function freshSplitUpload(){return {method:"pdf", file:null, split:false, ocr:true, settingsOpen:false, pages:null, bulkMenu:false, zoom:null, guide:0};}
+function freshSplitUpload(){return {method:"pdf", file:null, split:false, ocr:true, category:(CATEGORIES[0]||""), settingsOpen:false, pages:null, bulkMenu:false, zoom:null, guide:0};}
 function setUploadCategory(v){ if(state.upload.processing.active)return; state.upload.category=v; }
+function setSplitCategory(v){ if(state.upload.processing.active)return; state.splitUpload.category=v; }
+function uplCatRow(val,handler){
+  return `<div class="upl-cat">
+    <select class="in" style="max-width:280px" onchange="${handler}(this.value)">
+      <option value="" ${!val?"selected":""}>（未選択）</option>
+      ${CATEGORIES.map(c=>`<option value="${esc(c)}" ${val===c?"selected":""}>${esc(c)}</option>`).join("")}
+    </select>
+    <span class="upl-cat-d" style="margin-left:8px">選択した営業所が書類に紐付きます。選択肢は設定の「営業所の管理」で追加できます。</span>
+  </div>`;
+}
 function closeUpload(){if(state.upload.processing.active)return;state.upload.open=false;state.splitUpload=freshSplitUpload();renderOverlay();}
 function uplRemove(i){if(state.upload.processing.active)return;state.upload.files.splice(i,1);renderOverlay();}
 function toggleOcr(){if(state.upload.processing.active)return;state.upload.ocr=!state.upload.ocr;renderOverlay();}
@@ -1531,14 +1541,7 @@ function renderUploadModal(){
         <div class="dz-text">ファイルをドラッグ＆ドロップ、または</div>
         <button class="btn-select" onclick="event.stopPropagation();pickFiles()">ファイルを選択</button></div>`;
   }
-  const catRow=`<div class="upl-cat">
-    <label class="upl-cat-l">営業所</label>
-    <select class="in" style="max-width:280px" onchange="setUploadCategory(this.value)">
-      <option value="" ${!u.category?"selected":""}>（未選択）</option>
-      ${CATEGORIES.map(c=>`<option value="${esc(c)}" ${u.category===c?"selected":""}>${esc(c)}</option>`).join("")}
-    </select>
-    <span class="upl-cat-d">選択した営業所が書類に紐付きます。選択肢は設定の「営業所の管理」で追加できます。</span>
-  </div>`;
+  const catRow=uplCatRow(u.category,"setUploadCategory");
   const tabs=`<div class="upl-tabs">
     <button class="upl-tab ${u.tab==="new"?"active":""}" ${proc?"disabled":""} onclick="switchUploadTab('new')">新規アップロード</button>
     <button class="upl-tab ${u.tab==="split"?"active":""}" ${proc?"disabled":""} onclick="switchUploadTab('split')">PDF分割アップロード</button>
@@ -1657,6 +1660,10 @@ function renderSplitUploadBody(tabs){
         <span style="font-size:13px;color:${splitDisabled?'var(--inkFaint)':'var(--ink)'}">分割する</span>
         ${s.split&&!splitDisabled?`<button class="sp-prev-btn" onclick="splitOpenSettings()">${I.pencil('#0E7A4B',14)} 分割プレビュー</button>`:""}
       </div>
+    </div>
+    <div class="sp-field">
+      <div class="sp-flabel">営業所</div>
+      ${uplCatRow(s.category,"setSplitCategory")}
     </div>
     <div class="sp-field">
       <div class="ocr-row" style="margin-top:0">
@@ -1785,7 +1792,7 @@ function finishSplitUpload(){
     const ent=makeUploadEntry(base+(groups.length>1?`（${gi+1}）.pdf`:".pdf"));
     const id="d"+(docs.length+1)+"-"+Date.now()+"-"+newIds.length;
     docs.push({id, no:NEXT_NO++, deleted:false, reflectedAt:null,
-      name:ent.name, vendor:ocr?ent.vendor:"", cat:"請求書", category:"", status:"未入力"});
+      name:ent.name, vendor:ocr?ent.vendor:"", cat:"請求書", category:s.category||"", status:"未入力"});
     const fl=ocr?ent.lines:ent.lines.map(l=>({...l,plate:"",vendor:""}));
     fl.forEach(l=>{ l.docId=id; LINES.push(l); });
     newIds.push(id);
