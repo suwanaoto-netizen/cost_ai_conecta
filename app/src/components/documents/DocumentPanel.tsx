@@ -56,6 +56,8 @@ export function DocumentPanel({
   const threshold = settings.matchThreshold;
 
   const [draft, setDraft] = useState<Draft | null>(null);
+  // 右側プレビュー（請求書の画像そのもの）は原本。左パネルの編集では変化させず凍結する。
+  const [original, setOriginal] = useState<{ no: number; vendor: string; lines: Line[] } | null>(null);
   const [zoom, setZoom] = useState(100);
   const [reflecting, setReflecting] = useState(false);
   const [confirmReflect, setConfirmReflect] = useState(false);
@@ -68,6 +70,8 @@ export function DocumentPanel({
       .filter((l) => l.docId === docId)
       .map((l) => ({ lid: l.lid, item: l.item, plate: l.plate, kind: l.kind, cat: l.cat, inspectedAt: l.inspectedAt, amount: l.amount, confidence: l.confidence, vehicleId: l.vehicleId }));
     setDraft({ id: d.id, no: d.no, name: d.name, vendor: d.vendor, cat: d.cat, category: d.category, status: d.status, reflectedAt: d.reflectedAt, lines: dl });
+    // 原本スナップショット（プレビュー用・以後の編集では不変）
+    setOriginal({ no: d.no, vendor: d.vendor, lines: dl.map((l) => ({ ...l, docId: d.id } as Line)) });
     setZoom(100);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docId]);
@@ -320,7 +324,8 @@ export function DocumentPanel({
                 <button onClick={() => setZoom((z) => Math.min(200, z + 10))}>＋</button>
               </div>
               <div className="pv-page-wrap">
-                <InvoicePreview no={draft.no} vendor={draft.vendor} lines={draft.lines as Line[]} companyName={settings.companyName} zoom={zoom} />
+                {/* 請求書の画像そのもの＝原本。左の編集では変化しない（凍結）。 */}
+                <InvoicePreview no={(original ?? draft).no} vendor={(original ?? draft).vendor} lines={(original?.lines ?? (draft.lines as Line[]))} companyName={settings.companyName} zoom={zoom} />
               </div>
             </div>
           </div>
