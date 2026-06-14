@@ -7,7 +7,7 @@ import type { DocType, Document, Line } from "../../domain/types";
 import { buildPlateIndex, matchOf, resolveVehicleId } from "../../domain/match";
 import { docTotal, expectedDocTypes, ocrAmountCandidates, plateSuggestions } from "../../domain/documents";
 import { DOC_TYPES } from "../../domain/settings";
-import { resolveRepairSubcat, repairSubcatLabel } from "../../domain/repairSubcat";
+import { resolveSubcat, subcatLabel, FUEL_CAT } from "../../domain/repairSubcat";
 import { yen } from "../../domain/format";
 import { MatchBadge } from "../common/MatchBadge";
 import { StatusChip } from "../common/StatusChip";
@@ -16,7 +16,7 @@ import { IconCheck, IconX, IconChevron, IconAlert } from "../common/Icon";
 import { ReflectLog } from "./ReflectLog";
 import { InvoicePreview } from "./InvoicePreview";
 
-type DraftLine = Pick<Line, "lid" | "item" | "plate" | "kind" | "cat" | "inspectedAt" | "amount" | "confidence" | "vehicleId">;
+type DraftLine = Pick<Line, "lid" | "item" | "plate" | "kind" | "cat" | "inspectedAt" | "amount" | "confidence" | "vehicleId" | "liters" | "unitPrice">;
 
 // 手動追加した明細用の lid。既存（正の整数）と衝突しないよう負の値を降順で採番する。
 let _newLid = -1;
@@ -72,7 +72,7 @@ export function DocumentPanel({
     if (!d) return;
     const dl: DraftLine[] = lines
       .filter((l) => l.docId === docId)
-      .map((l) => ({ lid: l.lid, item: l.item, plate: l.plate, kind: l.kind, cat: l.cat, inspectedAt: l.inspectedAt, amount: l.amount, confidence: l.confidence, vehicleId: l.vehicleId }));
+      .map((l) => ({ lid: l.lid, item: l.item, plate: l.plate, kind: l.kind, cat: l.cat, inspectedAt: l.inspectedAt, amount: l.amount, confidence: l.confidence, vehicleId: l.vehicleId, liters: l.liters, unitPrice: l.unitPrice }));
     setDraft({ id: d.id, no: d.no, name: d.name, vendor: d.vendor, cat: d.cat, category: d.category, status: d.status, reflectedAt: d.reflectedAt, lines: dl });
     // 原本スナップショット（プレビュー用・以後の編集では不変）
     setOriginal({ no: d.no, vendor: d.vendor, lines: dl.map((l) => ({ ...l, docId: d.id } as Line)) });
@@ -275,15 +275,49 @@ export function DocumentPanel({
                     {(() => {
                       // 内訳（連携用）は cat+item から都度導出する従属値。直接編集は不可で、
                       // 項目名を正すと判定ルールに従って自動で変わる（保存時に永続化される値と一致）。
-                      const sub = resolveRepairSubcat(l.cat, l.item);
+                      const sub = resolveSubcat(l.cat, l.item);
                       if (!sub) return null;
                       return (
                         <div className="fld">
                           <label>内訳（連携用）</label>
-                          <input className="in" readOnly value={repairSubcatLabel(sub)} title={`連携コード: ${sub}（項目名から自動判定）`} />
+                          <input className="in" readOnly value={subcatLabel(sub)} title={`連携コード: ${sub}（項目名から自動判定）`} />
                         </div>
                       );
                     })()}
+                    {l.cat === FUEL_CAT && (
+                      <div className="grid2">
+                        <div className="fld">
+                          <label>給油量（L）</label>
+                          <input
+                            className="in mono"
+                            readOnly={ro}
+                            inputMode="decimal"
+                            placeholder="（任意）"
+                            value={l.liters ?? ""}
+                            autoComplete="off"
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/[^0-9.]/g, "");
+                              patchLine(l.lid, { liters: v === "" ? null : parseFloat(v) });
+                            }}
+                          />
+                        </div>
+                        <div className="fld">
+                          <label>単価（円/L）</label>
+                          <input
+                            className="in mono"
+                            readOnly={ro}
+                            inputMode="decimal"
+                            placeholder="（任意）"
+                            value={l.unitPrice ?? ""}
+                            autoComplete="off"
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/[^0-9.]/g, "");
+                              patchLine(l.lid, { unitPrice: v === "" ? null : parseFloat(v) });
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
                     <div className="grid2">
                       <div className="fld">
                         <label>対象車両（車番）</label>

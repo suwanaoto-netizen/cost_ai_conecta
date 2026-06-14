@@ -1,5 +1,5 @@
 import type { Adjustment, Line, Overridable } from "./types";
-import { resolveRepairSubcat } from "./repairSubcat";
+import { resolveSubcat } from "./repairSubcat";
 
 /** 指定明細の override 調整を取得（なければ null）。 */
 export function findOverride(
@@ -21,7 +21,7 @@ export function effDocLine(line: Line, docId: string, adjustments: Adjustment[])
   const eff = { ...line, ...a.patch };
   // cat/item が override された場合、内訳が patch で明示指定されていなければ再判定する。
   if (("cat" in a.patch || "item" in a.patch) && !("subCat" in a.patch)) {
-    eff.subCat = resolveRepairSubcat(eff.cat, eff.item) ?? null;
+    eff.subCat = resolveSubcat(eff.cat, eff.item) ?? null;
   }
   return eff;
 }
