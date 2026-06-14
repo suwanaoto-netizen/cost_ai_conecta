@@ -1474,7 +1474,7 @@ function doBulkReflect(){
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="入力済み");
   if(t.length===0){ render(); return; }
   runReflect(t.map(d=>({name:d.name,lines:docLines(d)})), `${t.length}件の書類をデータ連携しました`, ()=>{
-    const ts=nowStamp(); t.forEach(d=>{d.status="連携済み";d.reflectedAt=ts;state.selected.delete(d.id);});
+    const ts=nowStamp(); t.forEach(d=>{d.status="連携済み";d.reflectedAt=ts;freezeLinesOf(d.id);state.selected.delete(d.id);});
     render(); toast(`${t.length}件を車両コストへデータ連携しました`, {label:"コストモニターを見る", fn:gotoVehicles}); }); }
 function bulkChangeOffice(){ state.bulkMenu=false;
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status!=="連携済み");
@@ -2200,7 +2200,7 @@ function doReflectPanel(){
   const d=docs.find(x=>x.id===state.panelId); if(!d||d.status!=="入力済み")return;
   runReflect([{name:state.draft.name,lines:state.draft.lines}], `${state.draft.name} をデータ連携しました`, ()=>{
     Object.assign(d,{cat:state.draft.cat,category:state.draft.category,vendor:state.draft.vendor}); writeLines(d.id, state.draft.lines);
-    d.status="連携済み"; d.reflectedAt=nowStamp(); state.draft.status="連携済み"; state.draft.reflectedAt=d.reflectedAt;
+    d.status="連携済み"; d.reflectedAt=nowStamp(); freezeLinesOf(d.id); state.draft.status="連携済み"; state.draft.reflectedAt=d.reflectedAt;
     state.selected.delete(d.id);
     render(); renderNav(); toast("車両コストへデータ連携しました", {label:"コストモニターを見る", fn:()=>{ closePanel(); gotoVehicles(); }});
   });
@@ -2238,16 +2238,18 @@ function buildVehicles(catFilter, range){
   const ensure=(key,kind,target)=>{ if(!map.has(key)) map.set(key,{key,kind,target,total:0,byCat:{},count:0,last:"",lines:[],fuso:null}); return map.get(key); };
   const add=(e,line)=>{ e.total+=(+line.amount||0); e.byCat[line.cat]=(e.byCat[line.cat]||0)+(+line.amount||0); e.count++;
     if(line.date>e.last)e.last=line.date; e.lines.push(line); if(line.fuso&&!e.fuso)e.fuso=line.fuso; };
+  const adjIdx=new Map(); ADJUSTMENTS.forEach(a=>{ if(a.type==="override") adjIdx.set(adjKey(a.docId,a.lid),a); }); // override 調整の索引
   docs.filter(d=>d.status==="連携済み"&&!d.deleted).forEach(d=>{
     if(cf!=="all" && (d.category||"")!==cf) return;
     linesOf(d.id).forEach(l=>{
-      if(!inR(l.inspectedAt)) return;
+      const eff=effDocLine(l,d.id,adjIdx); // 凍結された元明細 ＋ override 調整 ＝ 実効値
+      if(!inR(eff.inspectedAt)) return;
       // 集計キーは不変の車両ID。確定済みなら焼き付けた vehicleId を、未焼き付けなら現在のマスタ突合で解決する。
       const vid=l.vehicleId||resolveVehicleId(l.plate);
       const mv=vehicleById(vid);
       const target=mv?mv.plate:(l.plate||"未設定"); // 表示はマスタの正規plate（OCRゆらぎを吸収）
       const key=vid||(normPlate(l.plate)?"U:"+normPlate(l.plate):"未設定"); // 未登録は正規化plateで暫定集計
-      add(ensure(key,"単車",target),{lid:l.lid,src:"doc",docId:d.id,item:l.item,cat:l.cat,date:l.inspectedAt,amount:+l.amount,vendor:d.vendor,doc:d.name,office:d.category,fuso:l.fuso});
+      add(ensure(key,"単車",target),{lid:l.lid,src:"doc",docId:d.id,item:eff.item,cat:eff.cat,date:eff.inspectedAt,amount:+eff.amount,vendor:d.vendor,doc:d.name,office:d.category,fuso:l.fuso});
     });
   });
   state.manualLines.forEach(m=>{ if(cf!=="all" && (m.office||"")!==cf) return; if(!inR(m.date)) return;
@@ -2258,9 +2260,9 @@ function buildVehicles(catFilter, range){
 /* 車両内訳の編集（元データに反映） */
 function vehEditDocLine(docId,lid,field,val){
   const l=LINES.find(x=>x.docId===docId && x.lid===lid); if(!l)return;
-  if(field==="amount") l.amount=parseInt(String(val).replace(/[^0-9]/g,""))||0;
-  else if(field==="date") l.inspectedAt=val;
-  else l[field]=val;
+  const lf = field==="date" ? "inspectedAt" : field; // item/cat/amount は明細と同名
+  const v  = field==="amount" ? (parseInt(String(val).replace(/[^0-9]/g,""))||0) : val;
+  setOverride(docId, lid, lf, v, l); // 元データ（凍結済み）は変更せず override 調整として記録
   render();
 }
 function vehEditManualLine(id,field,val){
@@ -2341,6 +2343,28 @@ function closeVehEdit(){ state.vehEditKey=null; state.vehEditMeta=null; state.ve
 const CHANGELOG=[];
 const CURRENT_USER="諏訪 尚杜";
 function logChange(e){ CHANGELOG.push(Object.assign({ts:nowStamp(),user:CURRENT_USER},e)); }
+/* ───── 連携済み明細への調整（追記専用・元データ不変） ─────
+   連携済みの明細は凍結し直接編集しない。コストモニターでの修正は override 調整として記録し、
+   buildVehicles が集計時のみ適用する。請求書原本（書類詳細）は原値のまま。元値に戻すと調整は消える（＝undo）。 */
+const ADJUSTMENTS=[]; let _adjSeq=1;
+function adjKey(docId,lid){ return docId+"|"+lid; }
+function findOverride(docId,lid){ return ADJUSTMENTS.find(a=>a.type==="override"&&a.docId===docId&&String(a.lid)===String(lid))||null; }
+function setOverride(docId,lid,lf,val,origLine){
+  let a=findOverride(docId,lid);
+  if(!a){ a={id:"adj"+(_adjSeq++),docId,lid:String(lid),type:"override",patch:{},ts:nowStamp(),user:CURRENT_USER}; ADJUSTMENTS.push(a); }
+  const same = lf==="amount" ? (+origLine[lf])===(+val) : String(origLine[lf]||"")===String(val||"");
+  if(same) delete a.patch[lf]; else a.patch[lf]=val;
+  a.ts=nowStamp(); a.user=CURRENT_USER;
+  if(Object.keys(a.patch).length===0){ const i=ADJUSTMENTS.indexOf(a); if(i>=0) ADJUSTMENTS.splice(i,1); } // 全フィールドが原状回復したら調整を破棄
+}
+/* 元の明細に override 調整を重ねた実効値を返す（元オブジェクトは変更しない） */
+function effDocLine(l,docId,idx){
+  const a=idx?idx.get(adjKey(docId,l.lid)):findOverride(docId,l.lid);
+  return a?Object.assign({},l,a.patch):l;
+}
+/* 連携済み書類の明細を凍結して直接変更を防ぐ */
+function freezeLinesOf(docId){ linesOf(docId).forEach(l=>Object.freeze(l)); }
+function freezeReflectedLines(){ docs.forEach(d=>{ if(d.status==="連携済み") freezeLinesOf(d.id); }); }
 /* デモ用の初期履歴（実在の車両・明細に紐付け、複数ユーザー・操作種別を用意） */
 function seedChangelog(){
   const vs=buildVehicles("all").filter(v=>v.lines.length);
@@ -3409,6 +3433,7 @@ function render(){
   _restoreScroll(c,cs);
   renderOverlay();
 }
+freezeReflectedLines();
 seedChangelog();
 render();
 </script>
