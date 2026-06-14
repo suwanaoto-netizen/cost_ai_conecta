@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type {
   Adjustment,
   ChangelogEntry,
+  DocType,
   Document,
   Line,
   ManualLine,
@@ -32,6 +33,30 @@ export interface VehEditCommit {
   changelog: ChangelogEntry[];
 }
 
+export interface DocPatch {
+  vendor: string;
+  cat: DocType;
+  category: string;
+}
+export interface UploadEntry {
+  name: string;
+  vendor: string;
+  cat: DocType;
+  lines: Line[];
+}
+
+const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
+/** 指定docの明細を入れ替えた新しい lines 配列を返す（freeze 指定で凍結）。 */
+function replaceLines(all: Line[], docId: string, next: Line[], freeze: boolean): Line[] {
+  const others = all.filter((l) => l.docId !== docId);
+  const fresh = next.map((l) => {
+    const c = clone(l);
+    c.docId = docId;
+    return freeze ? Object.freeze(c) : c;
+  });
+  return [...others, ...fresh];
+}
+
 interface DataStore {
   docs: Document[];
   lines: Line[];
@@ -45,6 +70,15 @@ interface DataStore {
   trashVehicle: (entry: ChangelogEntry) => void;
   restoreVehicle: (entry: ChangelogEntry) => void;
   markChangelogSeen: () => void;
+
+  // 書類一覧／詳細パネル
+  saveDocDraft: (id: string, patch: DocPatch, lines: Line[]) => void;
+  reflectDocDraft: (id: string, patch: DocPatch, lines: Line[]) => void;
+  markEntered: (ids: string[]) => void;
+  reflectMany: (ids: string[]) => void;
+  changeOffice: (ids: string[], office: string) => void;
+  setDeleted: (ids: string[], deleted: boolean) => void;
+  addDocuments: (entries: UploadEntry[], ocr: boolean, category: string) => void;
 }
 
 const { docs: seedDocs, lines: seedLines } = seedDocuments();
@@ -130,6 +164,70 @@ export const useDataStore = create<DataStore>((set) => ({
       return { vehTrash: t, changelog: [...s.changelog, entry] };
     }),
   markChangelogSeen: () => set((s) => ({ changelogSeenCount: s.changelog.length })),
+
+  saveDocDraft: (id, patch, lines) =>
+    set((s) => ({
+      docs: s.docs.map((d) =>
+        d.id === id ? { ...d, ...patch, status: d.status === "未入力" ? "入力済み" : d.status } : d,
+      ),
+      lines: replaceLines(s.lines, id, lines, false),
+    })),
+
+  reflectDocDraft: (id, patch, lines) =>
+    set((s) => ({
+      docs: s.docs.map((d) =>
+        d.id === id ? { ...d, ...patch, status: "連携済み", reflectedAt: nowStamp() } : d,
+      ),
+      lines: replaceLines(s.lines, id, lines, true),
+    })),
+
+  markEntered: (ids) =>
+    set((s) => {
+      const set2 = new Set(ids);
+      return { docs: s.docs.map((d) => (set2.has(d.id) && d.status === "未入力" ? { ...d, status: "入力済み" } : d)) };
+    }),
+
+  reflectMany: (ids) =>
+    set((s) => {
+      const set2 = new Set(ids);
+      const ts = nowStamp();
+      const frozen = new Set<string>();
+      const docs = s.docs.map((d) => {
+        if (set2.has(d.id) && d.status === "入力済み") {
+          frozen.add(d.id);
+          return { ...d, status: "連携済み" as const, reflectedAt: ts };
+        }
+        return d;
+      });
+      const lines = s.lines.map((l) => (l.docId && frozen.has(l.docId) && !Object.isFrozen(l) ? Object.freeze(l) : l));
+      return { docs, lines };
+    }),
+
+  changeOffice: (ids, office) =>
+    set((s) => {
+      const set2 = new Set(ids);
+      return { docs: s.docs.map((d) => (set2.has(d.id) && d.status !== "連携済み" ? { ...d, category: office } : d)) };
+    }),
+
+  setDeleted: (ids, deleted) =>
+    set((s) => {
+      const set2 = new Set(ids);
+      return { docs: s.docs.map((d) => (set2.has(d.id) ? { ...d, deleted } : d)) };
+    }),
+
+  addDocuments: (entries, ocr, category) =>
+    set((s) => {
+      const newDocs: Document[] = [];
+      const newLines: Line[] = [];
+      let no = s.docs.reduce((m, d) => Math.max(m, d.no), 1100) + 1;
+      entries.forEach((f, i) => {
+        const id = "u" + Date.now() + "_" + i;
+        newDocs.push({ id, no: no++, name: f.name, vendor: ocr ? f.vendor : "", cat: f.cat, status: "未入力", category: category || "", reflectedAt: null, deleted: false });
+        const fl = ocr ? f.lines : f.lines.map((l) => ({ ...l, plate: "", vehicleId: null }));
+        fl.forEach((l) => newLines.push({ ...l, docId: id }));
+      });
+      return { docs: [...s.docs, ...newDocs], lines: [...s.lines, ...newLines] };
+    }),
 }));
 
 export function nowStamp(): string {

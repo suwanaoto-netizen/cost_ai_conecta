@@ -5,22 +5,17 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { OverlayHost } from "./common/OverlayHost";
 import { Toast } from "./common/Toast";
-import { Placeholder } from "./views/Placeholder";
 import { SettingsView } from "./views/SettingsView";
 import { MasterView } from "./views/MasterView";
 import { CostMonitorView } from "./views/CostMonitorView";
-
-const VIEW_META = {
-  documents: { title: "書類一覧", desc: "取り込んだ請求書の確認・編集・データ連携を行います。" },
-} as const;
+import { DocumentsView } from "./views/DocumentsView";
 
 function ViewArea() {
   const view = useStore((s) => s.view);
   if (view === "settings") return <SettingsView />;
   if (view === "master") return <MasterView />;
   if (view === "vehicles") return <CostMonitorView />;
-  const meta = VIEW_META[view];
-  return <Placeholder title={meta.title} desc={meta.desc} />;
+  return <DocumentsView />;
 }
 
 export function AppShell() {
