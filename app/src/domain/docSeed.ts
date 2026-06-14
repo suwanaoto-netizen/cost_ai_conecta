@@ -1,6 +1,7 @@
 import type { Document, Line, DocStatus, Fuso } from "./types";
 import { FLEET } from "./masterSeed";
 import { DEFAULT_CATEGORIES } from "./settings";
+import { resolveRepairSubcat } from "./repairSubcat";
 
 /**
  * 書類・明細のデモデータ生成（プロトタイプの決定論ジェネレータを移植）。
@@ -31,6 +32,7 @@ const L = (item: string, plate: string, cat: string, date: string, amount: numbe
   plate: plate || "",
   kind: "単車",
   cat,
+  ...(resolveRepairSubcat(cat, item) ? { subCat: resolveRepairSubcat(cat, item) } : {}),
   inspectedAt: date,
   amount,
   confidence: conf,

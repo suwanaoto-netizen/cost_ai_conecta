@@ -23,6 +23,8 @@ export interface Line {
   plate: string;
   kind: string; // "単車"
   cat: string; // コスト分類
+  /** 修繕・維持費の内訳コード（外部連携用・任意）。REPAIR_SUBCATS の code 値。 */
+  subCat?: string | null;
   inspectedAt: string; // 発生日 "YYYY-MM-DD"
   amount: number;
   confidence: number; // 0..1
@@ -67,6 +69,8 @@ export interface ManualLine {
   target: string;
   item: string;
   cat: string;
+  /** 修繕・維持費の内訳コード（外部連携用・任意）。REPAIR_SUBCATS の code 値。 */
+  subCat?: string | null;
   date: string;
   amount: number;
   vendor: string;
@@ -74,7 +78,7 @@ export interface ManualLine {
 }
 
 /** override 可能な明細フィールド（連携済み明細はこの調整経由でのみ補正する）。 */
-export type Overridable = "item" | "cat" | "inspectedAt" | "amount";
+export type Overridable = "item" | "cat" | "subCat" | "inspectedAt" | "amount";
 
 export interface Adjustment {
   id: string;

@@ -1,6 +1,11 @@
 import type { Line } from "./types";
 import { matchOf, type PlateIndex } from "./match";
 import { yen } from "./format";
+import { repairSubcatLabel } from "./repairSubcat";
+
+/** 連携先へ送る内訳の表記（例 " [内訳: tire/タイヤ]"）。内訳が無ければ空文字。 */
+const subCatTag = (l: Line) =>
+  l.subCat ? ` [内訳: ${l.subCat}/${repairSubcatLabel(l.subCat)}]` : "";
 
 export interface ReflectStep {
   phase: 0 | 1 | 2;
@@ -23,11 +28,11 @@ export function buildReflectPlan(lines: Line[], plateIndex: PlateIndex, threshol
     out.push({ phase: 1, text: `POST /vehicles  新規車両マスタ ${p}`, ok: `→ vehicle_id: V-${vid} を発行` });
     vNew
       .filter((x) => x.l.plate === p)
-      .forEach((x) => out.push({ phase: 2, text: `POST /costs  V-${vid} ← ${x.l.item}`, ok: `→ ${yen(x.l.amount)} を紐付け` }));
+      .forEach((x) => out.push({ phase: 2, text: `POST /costs  V-${vid} ← ${x.l.item}${subCatTag(x.l)}`, ok: `→ ${yen(x.l.amount)} を紐付け` }));
   });
   ws.filter((x) => x.st === "existing" || x.st === "existing-suspect").forEach((x) => {
     const warn = x.st === "existing-suspect" ? "（要確認）" : "";
-    out.push({ phase: 2, text: `POST /costs  ${x.l.plate} ← ${x.l.item}`, ok: `→ ${yen(x.l.amount)} を既存マスタに追記${warn}` });
+    out.push({ phase: 2, text: `POST /costs  ${x.l.plate} ← ${x.l.item}${subCatTag(x.l)}`, ok: `→ ${yen(x.l.amount)} を既存マスタに追記${warn}` });
   });
   ws.filter((x) => x.st === "suspect").forEach((x) =>
     out.push({ phase: 0, text: `SKIP  ${x.l.item}（車番要確認）`, ok: `→ 読み取り信頼度が低いため連携をスキップ` }),
