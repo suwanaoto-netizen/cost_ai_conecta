@@ -848,6 +848,16 @@ const I = {
 
 /* ───── マスタ ───── */
 const MASTER = new Set(["名古屋100あ1234","名古屋100か5678","三河800さ9012","名古屋800さ8706","岡崎100か2233","豊橋800せ4455","名古屋130す6677","一宮800そ8899"]);
+/* 車番の正規化（全角英数→半角・空白除去）。突合・登録判定は必ず正規化キーで行う。 */
+function normPlate(raw){
+  return String(raw||"")
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, s=>String.fromCharCode(s.charCodeAt(0)-0xFEE0))
+    .replace(/\s+/g,"").trim();
+}
+/* 正規化済みの登録車番インデックス（突合の真実源 MASTER から派生）。 */
+const PLATE_INDEX=new Set();
+function rebuildPlateIndex(){ PLATE_INDEX.clear(); MASTER.forEach(p=>PLATE_INDEX.add(normPlate(p))); }
+function plateRegistered(p){ return PLATE_INDEX.has(normPlate(p)); }
 const CATS=["燃料費","修繕・維持費","通行料","保険料","調達コスト","税金"];
 const CAT_STYLE={
   "燃料費":{fg:"#1E55C8",bg:"#E5EDFB"},
@@ -977,6 +987,7 @@ const FLEET=[
 ];
 const NEW_PLATES=new Set(["名古屋330え4567","岐阜100か7890","浜松100か3030","春日井500あ1212","名古屋800た1010","知多300か7878"]);
 FLEET.forEach(p=>{ if(!NEW_PLATES.has(p)) MASTER.add(p); });
+rebuildPlateIndex();
 
 /* ───── 自検協データ（車台番号 → 車格・諸元の突合） ───── */
 /* 車台番号の型式コードから車格を判定し、最大積載量・車両総重量・サイズを引き当てる。
@@ -1031,7 +1042,7 @@ function officeFromPlate(plate){
   });
 })();
 function nextMasterNo(){ return VEHICLE_MASTER.reduce((m,v)=>Math.max(m,v.no),1000)+1; }
-function syncMaster(){ MASTER.clear(); VEHICLE_MASTER.forEach(v=>{ if(v.plate) MASTER.add(v.plate); }); }
+function syncMaster(){ MASTER.clear(); VEHICLE_MASTER.forEach(v=>{ if(v.plate) MASTER.add(v.plate); }); rebuildPlateIndex(); }
 
 const GEN_VENDORS=[
  {n:"中部マツダ整備",cat:["修繕・維持費"]},
@@ -1148,13 +1159,18 @@ function nowStamp(){const d=new Date();const p=n=>String(n).padStart(2,"0");
 /* 突合：明細の対象（車番）をロジポケマスタと照合 */
 function matchOf(l){
   const th=state.settings.matchThreshold;
-  const p=(l.plate||"").trim();
-  if(!p) return "missing"; if(MASTER.has(p)) return "existing"; if((+l.confidence)<th) return "suspect"; return "new";
+  const key=normPlate(l.plate);
+  if(!key) return "missing";
+  const hit=PLATE_INDEX.has(key);
+  // 信頼度が低い読み取りは、既存車番に一致していても必ず要確認に倒す（誤紐付け防止）。
+  if((+l.confidence)<th) return hit ? "existing-suspect" : "suspect";
+  return hit ? "existing" : "new";
 }
 function matchBadge(l){
   const st=matchOf(l);
   const m={
     existing:{t:"既存車両に紐付け",fg:"var(--teal)",bg:"var(--tealSoft)",ic:I.check("#157F73",12,2.6)},
+    "existing-suspect":{t:"要確認：既存車両（読み取り疑い）",fg:"var(--alert)",bg:"var(--alertSoft)",ic:I.alert("#B23A2E",12)},
     new:{t:"新規車両を作成",fg:"var(--amber)",bg:"var(--amberSoft)",ic:I.truck("#B87514",12)},
     suspect:{t:"要確認：読み取り疑い",fg:"var(--alert)",bg:"var(--alertSoft)",ic:I.alert("#B23A2E",12)},
     missing:{t:"対象車両が未選択",fg:"var(--inkSoft)",bg:"#EEF0F3",ic:I.alert("#5A6472",12)},
@@ -1447,7 +1463,8 @@ function renderEnterConfirm(){
 function bulkReflect(){ state.bulkMenu=false;
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="入力済み");
   if(t.length===0){ render(); toast("連携できる「入力済み」の書類が選択されていません"); return; }
-  state.reflectConfirm={kind:"bulk", count:t.length, label:""}; renderOverlay(); }
+  const warn=t.reduce((n,d)=>n+countUnresolved(docLines(d)),0);
+  state.reflectConfirm={kind:"bulk", count:t.length, label:"", warn}; renderOverlay(); }
 function doBulkReflect(){
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="入力済み");
   if(t.length===0){ render(); return; }
@@ -2108,13 +2125,22 @@ function savePanel(){
 function buildPlanFromLines(allLines){
   const lines=[]; let vid=10290;
   const ws=allLines.map(l=>({l,st:matchOf(l)}));
-  const vNew=ws.filter(x=>(x.st==="new"||x.st==="suspect")&&(x.l.plate||"").trim());
+  // 新規車両マスタの自動作成は high-confidence の未登録（new）のみ。低信頼度（suspect）は自動作成しない。
+  const vNew=ws.filter(x=>x.st==="new"&&(x.l.plate||"").trim());
   [...new Set(vNew.map(x=>x.l.plate))].forEach(p=>{vid++;
     lines.push({phase:1,text:`POST /vehicles  新規車両マスタ ${p}`,ok:`→ vehicle_id: V-${vid} を発行`});
     vNew.filter(x=>x.l.plate===p).forEach(x=>lines.push({phase:2,text:`POST /costs  V-${vid} ← ${x.l.item}`,ok:`→ ${yen(x.l.amount)} を紐付け`}));});
-  ws.filter(x=>x.st==="existing").forEach(x=>lines.push({phase:2,text:`POST /costs  ${x.l.plate} ← ${x.l.item}`,ok:`→ ${yen(x.l.amount)} を既存マスタに追記`}));
+  // 既存マスタへの追記。低信頼度で一致した行（existing-suspect）は追記するが要確認を明示。
+  ws.filter(x=>x.st==="existing"||x.st==="existing-suspect").forEach(x=>{
+    const warn=x.st==="existing-suspect"?"（要確認）":"";
+    lines.push({phase:2,text:`POST /costs  ${x.l.plate} ← ${x.l.item}`,ok:`→ ${yen(x.l.amount)} を既存マスタに追記${warn}`});});
+  // 車両を特定できない低信頼度の読み取りはスキップ（自動作成も追記もしない）。
+  ws.filter(x=>x.st==="suspect").forEach(x=>
+    lines.push({phase:2,text:`SKIP  ${x.l.item}（車番要確認）`,ok:`→ 読み取り信頼度が低いため連携をスキップ`}));
   return lines;
 }
+/* 連携前の要確認件数（suspect / existing-suspect の明細数） */
+function countUnresolved(allLines){ return (allLines||[]).filter(l=>{const s=matchOf(l);return s==="suspect"||s==="existing-suspect";}).length; }
 
 /* 単一・一括 共通の連携ログ。units=[{name,lines}] */
 function runReflect(units, doneLabel, onFinish){
@@ -2163,7 +2189,8 @@ function closeReflect(){ const f=state._reflectFinish; state._reflectFinish=null
 
 function reflectPanel(){
   const d=docs.find(x=>x.id===state.panelId); if(!d||d.status!=="入力済み")return;
-  state.reflectConfirm={kind:"panel", count:1, label:state.draft?state.draft.name:d.name}; renderOverlay(); }
+  const warn=countUnresolved(state.draft?state.draft.lines:docLines(d));
+  state.reflectConfirm={kind:"panel", count:1, label:state.draft?state.draft.name:d.name, warn}; renderOverlay(); }
 function doReflectPanel(){
   const d=docs.find(x=>x.id===state.panelId); if(!d||d.status!=="入力済み")return;
   runReflect([{name:state.draft.name,lines:state.draft.lines}], `${state.draft.name} をデータ連携しました`, ()=>{
@@ -2184,6 +2211,9 @@ function renderReflectConfirm(){
       <button class="x" onclick="closeReflectConfirm()">${I.x("#5A6472",18)}</button></div>
     <div class="m-body">
       <p style="margin:0 0 13px;font-size:13.5px;color:var(--ink)">${target}を車両コストへデータ連携します。</p>
+      ${rc.warn?`<div class="ce-warn" style="background:var(--alertSoft);border-color:var(--alert)">${I.alert("#B23A2E",18)}<div>
+        <div class="ce-q" style="color:var(--alert)">読み取り信頼度が低い明細が <b>${rc.warn}</b> 件あります。</div>
+        <div class="ce-note">車番が特定できない明細は連携されず、低信頼度で既存車両に一致した明細は<b>要確認</b>のまま追記されます。先に明細を確認することを推奨します。</div></div></div>`:""}
       <div class="ce-warn">${I.alert("#B87514",18)}<div>
         <div class="ce-q">データ連携すると、<b>書類一覧画面では書類情報・明細の修正ができなくなります。</b></div>
         <div class="ce-note">修正が必要になった場合も、データ連携後は<b>コストモニター画面</b>から内訳を編集できます。</div></div></div>
@@ -2385,7 +2415,7 @@ function renderVehEditModal(){
   let v=list.find(x=>x.key===key);
   if(!v){ const m=state.vehEditMeta||{key,kind:"単車",target:key.replace(/^[VS]:/,"")};
     v={key:m.key,kind:m.kind,target:m.target,total:0,byCat:{},count:0,last:"",lines:[],fuso:null}; }
-  const isMaster=MASTER.has(v.target);
+  const isMaster=plateRegistered(v.target);
   const mtag=isMaster?`<span class="mtag exist">${I.check("#157F73",11,2.6)}既存マスタ</span>`
                      :`<span class="mtag newv">${I.truck("#B87514",11)}新規作成</span>`;
   const filterNote=state.vehCategoryFilter!=="all"?`<span class="ve-note">絞り込み中：${esc(state.vehCategoryFilter)}</span>`:"";
@@ -2597,7 +2627,7 @@ function setVehChartGran(g){ state.vehChartGran=g; refreshVehChart(); }
 function renderVehPanel(){
   const p=state.vehPanel; if(!p) return "";
   const v=buildVehicles(state.vehCategoryFilter).find(x=>x.key===p.key)||{key:p.key,kind:p.kind,target:p.target,total:0,byCat:{},count:0,last:"",lines:[],fuso:null};
-  const isMaster=MASTER.has(v.target);
+  const isMaster=plateRegistered(v.target);
   const events=genVehEvents(v);
   let availCats=[...new Set(events.map(e=>e.cat))].sort((a,b)=>(v.byCat[b]||0)-(v.byCat[a]||0));
   if(availCats.includes("修繕・維持費")) availCats=["修繕・維持費",...availCats.filter(c=>c!=="修繕・維持費")];
@@ -2732,7 +2762,7 @@ function visibleVehicles(){
   if(state.vehSort.key){
     const dir=state.vehSort.dir==="asc"?1:-1;
     const val=v=>({target:v.target,
-      master:MASTER.has(v.target)?1:0,
+      master:plateRegistered(v.target)?1:0,
       total:v.total,last:v.last,count:v.count})[state.vehSort.key];
     veh=veh.slice().sort((a,b)=>{const va=val(a),vb=val(b);
       if(va<vb)return -dir; if(va>vb)return dir; return b.total-a.total;});
@@ -2747,7 +2777,7 @@ function renderVehicles(){
   let veh=visibleVehicles();
   const vehicles=veh;
   const grand=veh.reduce((s,v)=>s+v.total,0);
-  const newCount=vehicles.filter(v=>!MASTER.has(v.target)).length;
+  const newCount=vehicles.filter(v=>!plateRegistered(v.target)).length;
 
   const clogUnseen=CHANGELOG.length-(state.changelogSeenCount||0);
   const catSel=`<div class="filter-sel"><span class="fs-l">${I.boxes("#5A6472",14)} 営業所</span>
@@ -2845,7 +2875,7 @@ function renderVehicles(){
   const pageVeh=veh.slice(start,start+per);
 
   const rows=pageVeh.map(v=>{
-    const isMaster=MASTER.has(v.target);
+    const isMaster=plateRegistered(v.target);
     const mtag=isMaster?`<span class="mtag exist">${I.check("#157F73",11,2.6)}既存マスタ</span>`
                        :`<span class="mtag newv">${I.truck("#B87514",11)}新規作成</span>`;
     const cats=Object.keys(v.byCat).sort((a,b)=>v.byCat[b]-v.byCat[a]);
