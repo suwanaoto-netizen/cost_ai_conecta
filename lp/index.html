@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Fleet Pilot｜請求書データ化・車両コスト管理 ｜ ロジポケシリーズ</title>
+<meta name="description" content="AI-OCRで請求書を自動データ化。車番ごとにコストを自動集計し、ロジポケへ連携。転記レスで車両原価をまるっと可視化する、ロジポケシリーズの車両コスト管理サービス。" />
+<!--
+  ロジポケ ブランドデザインルール準拠の紹介ページ（LP）。
+  デザイン出典: logipoke_design_ver1（添付）。
+  Primary #419482 / Deep #2F6E54 / 和文 Noto Sans JP・欧文 Poppins。
+  ※ ルート index.html（レガシー参照プロトタイプ）は上書きしていません。
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    /* ── ロジポケ ブランドカラー（添付デザインルールより） ── */
+    --green:#419482;          /* メイン／ロゴ */
+    --green-deep:#2F6E54;     /* ディープグリーン */
+    --green-forest:#3B694E;   /* エコシステム内環 */
+    --green-soft:#E7F2EE;     /* ミント淡 */
+    --green-tint:#F2F8F5;     /* さらに淡い背景 */
+    --cyan:#52ACC9;           /* シアンアクセント */
+    --cyan-2:#68B8C7;
+    --navy:#233B44;           /* ネイビー */
+    --pink:#C95E78;           /* ピンク */
+    --blue:#52ACC9;
+
+    --ink:#23303A;            /* 本文 */
+    --ink-soft:#5E6E73;
+    --ink-faint:#90A09F;
+    --line:#E2EBE6;
+    --white:#ffffff;
+    --bg:#ffffff;
+
+    --grad-brand:linear-gradient(120deg,#419482 0%,#4BA793 42%,#62B9C7 100%);
+    --grad-cyan:linear-gradient(120deg,#4EB3A6 0%,#68B8C7 60%,#6DBBD2 100%);
+
+    --jp:'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',system-ui,sans-serif;
+    --en:'Poppins','Noto Sans JP',system-ui,sans-serif;
+
+    --radius:22px;
+    --radius-lg:30px;
+    --shadow-sm:0 4px 18px rgba(46,110,84,.06);
+    --shadow:0 18px 50px rgba(40,90,72,.10);
+    --shadow-lg:0 30px 70px rgba(40,90,72,.16);
+    --maxw:1160px;
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;font-family:var(--jp);color:var(--ink);background:var(--bg);
+    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+    font-feature-settings:"palt" 1;line-height:1.85;letter-spacing:.01em;
+  }
+  a{color:inherit;text-decoration:none}
+  img{max-width:100%;display:block}
+  h1,h2,h3{margin:0;line-height:1.4;font-weight:900;letter-spacing:.01em}
+  p{margin:0}
+  .en{font-family:var(--en)}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+
+  /* ── ボタン ── */
+  .btn{display:inline-flex;align-items:center;gap:9px;font-family:var(--jp);font-weight:700;
+       font-size:15px;padding:14px 26px;border-radius:999px;cursor:pointer;border:1.5px solid transparent;
+       transition:transform .18s ease,box-shadow .18s ease,background .18s ease,color .18s ease;white-space:nowrap}
+  .btn-primary{background:var(--green);color:#fff;box-shadow:0 10px 24px rgba(65,148,130,.32)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 16px 32px rgba(65,148,130,.4);background:#3a8675}
+  .btn-ghost{background:#fff;color:var(--green-deep);border-color:#CFE3DB}
+  .btn-ghost:hover{transform:translateY(-2px);border-color:var(--green);color:var(--green)}
+  .btn-white{background:#fff;color:var(--green-deep)}
+  .btn-white:hover{transform:translateY(-2px);box-shadow:0 16px 32px rgba(0,0,0,.14)}
+  .btn-line{background:transparent;color:#fff;border-color:rgba(255,255,255,.6)}
+  .btn-line:hover{background:rgba(255,255,255,.12)}
+  .btn svg{width:17px;height:17px}
+
+  /* ── ロゴ ── */
+  .logo{display:inline-flex;align-items:center;gap:11px}
+  .logo .mark{width:38px;height:42px;flex-shrink:0}
+  .logo .word{font-family:var(--jp);font-weight:900;font-size:23px;color:var(--green);letter-spacing:.02em}
+  .logo.on-dark .word{color:#fff}
+
+  /* ── ヘッダー ── */
+  header{position:sticky;top:0;z-index:60;background:rgba(255,255,255,.86);backdrop-filter:blur(12px);
+         border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:72px}
+  .nav .links{display:flex;align-items:center;gap:30px}
+  .nav .links a{font-weight:500;font-size:14.5px;color:var(--ink-soft);transition:color .15s}
+  .nav .links a:hover{color:var(--green)}
+  .nav .cta{display:flex;align-items:center;gap:12px}
+  .nav-toggle{display:none;background:none;border:0;cursor:pointer;padding:6px}
+  .nav-toggle span{display:block;width:24px;height:2px;background:var(--ink);margin:5px 0;border-radius:2px;transition:.2s}
+
+  /* ── series badge ── */
+  .series-badge{display:inline-flex;align-items:center;gap:8px;background:var(--green-soft);
+       color:var(--green-deep);font-weight:700;font-size:12.5px;padding:7px 15px 7px 11px;border-radius:999px;
+       border:1px solid #CFE6DD}
+  .series-badge .dot{width:18px;height:20px}
+
+  /* ── ヒーロー ── */
+  .hero{position:relative;overflow:hidden;background:
+        radial-gradient(1100px 540px at 88% -8%, #E9F4F0 0%, rgba(233,244,240,0) 60%),
+        radial-gradient(820px 480px at -6% 8%, #EAF5F8 0%, rgba(234,245,248,0) 55%),
+        var(--green-tint)}
+  .hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center;
+        padding-top:84px;padding-bottom:90px}
+  .hero h1{font-size:clamp(30px,4.3vw,52px);line-height:1.32;letter-spacing:.005em}
+  .hero h1 em{font-style:normal;color:var(--green);background:linear-gradient(transparent 62%, #CDEAE0 62%)}
+  .hero .lead{margin-top:22px;font-size:16.5px;color:var(--ink-soft);max-width:540px;line-height:2}
+  .hero .acts{display:flex;gap:14px;margin-top:32px;flex-wrap:wrap}
+  .hero .kvline{margin-top:30px;font-family:var(--en);font-weight:700;font-size:14px;letter-spacing:.18em;
+        color:var(--green);text-transform:uppercase}
+  .eyebrow{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+
+  /* ヒーロービジュアル */
+  .hero-visual{position:relative;aspect-ratio:1/1;max-width:480px;margin-left:auto;width:100%}
+  .blob{position:absolute;inset:0;border-radius:42% 58% 56% 44%/48% 44% 56% 52%;
+        background:var(--grad-brand);box-shadow:var(--shadow-lg);
+        animation:morph 14s ease-in-out infinite}
+  @keyframes morph{0%,100%{border-radius:42% 58% 56% 44%/48% 44% 56% 52%}
+        50%{border-radius:56% 44% 42% 58%/52% 56% 44% 48%}}
+  .blob-ring{position:absolute;inset:-26px;border-radius:50%;border:1.5px dashed rgba(65,148,130,.28)}
+  .device{position:absolute;inset:14% 12%;background:#fff;border-radius:20px;box-shadow:var(--shadow-lg);
+        padding:16px;display:flex;flex-direction:column;gap:11px}
+  .device .bar{display:flex;align-items:center;gap:7px;margin-bottom:2px}
+  .device .bar i{width:9px;height:9px;border-radius:50%;background:#E2EBE6}
+  .device .bar i:first-child{background:#F0B6C2}.device .bar i:nth-child(2){background:#FAD9A6}.device .bar i:nth-child(3){background:#A9DDC5}
+  .row{display:flex;align-items:center;gap:10px;background:var(--green-tint);border-radius:11px;padding:9px 11px}
+  .row .ic{width:30px;height:30px;border-radius:8px;background:var(--green-soft);display:grid;place-items:center;color:var(--green);flex-shrink:0}
+  .row .ic svg{width:16px;height:16px}
+  .row .tx{flex:1;min-width:0}
+  .row .tx b{display:block;font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .tx small{font-size:10px;color:var(--ink-faint);font-family:var(--en)}
+  .row .amt{font-family:var(--en);font-weight:700;font-size:12.5px;color:var(--green-deep)}
+  .row .tag{font-size:9.5px;font-weight:700;padding:3px 7px;border-radius:999px}
+  .tag.exist{background:#DCEFEC;color:#157F73}.tag.newv{background:#FBEFD8;color:#9A6712}
+  .badge-float{position:absolute;background:#fff;border-radius:14px;box-shadow:var(--shadow);padding:11px 15px;
+        display:flex;align-items:center;gap:10px}
+  .badge-float .num{font-family:var(--en);font-weight:800;font-size:21px;color:var(--green)}
+  .badge-float small{font-size:10.5px;color:var(--ink-soft);line-height:1.3}
+  .bf-1{top:-14px;left:-18px;animation:float 5s ease-in-out infinite}
+  .bf-2{bottom:6%;right:-22px;animation:float 6s ease-in-out infinite .8s}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+
+  /* ── ロゴ帯（信頼） ── */
+  .trust{padding:30px 0;border-bottom:1px solid var(--line)}
+  .trust .wrap{display:flex;align-items:center;gap:26px;flex-wrap:wrap;justify-content:center}
+  .trust .t{font-size:13px;color:var(--ink-faint);font-weight:700}
+  .chips{display:flex;gap:9px;flex-wrap:wrap;justify-content:center}
+  .chip{font-size:12.5px;font-weight:700;color:var(--green-deep);background:var(--green-soft);
+        border:1px solid #D5E8E1;border-radius:999px;padding:7px 14px}
+
+  /* ── セクション共通 ── */
+  section{padding:92px 0}
+  .sec-head{text-align:center;max-width:680px;margin:0 auto 56px}
+  .kicker{display:inline-block;font-family:var(--en);font-weight:700;font-size:13px;letter-spacing:.14em;
+        color:var(--green);text-transform:uppercase;margin-bottom:14px}
+  .sec-head h2{font-size:clamp(25px,3.2vw,36px);line-height:1.42}
+  .sec-head h2 em{font-style:normal;color:var(--green)}
+  .sec-head p{margin-top:18px;color:var(--ink-soft);font-size:15.5px}
+
+  /* 課題 */
+  .problem{background:var(--green-tint)}
+  .prob-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .prob-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:30px 26px;box-shadow:var(--shadow-sm)}
+  .prob-card .qm{font-family:var(--en);font-weight:800;font-size:30px;color:var(--pink);opacity:.85;margin-bottom:8px}
+  .prob-card h3{font-size:17px;margin-bottom:9px}
+  .prob-card p{font-size:13.5px;color:var(--ink-soft);line-height:1.9}
+
+  /* 機能（チェックリスト型） */
+  .feat{display:flex;flex-direction:column;gap:34px}
+  .feat-row{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center}
+  .feat-row:nth-child(even) .feat-media{order:-1}
+  .feat-no{font-family:var(--en);font-weight:800;font-size:15px;color:var(--green);letter-spacing:.1em}
+  .feat-text h3{font-size:clamp(21px,2.6vw,27px);margin:10px 0 14px;line-height:1.45}
+  .feat-text>p{color:var(--ink-soft);font-size:15px;line-height:2;margin-bottom:18px}
+  .checks{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:11px}
+  .checks li{display:flex;gap:12px;align-items:flex-start;font-size:14.5px;font-weight:500}
+  .checks li .ck{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--green);display:grid;place-items:center;margin-top:2px}
+  .checks li .ck svg{width:13px;height:13px;color:#fff}
+
+  .feat-media{position:relative}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow);
+        padding:24px;position:relative;overflow:hidden}
+  .panel::before{content:"";position:absolute;inset:0 0 auto 0;height:6px;background:var(--grad-brand)}
+  .panel h4{font-size:13px;color:var(--ink-faint);font-weight:700;margin:6px 0 16px;font-family:var(--en);letter-spacing:.04em}
+  .upl{border:2px dashed #C9E1D8;border-radius:14px;padding:26px;text-align:center;color:var(--green-deep);background:var(--green-tint)}
+  .upl svg{width:34px;height:34px;color:var(--green);margin-bottom:8px}
+  .upl b{display:block;font-size:14px}.upl small{font-size:11.5px;color:var(--ink-faint)}
+  .ocr-list{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+  .mono{font-family:var(--en)}
+  .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .kpi{background:var(--green-tint);border-radius:14px;padding:16px}
+  .kpi small{font-size:11px;color:var(--ink-soft);font-weight:700}
+  .kpi b{display:block;font-family:var(--en);font-weight:800;font-size:24px;color:var(--green-deep);margin-top:3px}
+  .kpi b span{font-size:13px}
+  .bars{display:flex;align-items:flex-end;gap:10px;height:120px;margin-top:14px;padding:0 4px}
+  .bars .b{flex:1;background:var(--grad-brand);border-radius:7px 7px 0 0;position:relative;min-height:14px}
+  .bars .b.alt{background:var(--grad-cyan)}
+  .bars .b span{position:absolute;top:-18px;left:0;right:0;text-align:center;font-family:var(--en);font-size:10px;font-weight:700;color:var(--ink-soft)}
+
+  /* バリュー */
+  .value{background:var(--green-forest);color:#fff;position:relative;overflow:hidden}
+  .value::before{content:"";position:absolute;width:520px;height:520px;border-radius:50%;
+        background:radial-gradient(circle,rgba(98,185,199,.35),transparent 68%);top:-200px;right:-120px}
+  .value .sec-head h2,.value .kicker{color:#fff}
+  .value .kicker{color:#A9E0D2}
+  .value .sec-head p{color:rgba(255,255,255,.78)}
+  .val-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;position:relative}
+  .val-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:var(--radius);
+        padding:32px 28px;backdrop-filter:blur(4px)}
+  .val-card .vic{width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.14);display:grid;place-items:center;margin-bottom:18px}
+  .val-card .vic svg{width:26px;height:26px;color:#fff}
+  .val-card h3{font-size:19px;margin-bottom:10px}
+  .val-card p{font-size:13.5px;color:rgba(255,255,255,.8);line-height:1.95}
+
+  /* フロー */
+  .flow-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .step{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:28px 22px;box-shadow:var(--shadow-sm)}
+  .step .stno{font-family:var(--en);font-weight:800;font-size:13px;color:#fff;background:var(--green);
+        width:34px;height:34px;border-radius:50%;display:grid;place-items:center;margin-bottom:16px}
+  .step h3{font-size:16px;margin-bottom:8px}
+  .step p{font-size:13px;color:var(--ink-soft);line-height:1.85}
+  .step .arrow{position:absolute;right:-13px;top:46px;color:#C9E1D8;z-index:2}
+  .step .arrow svg{width:22px;height:22px}
+
+  /* エコシステム */
+  .eco{background:var(--green-tint)}
+  .eco-flex{display:grid;grid-template-columns:1fr 1fr;gap:54px;align-items:center}
+  .eco-copy h2{font-size:clamp(24px,3vw,33px);line-height:1.45;margin-bottom:18px}
+  .eco-copy h2 em{font-style:normal;color:var(--green)}
+  .eco-copy p{color:var(--ink-soft);font-size:15px;line-height:2;margin-bottom:22px}
+  .eco-tags{display:flex;flex-wrap:wrap;gap:9px}
+  .eco-tags span{font-size:12.5px;font-weight:700;background:#fff;border:1px solid #D5E8E1;color:var(--green-deep);
+        border-radius:999px;padding:7px 14px}
+  .eco-ring{position:relative;width:100%;max-width:430px;aspect-ratio:1/1;margin:0 auto}
+  .eco-outer{position:absolute;inset:0;border-radius:50%;background:var(--green);opacity:.16}
+  .eco-inner{position:absolute;inset:18%;border-radius:50%;background:var(--green-forest)}
+  .eco-core{position:absolute;inset:33%;border-radius:50%;background:#fff;box-shadow:var(--shadow);
+        display:grid;place-items:center;text-align:center;padding:10px}
+  .eco-core .word{font-family:var(--jp);font-weight:900;color:var(--green);font-size:clamp(15px,2.4vw,21px)}
+  .eco-core small{font-family:var(--en);font-size:9px;letter-spacing:.12em;color:var(--ink-faint);display:block;margin-top:2px}
+  .node{position:absolute;width:74px;height:74px;border-radius:50%;background:#fff;box-shadow:var(--shadow-sm);
+        display:grid;place-items:center;text-align:center;font-size:11px;font-weight:700;color:var(--green-deep);
+        transform:translate(-50%,-50%);border:2px solid #fff;line-height:1.3;padding:4px}
+  .node.self{background:var(--green);color:#fff;box-shadow:0 12px 26px rgba(65,148,130,.4);width:84px;height:84px;font-size:12px}
+
+  /* CTA */
+  .cta-band{background:var(--grad-brand);color:#fff;border-radius:34px;padding:64px 40px;text-align:center;
+        position:relative;overflow:hidden;box-shadow:var(--shadow-lg)}
+  .cta-band::before{content:"";position:absolute;width:380px;height:380px;border-radius:50%;
+        background:rgba(255,255,255,.12);top:-160px;left:-80px}
+  .cta-band::after{content:"";position:absolute;width:300px;height:300px;border-radius:50%;
+        background:rgba(255,255,255,.10);bottom:-150px;right:-60px}
+  .cta-band h2{font-size:clamp(24px,3.4vw,38px);line-height:1.4;position:relative}
+  .cta-band p{margin-top:16px;font-size:15.5px;color:rgba(255,255,255,.9);position:relative}
+  .cta-band .acts{display:flex;gap:14px;justify-content:center;margin-top:32px;flex-wrap:wrap;position:relative}
+
+  /* フッター */
+  footer{background:var(--navy);color:#C7D3D8;padding:64px 0 30px}
+  .foot-top{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:40px;padding-bottom:40px;border-bottom:1px solid rgba(255,255,255,.1)}
+  .foot-top .about p{font-size:13px;color:#9DAEB4;margin-top:16px;line-height:1.9;max-width:300px}
+  .foot-col h4{font-size:13px;color:#fff;font-weight:700;margin-bottom:16px}
+  .foot-col a{display:block;font-size:13px;color:#9DAEB4;padding:5px 0;transition:color .15s}
+  .foot-col a:hover{color:#fff}
+  .foot-bot{display:flex;justify-content:space-between;align-items:center;padding-top:24px;flex-wrap:wrap;gap:12px}
+  .foot-bot small{font-size:12px;color:#7E9097;font-family:var(--en)}
+
+  /* reveal */
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.in{opacity:1;transform:none}
+
+  /* ── レスポンシブ ── */
+  @media (max-width:900px){
+    .hero .wrap{grid-template-columns:1fr;gap:40px;padding-top:56px;padding-bottom:64px}
+    .hero-visual{margin:0 auto;max-width:380px}
+    .feat-row{grid-template-columns:1fr;gap:26px}
+    .feat-row:nth-child(even) .feat-media{order:0}
+    .prob-grid,.val-grid{grid-template-columns:1fr}
+    .flow-grid{grid-template-columns:1fr 1fr}
+    .step .arrow{display:none}
+    .eco-flex{grid-template-columns:1fr;gap:36px}
+    .foot-top{grid-template-columns:1fr 1fr;gap:28px}
+    .nav .links,.nav .cta .btn-ghost{display:none}
+    .nav-toggle{display:block}
+    .nav.open .links{display:flex;position:absolute;top:72px;left:0;right:0;background:#fff;flex-direction:column;
+        gap:0;padding:8px 24px 18px;border-bottom:1px solid var(--line);box-shadow:var(--shadow)}
+    .nav.open .links a{padding:12px 0;border-bottom:1px solid var(--line);width:100%}
+  }
+  @media (max-width:560px){
+    section{padding:64px 0}
+    .flow-grid{grid-template-columns:1fr}
+    .foot-top{grid-template-columns:1fr}
+    .cta-band{padding:48px 22px}
+    .hero .acts .btn,.cta-band .acts .btn{flex:1;justify-content:center}
+  }
+</style>
+</head>
+<body>
+
+<!-- ロゴSVG（共通定義） -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="logipoke-mark" viewBox="0 0 100 112">
+      <path d="M26,6 H74 Q94,6 94,26 V56 Q94,90 50,108 Q6,90 6,56 V26 Q6,6 26,6 Z" fill="currentColor"/>
+      <rect x="22" y="34" width="30" height="7" rx="3.5" fill="#fff"/>
+      <rect x="22" y="49" width="22" height="7" rx="3.5" fill="#fff"/>
+      <rect x="22" y="64" width="14" height="7" rx="3.5" fill="#fff"/>
+      <path d="M58,32 q12,0 12,13 q0,15 -16,20" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<header>
+  <div class="wrap">
+    <nav class="nav" id="nav">
+      <a href="#top" class="logo" aria-label="ロジポケ AI Fleet Pilot">
+        <svg class="mark" style="color:var(--green)"><use href="#logipoke-mark"/></svg>
+        <span class="word">ロジポケ</span>
+      </a>
+      <div class="links">
+        <a href="#problem">課題</a>
+        <a href="#features">機能</a>
+        <a href="#value">特長</a>
+        <a href="#flow">導入の流れ</a>
+        <a href="#eco">シリーズ</a>
+      </div>
+      <div class="cta">
+        <a href="#contact" class="btn btn-ghost">資料ダウンロード</a>
+        <a href="#contact" class="btn btn-primary">無料で試す</a>
+        <button class="nav-toggle" id="navToggle" aria-label="メニュー"><span></span><span></span><span></span></button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<!-- ヒーロー -->
+<section class="hero" id="top" style="padding:0">
+  <div class="wrap">
+    <div class="hero-copy">
+      <div class="eyebrow">
+        <span class="series-badge">
+          <svg class="dot" style="color:var(--green)"><use href="#logipoke-mark"/></svg>
+          ロジポケシリーズ ／ AI Fleet Pilot
+        </span>
+      </div>
+      <h1>請求書のデータ化から<br><em>車両コストの可視化</em>まで、<br>まるっと自動化。</h1>
+      <p class="lead">AI-OCRが請求書を自動でデータ化。車番ごとにコストを自動集計し、ロジポケへ連携します。転記レスで車両原価をリアルタイムに可視化する、物流事業者のためのコスト管理サービスです。</p>
+      <div class="acts">
+        <a href="#contact" class="btn btn-primary">
+          無料で試す
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a href="#features" class="btn btn-ghost">機能を見る</a>
+      </div>
+      <div class="kvline">Smart Logistics, in your pocket.</div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="blob-ring"></div>
+      <div class="blob"></div>
+      <div class="device">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="row">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
+          <span class="tx"><b>燃料費請求書_4月.pdf</b><small>OCR 98% · 品川500 あ12-34</small></span>
+          <span class="tag exist">既存車両</span>
+        </div>
+        <div class="row">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
+          <span class="tx"><b>高速通行料 集計</b><small>足立800 か56-78</small></span>
+          <span class="tag newv">新規車両</span>
+        </div>
+        <div class="row">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>
+          <span class="tx"><b>車両別コスト</b><small>今月の積み上げ</small></span>
+          <span class="amt">¥1,284,000</span>
+        </div>
+      </div>
+      <div class="badge-float bf-1">
+        <span class="num">98%</span><small>OCR<br>読取精度</small>
+      </div>
+      <div class="badge-float bf-2">
+        <span class="num">0</span><small>転記<br>作業</small>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 信頼帯：対応コスト分類 -->
+<div class="trust">
+  <div class="wrap">
+    <span class="t">対応するコスト分類</span>
+    <div class="chips">
+      <span class="chip">燃料費</span>
+      <span class="chip">修繕・維持費</span>
+      <span class="chip">通行料</span>
+      <span class="chip">保険料</span>
+      <span class="chip">調達コスト</span>
+      <span class="chip">税金</span>
+      <span class="chip">＋ 設定で追加可</span>
+    </div>
+  </div>
+</div>
+
+<!-- 課題 -->
+<section class="problem" id="problem">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kicker">Problem</span>
+      <h2>車両ごとの請求書、<br><em>手入力</em>のままにしていませんか？</h2>
+      <p>燃料・整備・通行料・保険・税金──車両ごとに届く多種多様な請求書。手作業の転記には、見えないコストが潜んでいます。</p>
+    </div>
+    <div class="prob-grid">
+      <div class="prob-card reveal">
+        <div class="qm">?</div>
+        <h3>転記の負荷とミス</h3>
+        <p>会計・コスト管理システムへの手入力に時間がかかり、入力ミスや集計漏れが発生する。</p>
+      </div>
+      <div class="prob-card reveal">
+        <div class="qm">?</div>
+        <h3>車両原価が見えない</h3>
+        <p>車番（ナンバー）単位の原価を集計するのに手間がかかり、可視化が後手に回る。</p>
+      </div>
+      <div class="prob-card reveal">
+        <div class="qm">?</div>
+        <h3>監査の手間</h3>
+        <p>いつ・誰が・何を変えたのか。修正履歴を残す運用が属人化し、監査対応が重い。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 機能 -->
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kicker">Features</span>
+      <h2>請求書を、<em>撮って・繋ぐ</em>だけ。</h2>
+      <p>アップロードからコスト可視化まで。3つのコア機能が、車両コスト管理をまるっと自動化します。</p>
+    </div>
+
+    <div class="feat">
+      <!-- 1 -->
+      <div class="feat-row reveal">
+        <div class="feat-text">
+          <span class="feat-no">FEATURE 01</span>
+          <h3>AI-OCRで請求書を<br>自動データ化</h3>
+          <p>PDF・画像・CSVをアップロードするだけで、AI-OCRが明細を自動で抽出。読み取り信頼度も併せて表示します。</p>
+          <ul class="checks">
+            <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>PDF・画像・CSVに対応した一括取込</li>
+            <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>項目・金額・発生日を明細単位で自動抽出</li>
+            <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>読み取り信頼度を可視化し、確認を効率化</li>
+          </ul>
+        </div>
+        <div class="feat-media">
+          <div class="panel">
+            <h4>UPLOAD &amp; OCR</h4>
+            <div class="upl">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+              <b>請求書をドラッグ＆ドロップ</b>
+              <small>PDF / JPG / PNG / CSV</small>
+            </div>
+            <div class="ocr-list">
+              <div class="row"><span class="tx"><b>軽油 1,000L</b><small class="mono">2026-04-12</small></span><span class="amt">¥152,000</span><span class="tag exist">98%</span></div>
+              <div class="row"><span class="tx"><b>オイル交換</b><small class="mono">2026-04-15</small></span><span class="amt">¥8,800</span><span class="tag exist">95%</span></div>
+              <div class="row"><span class="tx"><b>高速料金</b><small class="mono">2026-04-18</small></span><span class="amt">¥24,300</span><span class="tag newv">82%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2 -->
+      <div class="feat-row reveal">
+        <div class="feat-text">
+          <span class="feat-no">FEATURE 02</span>
+          <h3>車番を車両マスタへ<br>自動突合</h3>
+          <p>ナンバープレートを車両マスタと自動で照合。既存車両への紐付け、新規車両の作成、要確認を自動で判定します。</p>
+          <ul class="checks">
+            <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>既存 / 新規 / 要確認 / 未選択 を自動判定</li>
+            <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>信頼度しきい値（既定85%）は設定で調整可能</li>
+            <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>車台番号から車格・諸元を参照して補完</li>
+          </ul>
+        </div>
+        <div class="feat-media">
+          <div class="panel">
+            <h4>VEHICLE MATCHING</h4>
+            <div class="ocr-list">
+              <div class="row"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13l2-5h14l2 5v5h-2a2 2 0 0 1-4 0H9a2 2 0 0 1-4 0H3z"/></svg></span><span class="tx"><b>品川500 あ12-34</b><small>車両マスタに一致</small></span><span class="tag exist">既存車両に紐付け</span></div>
+              <div class="row"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13l2-5h14l2 5v5h-2a2 2 0 0 1-4 0H9a2 2 0 0 1-4 0H3z"/></svg></span><span class="tx"><b>足立800 か56-78</b><small>未登録 · 信頼度92%</small></span><span class="tag newv">新規車両を作成</span></div>
+              <div class="row" style="background:#FBEFEC"><span class="ic" style="background:#F7E2DF;color:#B23A2E"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span><span class="tx"><b>練馬○○ ?2-34</b><small>信頼度74%</small></span><span class="tag" style="background:#F7E2DF;color:#B23A2E">要確認</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 -->
+      <div class="feat-row reveal">
+        <div class="feat-text">
+          <span class="feat-no">FEATURE 03</span>
+          <h3>車番単位でコストを<br>自動集計・可視化</h3>
+          <p>連携済みデータから「1車番＝1レコード」でコストを積み上げ。コストモニターで車両原価を常に最新の状態で可視化します。</p>
+          <ul class="checks">
+            <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>車両（車番）単位の原価をリアルタイム集計</li>
+            <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>営業所・期間で絞り込んで分析</li>
+            <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>連携済みの編集は変更履歴として記録</li>
+          </ul>
+        </div>
+        <div class="feat-media">
+          <div class="panel">
+            <h4>COST MONITOR</h4>
+            <div class="kpi-grid">
+              <div class="kpi"><small>当月コスト合計</small><b>¥4.82<span>M</span></b></div>
+              <div class="kpi"><small>対象車両</small><b>32<span>台</span></b></div>
+            </div>
+            <div class="bars">
+              <div class="b" style="height:54%"><span>燃料</span></div>
+              <div class="b alt" style="height:38%"><span>整備</span></div>
+              <div class="b" style="height:70%"><span>通行</span></div>
+              <div class="b alt" style="height:30%"><span>保険</span></div>
+              <div class="b" style="height:46%"><span>税金</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- バリュー -->
+<section class="value" id="value">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kicker">Core Value</span>
+      <h2>現場の手間を減らし、<br>経営の判断を速くする。</h2>
+      <p>転記レス・可視化・監査性。3つの価値が、車両コスト管理の当たり前を変えます。</p>
+    </div>
+    <div class="val-grid">
+      <div class="val-card reveal">
+        <div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg></div>
+        <h3>転記レス</h3>
+        <p>OCR＋自動突合で入力を自動化。手作業の転記をなくし、入力ミスと集計漏れを防ぎます。</p>
+      </div>
+      <div class="val-card reveal">
+        <div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <h3>車両原価の可視化</h3>
+        <p>1車番＝1レコードで、常に最新の積み上げを表示。車両ごとの原価がひと目で分かります。</p>
+      </div>
+      <div class="val-card reveal">
+        <div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <h3>監査性</h3>
+        <p>連携済みデータの編集は「いつ・誰が・何を・どう変えたか」を変更履歴として自動記録します。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- フロー -->
+<section id="flow">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kicker">How it works</span>
+      <h2>導入は、<em>4ステップ</em>。</h2>
+      <p>アップロードしてから、ロジポケへの連携・可視化まで。シンプルなフローで現場に定着します。</p>
+    </div>
+    <div class="flow-grid">
+      <div class="step reveal">
+        <div class="stno">1</div>
+        <h3>アップロード</h3>
+        <p>請求書（PDF/画像/CSV）をまとめて取り込みます。</p>
+        <span class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </div>
+      <div class="step reveal">
+        <div class="stno">2</div>
+        <h3>AI-OCRデータ化</h3>
+        <p>明細を自動抽出。車番を車両マスタへ突合します。</p>
+        <span class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </div>
+      <div class="step reveal">
+        <div class="stno">3</div>
+        <h3>確認・入力済み</h3>
+        <p>内容を確認・修正して「入力済み」に。</p>
+        <span class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </div>
+      <div class="step reveal">
+        <div class="stno">4</div>
+        <h3>連携・可視化</h3>
+        <p>ロジポケへ連携し、車両コストを自動集計・可視化。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- エコシステム -->
+<section class="eco" id="eco">
+  <div class="wrap">
+    <div class="eco-flex">
+      <div class="eco-copy reveal">
+        <span class="kicker">Logipoke Series</span>
+        <h2>このサービスは、<br><em>ロジポケシリーズ</em>の一員です。</h2>
+        <p>安全教育・労務管理・運行管理・台帳管理など、物流DXを支えるロジポケのサービス群と連携。請求書データ化・車両コスト管理を担い、現場と経営をまるっと最適化します。</p>
+        <div class="eco-tags">
+          <span>安全教育</span><span>マニュアル管理</span><span>バース管理</span>
+          <span>台帳管理</span><span>労務管理</span><span>運行管理</span><span>人材紹介</span>
+        </div>
+      </div>
+      <div class="eco-ring reveal" id="ecoRing">
+        <div class="eco-outer"></div>
+        <div class="eco-inner"></div>
+        <div class="eco-core">
+          <div>
+            <div class="word">コスト管理</div>
+            <small>AI FLEET PILOT</small>
+          </div>
+        </div>
+        <!-- ノードはJSで円周配置 -->
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="contact" style="padding-top:0">
+  <div class="wrap">
+    <div class="cta-band reveal">
+      <h2>請求書の転記、<br>そろそろ手放しませんか。</h2>
+      <p>導入のご相談・デモのご依頼を承ります。まずはお気軽にお問い合わせください。</p>
+      <div class="acts">
+        <a href="#" class="btn btn-white">無料で試す</a>
+        <a href="#" class="btn btn-line">資料ダウンロード</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- フッター -->
+<footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <div class="about">
+        <a href="#top" class="logo on-dark">
+          <svg class="mark" style="color:#fff"><use href="#logipoke-mark"/></svg>
+          <span class="word">ロジポケ</span>
+        </a>
+        <p>物流DXで現場と経営をまるっと最適化。<br>Smart Logistics, in your pocket.</p>
+      </div>
+      <div class="foot-col">
+        <h4>サービス</h4>
+        <a href="#features">機能</a>
+        <a href="#value">特長</a>
+        <a href="#flow">導入の流れ</a>
+        <a href="#eco">ロジポケシリーズ</a>
+      </div>
+      <div class="foot-col">
+        <h4>ロジポケシリーズ</h4>
+        <a href="#">安全教育</a>
+        <a href="#">運行管理</a>
+        <a href="#">労務管理</a>
+        <a href="#">台帳管理</a>
+      </div>
+      <div class="foot-col">
+        <h4>お問い合わせ</h4>
+        <a href="#contact">資料ダウンロード</a>
+        <a href="#contact">無料で試す</a>
+        <a href="#contact">デモのご依頼</a>
+      </div>
+    </div>
+    <div class="foot-bot">
+      <small>© 2026 Logipoke / AI Fleet Pilot. All rights reserved.</small>
+      <small>Privacy Policy ・ Terms</small>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // モバイルメニュー
+  const nav = document.getElementById('nav');
+  document.getElementById('navToggle').addEventListener('click', () => nav.classList.toggle('open'));
+  nav.querySelectorAll('.links a').forEach(a => a.addEventListener('click', () => nav.classList.remove('open')));
+
+  // スクロールリビール
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+  }, { threshold:.16 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // エコシステムのノードを円周配置
+  const ring = document.getElementById('ecoRing');
+  const services = ['安全教育','マニュアル管理','バース管理','台帳管理','労務管理','運行管理','人材紹介'];
+  const total = services.length + 1;       // 自サービス含む
+  const R = 50;                             // %半径
+  services.forEach((name, i) => {
+    const angle = (-90 + (360/total) * i) * Math.PI/180;
+    const x = 50 + R * Math.cos(angle);
+    const y = 50 + R * Math.sin(angle);
+    const n = document.createElement('div');
+    n.className = 'node';
+    n.style.left = x + '%';
+    n.style.top = y + '%';
+    n.textContent = name;
+    ring.appendChild(n);
+  });
+  // 自サービスノード（最後の位置）
+  const a = (-90 + (360/total) * services.length) * Math.PI/180;
+  const self = document.createElement('div');
+  self.className = 'node self';
+  self.style.left = (50 + R * Math.cos(a)) + '%';
+  self.style.top = (50 + R * Math.sin(a)) + '%';
+  self.innerHTML = 'コスト<br>管理';
+  ring.appendChild(self);
+</script>
+</body>
+</html>
