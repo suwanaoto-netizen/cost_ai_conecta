@@ -600,6 +600,11 @@
   .mk-note{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--inkFaint);font-weight:700}
   .mk-ico{position:absolute;right:12px;bottom:9px;width:26px;height:26px;border-radius:999px;background:var(--greenSoft);display:flex;align-items:center;justify-content:center}
   /* コストモニター ピックアップ */
+  .pickup-toggle{display:inline-flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;font-size:11.5px;font-weight:800;color:var(--inkSoft);padding:3px 6px;margin:0 0 6px -6px;border-radius:6px;transition:background .12s,color .12s}
+  .pickup-toggle:hover{background:rgba(0,0,0,.04);color:var(--ink)}
+  .pickup-toggle svg{transition:transform .15s;transform:rotate(90deg)}
+  .pickup-toggle.collapsed{margin-bottom:10px}
+  .pickup-toggle.collapsed svg{transform:rotate(0)}
   .pickup{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:stretch}
   .pk-card{flex:1;min-width:248px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column}
   .pk-card-alert{border-color:var(--alert);box-shadow:0 0 0 1px var(--alert) inset}
@@ -1226,7 +1231,7 @@ let state={
   vehExpanded:new Set(),
   vehEditKey:null, vehEditMeta:null, vehEditConfirm:false, vehEditSnapshot:null, vehViewDocId:null, vehViewLid:null,
   vehPanel:null, vehChartCat:null, vehChartGran:"month", vehTlExpanded:false,
-  vehTrash:new Set(), vehTrashView:false, vehTrashAction:null,
+  vehTrash:new Set(), vehTrashView:false, vehTrashAction:null, vehPickupCollapsed:false,
   changelogOpen:false, changelogSeenCount:0, vehEditHighlight:null,
   vehDateStart:null, vehDateEnd:null, vehCalOpen:false, vehCalYM:"2026-06",
   reflectConfirm:null, enterConfirm:null, officeConfirm:null,
@@ -2902,11 +2907,12 @@ function renderVehicles(){
   const topItems=topCost.map((v,i)=>pkItem(v,`<span class="pk-rank wide">${i+1}位</span><div class="pk-main"><div class="pk-plate">${esc(v.target)}</div></div><span class="pk-amt">${yen(v.total)}</span>`));
   const incItems=incRank.slice(0,3).map(x=>pkItem(x.v,`<span class="pk-pct">+${Math.round(x.p)}%</span><div class="pk-main"><div class="pk-plate">${esc(x.v.target)}</div></div>`));
   const emptyMsg=`<div class="pk-empty">該当する車両はありません</div>`;
-  const pickup=inTrash?"":`<div class="pickup">
+  const pkCol=state.vehPickupCollapsed;
+  const pickup=inTrash?"":`<button class="pickup-toggle ${pkCol?"collapsed":""}" onclick="toggleVehPickup()" aria-expanded="${!pkCol}">${I.chev("#5A6472",13)}<span>ピックアップ</span></button>${pkCol?"":`<div class="pickup">
     <div class="pk-card pk-card-alert"><div class="pk-h">${I.alert("#B23A2E",14)} 要確認車両</div><div class="pk-list">${att.join("")||emptyMsg}</div></div>
     <div class="pk-card"><div class="pk-h">${I.truckN("#0E7A4B",15)} コスト上位車両</div><div class="pk-list">${topItems.join("")||emptyMsg}</div></div>
     <div class="pk-card"><div class="pk-h" title="先月（${moJP(lastYM)}）を、その前月（${moJP(prevYM)}）と比較した前月比の増加率です">${I.alert("#B87514",14)} コスト増加車両 <span class="pk-hsub">前月比（先月：${moJP(lastYM)}）</span></div><div class="pk-list">${incItems.join("")||emptyMsg}</div></div>
-  </div>`;
+  </div>`}`;
 
   /* ページング */
   const per=state.vehPerPage;
@@ -2958,6 +2964,7 @@ function toggleVeh(k){if(state.vehExpanded.has(k))state.vehExpanded.delete(k);el
 function setVehCategoryFilter(v){ state.vehCategoryFilter=v; state.vehPage=1; render(); }
 /* ───── 車両のゴミ箱（確認ステップ＋変更履歴） ───── */
 function toggleVehTrash(){ state.vehTrashView=!state.vehTrashView; state.vehPage=1; render(); }
+function toggleVehPickup(){ state.vehPickupCollapsed=!state.vehPickupCollapsed; render(); }
 function _findVeh(key){ return buildVehicles("all").find(v=>v.key===key); }
 function vehAskTrash(key){ const v=_findVeh(key); if(!v) return;
   state.vehTrashAction={mode:"trash",key,kind:v.kind,target:v.target,total:v.total,count:v.count}; renderOverlay(); }
