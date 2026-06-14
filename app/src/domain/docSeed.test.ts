@@ -29,4 +29,13 @@ describe("seedDocuments", () => {
     // 既存車番はマスタの正規plate（= 車両ID集計）でキーされる
     expect(vehicles.some((v) => v.key.startsWith("veh_"))).toBe(true);
   });
+
+  it("curated SEED（明示書類）が含まれ、OCR誤読デモ明細を持つ", () => {
+    const seedDoc = docs.find((d) => d.name === "板金塗装_中日本ボデー_202605.pdf");
+    expect(seedDoc).toBeTruthy();
+    // 既知の誤読（三河800さ901O / 信頼度0.73）が明細として存在する
+    const misread = lines.find((l) => l.plate === "三河800さ901O");
+    expect(misread).toBeTruthy();
+    expect(misread!.confidence).toBeCloseTo(0.73);
+  });
 });
