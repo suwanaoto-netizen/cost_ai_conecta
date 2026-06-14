@@ -898,7 +898,7 @@ let UID=300;
 function L(item,plate,cat,date,amount,conf,extra){ return Object.assign({lid:UID++,item,plate:plate||"",kind:"単車",cat,inspectedAt:date,amount,confidence:conf==null?.97:conf}, extra&&extra.fuso?{fuso:extra.fuso}:{}); }
 
 const SEED = [
-  {name:"月次整備まとめ_中部マツダ_202605.pdf", vendor:"中部マツダ整備", cat:"請求書", status:"反映済み", lines:[
+  {name:"月次整備まとめ_中部マツダ_202605.pdf", vendor:"中部マツダ整備", cat:"請求書", status:"連携済み", lines:[
     L("継続車検 / 24ヶ月点検","名古屋100あ1234","修繕・維持費","2026-05-08",98500,.99),
     L("12ヶ月点検","名古屋100か5678","修繕・維持費","2026-05-09",42000,.98),
     L("オイル・エレメント交換","三河800さ9012","修繕・維持費","2026-05-10",18500,.98),
@@ -907,7 +907,7 @@ const SEED = [
     L("バッテリー交換","豊橋800せ4455","修繕・維持費","2026-05-15",24000,.96),
     L("ワイパー・電球交換","名古屋130す6677","修繕・維持費","2026-05-16",8200,.97),
   ]},
-  {name:"燃料費_ENEOS法人カード_202605.pdf", vendor:"ENEOSウイング", cat:"請求書", status:"反映済み", lines:[
+  {name:"燃料費_ENEOS法人カード_202605.pdf", vendor:"ENEOSウイング", cat:"請求書", status:"連携済み", lines:[
     L("軽油 給油（5月分）","名古屋100あ1234","燃料費","2026-05-31",58200,.96),
     L("軽油 給油（5月分）","名古屋100か5678","燃料費","2026-05-31",61400,.96),
     L("軽油 給油（5月分）","三河800さ9012","燃料費","2026-05-31",49800,.96),
@@ -915,7 +915,7 @@ const SEED = [
     L("軽油 給油（5月分）","豊橋800せ4455","燃料費","2026-05-31",33600,.95),
     L("軽油 給油（5月分）","名古屋130す6677","燃料費","2026-05-31",41250,.94),
   ]},
-  {name:"ETC利用料_NEXCO中日本_202605.pdf", vendor:"NEXCO中日本", cat:"請求書", status:"反映済み", lines:[
+  {name:"ETC利用料_NEXCO中日本_202605.pdf", vendor:"NEXCO中日本", cat:"請求書", status:"連携済み", lines:[
     L("ETC利用料（5月分）","名古屋100あ1234","通行料","2026-05-31",28400,.97),
     L("ETC利用料（5月分）","名古屋100か5678","通行料","2026-05-31",31200,.97),
     L("ETC利用料（5月分）","一宮800そ8899","通行料","2026-05-31",19800,.96),
@@ -937,12 +937,12 @@ const SEED = [
     L("左サイドパネル 板金塗装","三河800さ901O","修繕・維持費","2026-05-22",78000,.73),
     L("フロントバンパー交換","名古屋100か5678","修繕・維持費","2026-05-23",45000,.95),
   ]},
-  {name:"自動車税納付書_愛知県_202605.pdf", vendor:"愛知県自動車税事務所", cat:"請求書", status:"反映済み", lines:[
+  {name:"自動車税納付書_愛知県_202605.pdf", vendor:"愛知県自動車税事務所", cat:"請求書", status:"連携済み", lines:[
     L("自動車税","名古屋100あ1234","税金","2026-05-31",41500,.99),
     L("自動車税","名古屋100か5678","税金","2026-05-31",41500,.99),
     L("重量税（車検時）","豊橋800せ4455","税金","2026-05-20",32800,.98),
   ]},
-  {name:"車両リース料_オリックス自動車_202605.pdf", vendor:"オリックス自動車", cat:"請求書", status:"反映済み", lines:[
+  {name:"車両リース料_オリックス自動車_202605.pdf", vendor:"オリックス自動車", cat:"請求書", status:"連携済み", lines:[
     L("車両リース料（月次）","名古屋330え4567","調達コスト","2026-05-27",88000,.98),
     L("車両リース料（月次）","名古屋400さ2020","調達コスト","2026-05-27",76000,.98),
   ]},
@@ -1072,7 +1072,7 @@ function genDocs(n){
     const lines=[L(item,plate,cat,date,ri(8,40)*2500,.97)];
     if(rnd()<0.22){ lines.push(L(pick(GEN_ITEMS[cat]),plate,cat,date,ri(6,24)*2000,.96)); }
     const r=rnd();
-    const status=r<0.62?"反映済み":r<0.82?"入力済み":"未入力";
+    const status=r<0.62?"連携済み":r<0.82?"入力済み":"未入力";
     out.push({name:`${cat}_${v.n}_${plate}_${month.replace('-','')}.pdf`, vendor:v.n, cat:"請求書", status, lines});
   }
   return out;
@@ -1090,17 +1090,17 @@ function genMultiDocs(n){
   for(let i=0;i<n;i++){
     const p=pick(pools), month=pick(months), k=ri(5,10), plates=sample(FLEET,k);
     const lines=plates.map(pl=>L(pick(p.items),pl,p.cat,`${month}-${String(ri(1,28)).padStart(2,"0")}`,ri(8,30)*2500,.96));
-    const r=rnd(); const status=r<0.45?"反映済み":r<0.72?"入力済み":"未入力";
+    const r=rnd(); const status=r<0.45?"連携済み":r<0.72?"入力済み":"未入力";
     out.push({name:`${p.label}_${p.v}_${month.replace('-','')}.pdf`, vendor:p.v, cat:"請求書", status, lines});
   }
   return out;
 }
-/* 全車両をカバーする反映済みの燃料費（7明細ずつ＝5〜10件帯／コストモニターの母数確保） */
+/* 全車両をカバーする連携済みの燃料費（7明細ずつ＝5〜10件帯／コストモニターの母数確保） */
 function baselineDocs(){
   const out=[]; const vendors=["ENEOSウイング","出光リテール販売","ホクブトランスポート給油","コスモ石油法人"];
   for(let i=0,vi=0;i<FLEET.length;i+=7,vi++){
     const plates=FLEET.slice(i,i+7), vn=vendors[vi%vendors.length];
-    out.push({name:`燃料費まとめ_${vn}_202604.pdf`, vendor:vn, cat:"請求書", status:"反映済み",
+    out.push({name:`燃料費まとめ_${vn}_202604.pdf`, vendor:vn, cat:"請求書", status:"連携済み",
       lines:plates.map(p=>L("軽油 給油（4月分）",p,"燃料費","2026-04-30",ri(18,26)*2500,.96))});
   }
   return out;
@@ -1120,7 +1120,7 @@ function writeLines(docId, lines){
   (lines||[]).forEach(l=>{ const c=JSON.parse(JSON.stringify(l)); c.docId=docId; LINES.push(c); });
 }
 function maxLineDate(s){ return s.lines.map(l=>l.inspectedAt).sort().slice(-1)[0]||""; }
-function pushDoc(s){ const reflectedAt=s.status==="反映済み"?(maxLineDate(s)+" 09:00:00"):null;
+function pushDoc(s){ const reflectedAt=s.status==="連携済み"?(maxLineDate(s)+" 09:00:00"):null;
   const category=s.category||CATEGORIES[docs.length%CATEGORIES.length];
   const id="d"+(docs.length+1);
   const {lines, ...rest}=s;
@@ -1163,27 +1163,27 @@ function matchBadge(l){
 }
 function catPill(c){const s=CAT_STYLE[c]||CAT_STYLE["税金"];return `<span class="catpill" style="color:${s.fg};background:${s.bg}">${esc(c)}</span>`;}
 const STATUS_META={
-  "未入力":{cls:"st-todo"}, "入力済み":{cls:"st-done"}, "反映済み":{cls:"st-reflected"},
+  "未入力":{cls:"st-todo"}, "入力済み":{cls:"st-done"}, "連携済み":{cls:"st-reflected"},
 };
 function statusChip(s){const m=STATUS_META[s];
-  const lock = s==="反映済み" ? ` <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>` : "";
+  const lock = s==="連携済み" ? ` <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>` : "";
   return `<span class="st ${m.cls}"><span class="dot"></span>${s}${lock}</span>`;}
 /* ステータスの説明ツールチップ（一覧ヘッダーの「ステータス」横） */
 function statusHelp(){
   const rows=[
     ["未入力","取り込み直後の状態。取引先・車番・金額など、内容の確認・修正が必要です。"],
     ["入力済み","内容を確認・確定した状態。車両コストへデータ連携できます。"],
-    ["反映済み","車両コストへデータ連携済みの状態。書類一覧では編集できません（🔒）。修正はコストモニターから行えます。"],
+    ["連携済み","連携システムと車両コストへデータ連携済みの状態。書類一覧では編集できません（🔒）。修正はコストモニターから行えます。"],
   ].map(([s,d])=>`<div class="hp-row"><span class="hp-c" style="min-width:98px">${statusChip(s)}</span><span class="hp-d">${d}</span></div>`).join("");
   return `<span class="phase-help" onclick="event.stopPropagation()"><span class="help" tabindex="0">?</span><span class="help-pop"><span class="hp-h">ステータスの説明</span>
-    <span class="hp-intro">書類は「未入力 → 入力済み → 反映済み」の順で進みます。</span>${rows}</span></span>`;
+    <span class="hp-intro">書類は「未入力 → 入力済み → 連携済み」の順で進みます。</span>${rows}</span></span>`;
 }
 
 /* ───── 状態 ───── */
 let state={
   view:"documents",
   collapsed:false,
-  filterStatus:"all",   // all|未入力|入力済み|反映済み
+  filterStatus:"all",   // all|未入力|入力済み|連携済み
   categoryFilter:"all", vehCategoryFilter:"all",
   trash:false, docTrashAction:null,
   q:"",
@@ -1254,7 +1254,7 @@ function applyDocSort(list){
   const dir=s.dir==="asc"?1:-1;
   const val=d=>{switch(s.key){
     case "no":return d.no;
-    case "status":return ({"未入力":0,"入力済み":1,"反映済み":2})[d.status];
+    case "status":return ({"未入力":0,"入力済み":1,"連携済み":2})[d.status];
     case "name":return d.name;
     case "cat":return d.category||"";
     case "vendor":return d.vendor;
@@ -1285,7 +1285,7 @@ function visibleDocs(){
 }
 function setCategoryFilter(v){ state.categoryFilter=v; state.selected.clear(); state.bulkMenu=false; state.docPage=1; render(); }
 function renderDocuments(){
-  const counts={all:0,"未入力":0,"入力済み":0,"反映済み":0};
+  const counts={all:0,"未入力":0,"入力済み":0,"連携済み":0};
   docs.filter(d=>!d.deleted).forEach(d=>{counts.all++;counts[d.status]++;});
   const trashCount=docs.filter(d=>d.deleted).length;
 
@@ -1295,7 +1295,7 @@ function renderDocuments(){
   </div>`;
 
   const seg=state.trash?"":`<div class="seg">
-    ${["all","未入力","入力済み","反映済み"].map(k=>`<button class="${state.filterStatus===k?"active":""}" onclick="setFilter('${k}')">${k==="all"?"すべて":k}<span class="n">${counts[k]}</span></button>`).join("")}
+    ${["all","未入力","入力済み","連携済み"].map(k=>`<button class="${state.filterStatus===k?"active":""}" onclick="setFilter('${k}')">${k==="all"?"すべて":k}<span class="n">${counts[k]}</span></button>`).join("")}
   </div>`;
   const catSel=`<div class="filter-sel"><span class="fs-l">${I.boxes("#5A6472",14)} 営業所</span>
     <select onchange="setCategoryFilter(this.value)"><option value="all" ${state.categoryFilter==="all"?"selected":""}>すべて</option>
@@ -1352,7 +1352,7 @@ function renderDocBody(){
   if(!state.trash && sv.length>=2){
     const enterable=sv.filter(d=>d.status==="未入力").length;
     const reflectable=sv.filter(d=>d.status==="入力済み").length;
-    const officeable=sv.filter(d=>d.status!=="反映済み").length;
+    const officeable=sv.filter(d=>d.status!=="連携済み").length;
     topbar=`<div class="bulkbar">
       <span class="bb-count">${sv.length}件を選択中</span>
       <button class="bb-clear" onclick="clearSelection()">選択を解除</button>
@@ -1446,22 +1446,22 @@ function renderEnterConfirm(){
 }
 function bulkReflect(){ state.bulkMenu=false;
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="入力済み");
-  if(t.length===0){ render(); toast("反映できる「入力済み」の書類が選択されていません"); return; }
+  if(t.length===0){ render(); toast("連携できる「入力済み」の書類が選択されていません"); return; }
   state.reflectConfirm={kind:"bulk", count:t.length, label:""}; renderOverlay(); }
 function doBulkReflect(){
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="入力済み");
   if(t.length===0){ render(); return; }
   runReflect(t.map(d=>({name:d.name,lines:docLines(d)})), `${t.length}件の書類をデータ連携しました`, ()=>{
-    const ts=nowStamp(); t.forEach(d=>{d.status="反映済み";d.reflectedAt=ts;state.selected.delete(d.id);});
+    const ts=nowStamp(); t.forEach(d=>{d.status="連携済み";d.reflectedAt=ts;state.selected.delete(d.id);});
     render(); toast(`${t.length}件を車両コストへデータ連携しました`, {label:"コストモニターを見る", fn:gotoVehicles}); }); }
 function bulkChangeOffice(){ state.bulkMenu=false;
-  const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status!=="反映済み");
-  if(t.length===0){ render(); toast("営業所を変更できる書類が選択されていません（反映済みは変更不可）"); return; }
+  const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status!=="連携済み");
+  if(t.length===0){ render(); toast("営業所を変更できる書類が選択されていません（連携済みは変更不可）"); return; }
   state.officeConfirm={ids:t.map(d=>d.id), office:(CATEGORIES[0]||"")}; renderOverlay(); }
 function closeOfficeConfirm(){ state.officeConfirm=null; renderOverlay(); }
 function setOfficeConfirm(v){ if(state.officeConfirm) state.officeConfirm.office=v; }
 function proceedBulkChangeOffice(){ const oc=state.officeConfirm; state.officeConfirm=null; if(!oc){ renderOverlay(); return; }
-  const targets=oc.ids.map(id=>docs.find(d=>d.id===id)).filter(d=>d&&d.status!=="反映済み");
+  const targets=oc.ids.map(id=>docs.find(d=>d.id===id)).filter(d=>d&&d.status!=="連携済み");
   if(targets.length===0){ render(); return; }
   targets.forEach(d=>{ d.category=oc.office; });
   render(); toast(oc.office?`${targets.length}件の営業所を「${oc.office}」に変更しました`:`${targets.length}件の営業所を未選択にしました`); }
@@ -1882,10 +1882,10 @@ function panelNav(delta){
 function renderPanel(){
   const d=state.draft; if(!d)return"";
   const total=docTotal(d);
-  const isReflected=d.status==="反映済み";
-  const st=d.status; // 未入力 / 入力済み / 反映済み
+  const isReflected=d.status==="連携済み";
+  const st=d.status; // 未入力 / 入力済み / 連携済み
   const s2 = st==="未入力" ? "current" : "done";        // 内容を保存
-  const s3 = st==="反映済み" ? "done" : (st==="入力済み" ? "current" : "todo"); // データ連携
+  const s3 = st==="連携済み" ? "done" : (st==="入力済み" ? "current" : "todo"); // データ連携
   const stepper=`<div class="stepper">
     <div class="step done"><span class="sdot">${I.check("#fff",11,3)}</span><span class="slab">取込・データ化</span></div>
     <div class="sline done"></div>
@@ -1905,9 +1905,9 @@ function renderPanel(){
       <button class="pn-navbtn" ${hasNext?"":"disabled"} title="次の書類" onclick="panelNav(1)">次へ<span class="ic-r">${I.chev("#5A6472",13)}</span></button>
     </div>
     <div class="pn-actions">
-      ${st==="未入力"?`<span class="reflect-hint">${I.alert("#B87514",12)} 入力済みにすると反映ボタンが押下できます</span>`:""}
+      ${st==="未入力"?`<span class="reflect-hint">${I.alert("#B87514",12)} 入力済みにすると連携ボタンが押下できます</span>`:""}
       ${isReflected?"":`<button class="btn-ghost" onclick="savePanel()">${I.check("#5A6472",14,2.6)} 入力済み</button>`}
-      ${isReflected?`<span class="badge" style="color:var(--greenDark);background:var(--greenSoft)">${I.check("#0E7A4B",12,2.6)}反映済み（${d.reflectedAt||""}）</span>`
+      ${isReflected?`<span class="badge" style="color:var(--greenDark);background:var(--greenSoft)">${I.check("#0E7A4B",12,2.6)}連携済み（${d.reflectedAt||""}）</span>`
         : `<button class="btn-green" ${d.status==="入力済み"?"":"disabled"} title="${d.status==="入力済み"?"":"先に入力済みにしてください"}" onclick="reflectPanel()">${I.send()} データ連携する</button>`}
       <button class="icon-btn" style="border-color:var(--line)" title="閉じる" onclick="closePanel()">${I.x("#5A6472",16)}</button>
     </div>
@@ -2073,7 +2073,7 @@ function pnDeleteLine(){
   const lid=state.pnDeleteLid; state.pnDeleteLid=null;
   if(lid!=null && state.draft){ state.draft.lines=state.draft.lines.filter(x=>x.lid!==lid); }
   renderOverlay();
-  toast("明細を削除しました（保存または反映で確定します）");
+  toast("明細を削除しました（保存または連携で確定します）");
 }
 function renderPnDeleteConfirm(){
   if(state.pnDeleteLid==null || !state.draft) return "";
@@ -2086,7 +2086,7 @@ function renderPnDeleteConfirm(){
     <div class="m-body">
       <div class="ce-warn" style="background:var(--alertSoft);border-color:#E0B8B2">${I.alert("#B23A2E",18)}<div>
         <div class="ce-q">明細 ${idx}「${esc(l.item||"（項目なし）")}」を削除します。</div>
-        <div class="ce-note">${esc(l.cat)}・${yen(l.amount)}。この操作は保存または反映で確定します。削除後は元に戻せません。</div></div></div>
+        <div class="ce-note">${esc(l.cat)}・${yen(l.amount)}。この操作は保存または連携で確定します。削除後は元に戻せません。</div></div></div>
     </div>
     <div class="m-foot">
       <button class="btn-cancel" onclick="pnCancelDeleteLine()">キャンセル</button>
@@ -2168,7 +2168,7 @@ function doReflectPanel(){
   const d=docs.find(x=>x.id===state.panelId); if(!d||d.status!=="入力済み")return;
   runReflect([{name:state.draft.name,lines:state.draft.lines}], `${state.draft.name} をデータ連携しました`, ()=>{
     Object.assign(d,{cat:state.draft.cat,category:state.draft.category,vendor:state.draft.vendor}); writeLines(d.id, state.draft.lines);
-    d.status="反映済み"; d.reflectedAt=nowStamp(); state.draft.status="反映済み"; state.draft.reflectedAt=d.reflectedAt;
+    d.status="連携済み"; d.reflectedAt=nowStamp(); state.draft.status="連携済み"; state.draft.reflectedAt=d.reflectedAt;
     state.selected.delete(d.id);
     render(); renderNav(); toast("車両コストへデータ連携しました", {label:"コストモニターを見る", fn:()=>{ closePanel(); gotoVehicles(); }});
   });
@@ -2195,7 +2195,7 @@ function renderReflectConfirm(){
   </div></div>`;
 }
 
-/* ───── コストモニター（反映済み書類＋手動明細を集計） ───── */
+/* ───── コストモニター（連携済み書類＋手動明細を集計） ───── */
 function buildVehicles(catFilter, range){
   const cf=catFilter||"all";
   const inR = (range&&range.start&&range.end) ? (dt=>dt&&dt>=range.start&&dt<=range.end) : (()=>true);
@@ -2203,7 +2203,7 @@ function buildVehicles(catFilter, range){
   const ensure=(key,kind,target)=>{ if(!map.has(key)) map.set(key,{key,kind,target,total:0,byCat:{},count:0,last:"",lines:[],fuso:null}); return map.get(key); };
   const add=(e,line)=>{ e.total+=(+line.amount||0); e.byCat[line.cat]=(e.byCat[line.cat]||0)+(+line.amount||0); e.count++;
     if(line.date>e.last)e.last=line.date; e.lines.push(line); if(line.fuso&&!e.fuso)e.fuso=line.fuso; };
-  docs.filter(d=>d.status==="反映済み"&&!d.deleted).forEach(d=>{
+  docs.filter(d=>d.status==="連携済み"&&!d.deleted).forEach(d=>{
     if(cf!=="all" && (d.category||"")!==cf) return;
     linesOf(d.id).forEach(l=>{
       if(!inR(l.inspectedAt)) return;
@@ -2763,7 +2763,7 @@ function renderVehicles(){
     ${renderVehCal()}
   </div>`;
   const head=`<div class="pagehead pagehead-veh">
-    <div><p>反映済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}${hasRange?`<b style="color:var(--greenDark)">　期間：${state.vehDateStart}〜${state.vehDateEnd}</b>`:""}</p></div>
+    <div><p>連携済みの書類から、車両（車番）ごとにコストを自動集計します。1車番＝1レコードで、常に最新の積み上げを表示します。${state.vehCategoryFilter!=="all"?`<b style="color:var(--greenDark)">　絞り込み：${esc(state.vehCategoryFilter)}</b>`:""}${hasRange?`<b style="color:var(--greenDark)">　期間：${state.vehDateStart}〜${state.vehDateEnd}</b>`:""}</p></div>
     <div class="ph-spacer"></div>
     <button class="trash-toggle ${inTrash?"on":""}" onclick="toggleVehTrash()" title="ゴミ箱に移動した車両は、モニターの集計（登録車両数・コスト合計・各ピックアップ）から除外されます。いつでも元に戻せます。">${I.trash(inTrash?"#B23A2E":"#5A6472",13)} ゴミ箱<span style="font-family:var(--mono);font-size:10px;background:rgba(0,0,0,.06);padding:0 6px;border-radius:999px">${trashCount}</span></button>
     <button class="btn-hist" onclick="openChangelog()" title="コスト内訳の変更履歴">
@@ -2780,7 +2780,7 @@ function renderVehicles(){
       <div class="et">この期間に発生したコストはありません</div>
       <div class="es">期間（${state.vehDateStart}〜${state.vehDateEnd}）を変更するか、「全期間に戻す」で絞り込みを解除してください。</div></div></div>`;
     return head+filterBar+`<div class="veh-card"><div class="empty">${I.truckN("#9AA3AD",40)}
-      <div class="et">${state.vehCategoryFilter==="all"?"まだ反映された車両がありません":"この営業所の反映済みコストはありません"}</div>
+      <div class="et">${state.vehCategoryFilter==="all"?"まだ連携された車両がありません":"この営業所の連携済みコストはありません"}</div>
       <div class="es">${state.vehCategoryFilter==="all"?'書類一覧で内容を確認し「データ連携する」と、ここに車両ごとのコストが積み上がります。':"別の営業所を選ぶか、該当営業所の書類をデータ連携してください。"}</div></div></div>`;
   }
 
@@ -2813,7 +2813,7 @@ function renderVehicles(){
       <div class="mk-v">${incNow}<small>台</small></div>${trend(incNow-incPrev,"台")}</div>
     <div class="mk"><div class="mk-l">データ収集中の車両</div>
       <div class="mk-v">${collecting}<small>台</small></div>
-      <span class="mk-note">入力データが少ない車両 <span class="help" tabindex="0">?<span class="help-pop pop-right"><b>データ収集中の車両</b><br>反映済みの明細が2件以下で、コスト傾向の分析にはまだデータが不足している車両です。書類を追加で反映すると精度が上がります。</span></span></span></div>
+      <span class="mk-note">入力データが少ない車両 <span class="help" tabindex="0">?<span class="help-pop pop-right"><b>データ収集中の車両</b><br>連携済みの明細が2件以下で、コスト傾向の分析にはまだデータが不足している車両です。書類を追加で連携すると精度が上がります。</span></span></span></div>
   </div>`;
 
   /* ───── ピックアップ（登録データから自動抽出。クリックで車両カルテを表示） ───── */
