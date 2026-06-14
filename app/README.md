@@ -20,7 +20,12 @@
   - ドラフト/保存方式（`store/settings.ts`）。会社情報 / AI-OCR・突合しきい値 / 表示件数 / 営業所 / コスト分類×想定書類タイプ / データ連携（ロジポケ・モビポケ・外部のタブ）/ 車両マスタ導線。
   - 未保存変更バー＋保存確認（差分一覧）＋**離脱ガード**（`nav.tsx`、overlayStack で確認）。
   - `domain/settings.ts`（dirty/diff 純関数）はテスト済み。
-- 残りビュー（書類一覧/詳細/アップロード・コストモニター・マスタ）は `views/Placeholder`。後続手順で順次実装。
+- **マスタデータビュー（移植済み）**: `views/MasterView` + `master/MasterEditModal`。
+  - テーブル（No降順・ページャ）/ CSVダウンロード / 新規登録・編集（行クリック/編集ボタン）。
+  - **車台番号 → 自検協データ突合**（`domain/jikenkyo.ts`）で車格・最大積載量・車両総重量・サイズを自動反映。制御コンポーネントのためフォーカスは自然に保持（旧コードのDOMセル更新ハック不要）。
+  - 車番重複チェック・削除。`store/master.ts` がシードデータ（`domain/masterSeed.ts`）と CRUD を保持。
+  - jikenkyo/seed のロジックはテスト済み。
+- 残りビュー（書類一覧/詳細/アップロード・コストモニター）は `views/Placeholder`。後続手順で順次実装。
 
 ## コマンド
 ```bash

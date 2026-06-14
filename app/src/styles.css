@@ -168,6 +168,26 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .ce-q { font-size: 14px; font-weight: 800; color: var(--ink); }
 .ce-note { font-size: 12px; color: var(--inkSoft); margin-top: 3px; line-height: 1.5; }
 
+/* master table */
+.tscroll { flex: 1; min-height: 0; overflow: auto; }
+.veh-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+table.vt { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 900px; }
+.vt th, .vt td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--lineSoft); vertical-align: middle; }
+.vt thead th { position: sticky; top: 0; z-index: 2; background: #f3f5f2; font-size: 11px; font-weight: 800; color: var(--inkSoft); letter-spacing: 0.3px; white-space: nowrap; box-shadow: inset 0 -1px 0 var(--line); }
+.vt tbody tr.vrow { cursor: pointer; }
+.vt tbody tr.vrow:hover { background: #f6fbf8; }
+.vt .plate { display: inline-block; font-family: var(--mono); font-weight: 800; font-size: 13px; color: var(--ink); letter-spacing: 0.5px; }
+.vt .r { text-align: right; font-family: var(--mono); font-weight: 700; white-space: nowrap; }
+.veh-edit-btn { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--line); color: var(--greenDark); border-radius: 8px; padding: 6px 13px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.veh-edit-btn:hover { border-color: var(--greenLine); background: var(--greenSoft); }
+
+/* master edit form */
+.fld { margin-bottom: var(--space-det); }
+.fld label { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--inkSoft); margin: 0 0 4px; font-weight: 700; }
+.mtag { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 2px 9px; font-size: 10.5px; font-weight: 800; white-space: nowrap; }
+.mtag.exist { background: var(--tealSoft); color: var(--teal); }
+.mtag.newv { background: var(--amberSoft); color: var(--amber); }
+
 /* placeholder card (移行中ビュー用) */
 .placeholder { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 28px; color: var(--inkSoft); font-size: 13.5px; line-height: 1.7; }
 .placeholder code { font-family: var(--mono); background: var(--bg); padding: 1px 5px; border-radius: 4px; }
