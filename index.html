@@ -854,10 +854,15 @@ function normPlate(raw){
     .replace(/[Ａ-Ｚａ-ｚ０-９]/g, s=>String.fromCharCode(s.charCodeAt(0)-0xFEE0))
     .replace(/\s+/g,"").trim();
 }
-/* 正規化済みの登録車番インデックス（突合の真実源 MASTER から派生）。 */
-const PLATE_INDEX=new Set();
-function rebuildPlateIndex(){ PLATE_INDEX.clear(); MASTER.forEach(p=>PLATE_INDEX.add(normPlate(p))); }
+/* 正規化済み車番 → 車両ID のインデックス（車両マスタ VEHICLE_MASTER から派生）。
+   突合・集計の安定キーは plate 文字列ではなく不変の車両ID。 */
+const PLATE_INDEX=new Map();
+let _vehSeq=0;
+function nextVehicleId(){ return "veh_"+String(++_vehSeq).padStart(4,"0"); }
+function rebuildPlateIndex(){ PLATE_INDEX.clear(); VEHICLE_MASTER.forEach(v=>{ if(v.plate&&v.id) PLATE_INDEX.set(normPlate(v.plate), v.id); }); }
 function plateRegistered(p){ return PLATE_INDEX.has(normPlate(p)); }
+function resolveVehicleId(p){ return PLATE_INDEX.get(normPlate(p))||null; }
+function vehicleById(id){ return id?(VEHICLE_MASTER.find(v=>v.id===id)||null):null; }
 const CATS=["燃料費","修繕・維持費","通行料","保険料","調達コスト","税金"];
 const CAT_STYLE={
   "燃料費":{fg:"#1E55C8",bg:"#E5EDFB"},
@@ -987,7 +992,6 @@ const FLEET=[
 ];
 const NEW_PLATES=new Set(["名古屋330え4567","岐阜100か7890","浜松100か3030","春日井500あ1212","名古屋800た1010","知多300か7878"]);
 FLEET.forEach(p=>{ if(!NEW_PLATES.has(p)) MASTER.add(p); });
-rebuildPlateIndex();
 
 /* ───── 自検協データ（車台番号 → 車格・諸元の突合） ───── */
 /* 車台番号の型式コードから車格を判定し、最大積載量・車両総重量・サイズを引き当てる。
@@ -1037,10 +1041,11 @@ function officeFromPlate(plate){
     if(NEW_PLATES.has(p)) return;
     const chassis=_genChassis(p);
     const spec=lookupJikenkyo(chassis)||{maxLoad:"",gross:"",size:"",klass:""};
-    VEHICLE_MASTER.push({ no:no++, plate:p, chassis, code:`V${String(++idx).padStart(3,"0")}`, name:"", note:"", office:officeFromPlate(p),
+    VEHICLE_MASTER.push({ no:no++, id:nextVehicleId(), plate:p, chassis, code:`V${String(++idx).padStart(3,"0")}`, name:"", note:"", office:officeFromPlate(p),
       maxLoad:spec.maxLoad, grossWeight:spec.gross, size:spec.size, klass:spec.klass });
   });
 })();
+rebuildPlateIndex();
 function nextMasterNo(){ return VEHICLE_MASTER.reduce((m,v)=>Math.max(m,v.no),1000)+1; }
 function syncMaster(){ MASTER.clear(); VEHICLE_MASTER.forEach(v=>{ if(v.plate) MASTER.add(v.plate); }); rebuildPlateIndex(); }
 
@@ -2060,14 +2065,14 @@ function plateSuggestHTML(lid,val){
 }
 function pnPlateInput(lid,val){
   const l=state.draft.lines.find(x=>x.lid===lid); if(!l)return;
-  l.plate=val; l.confidence=Math.max(l.confidence,.99);
+  l.plate=val; l.confidence=Math.max(l.confidence,.99); l.vehicleId=resolveVehicleId(val);
   const b=document.getElementById("pn-badge-"+lid); if(b)b.innerHTML=matchBadge(l);
   const sug=document.getElementById("pn-sug-"+lid); if(sug)sug.innerHTML=plateSuggestHTML(lid,val);
   refreshPreview();
 }
 function pnPickPlate(lid,plate){
   const l=state.draft.lines.find(x=>x.lid===lid); if(!l)return;
-  l.plate=plate; l.confidence=Math.max(l.confidence,.99);
+  l.plate=plate; l.confidence=Math.max(l.confidence,.99); l.vehicleId=resolveVehicleId(plate);
   const inp=document.getElementById("pn-plate-"+lid); if(inp) inp.value=plate;
   const b=document.getElementById("pn-badge-"+lid); if(b)b.innerHTML=matchBadge(l);
   const sug=document.getElementById("pn-sug-"+lid); if(sug)sug.innerHTML=plateSuggestHTML(lid,plate);
@@ -2237,7 +2242,11 @@ function buildVehicles(catFilter, range){
     if(cf!=="all" && (d.category||"")!==cf) return;
     linesOf(d.id).forEach(l=>{
       if(!inR(l.inspectedAt)) return;
-      const target=(l.plate||"未設定"), key="V:"+target;
+      // 集計キーは不変の車両ID。確定済みなら焼き付けた vehicleId を、未焼き付けなら現在のマスタ突合で解決する。
+      const vid=l.vehicleId||resolveVehicleId(l.plate);
+      const mv=vehicleById(vid);
+      const target=mv?mv.plate:(l.plate||"未設定"); // 表示はマスタの正規plate（OCRゆらぎを吸収）
+      const key=vid||(normPlate(l.plate)?"U:"+normPlate(l.plate):"未設定"); // 未登録は正規化plateで暫定集計
       add(ensure(key,"単車",target),{lid:l.lid,src:"doc",docId:d.id,item:l.item,cat:l.cat,date:l.inspectedAt,amount:+l.amount,vendor:d.vendor,doc:d.name,office:d.category,fuso:l.fuso});
     });
   });
@@ -2271,7 +2280,7 @@ function vehDeleteManualLine(id){ state.manualLines=state.manualLines.filter(x=>
 /* 初期値：車両マスタの営業所と連動。マスタ未設定なら明細で最も多い営業所を採用する。 */
 function vehCurrentOffice(key){
   const v=buildVehicles("all").find(x=>x.key===key);
-  const plate=v?v.target:String(key).replace(/^[VS]:/,"");
+  const plate=v?v.target:(vehicleById(key)?vehicleById(key).plate:String(key).replace(/^[VUS]:/,""));
   const mv=VEHICLE_MASTER.find(x=>x.plate===plate);
   if(mv&&mv.office) return mv.office;
   if(!v) return "";
@@ -2413,7 +2422,7 @@ function renderVehEditModal(){
   const key=state.vehEditKey; if(!key) return "";
   const list=buildVehicles(state.vehCategoryFilter);
   let v=list.find(x=>x.key===key);
-  if(!v){ const m=state.vehEditMeta||{key,kind:"単車",target:key.replace(/^[VS]:/,"")};
+  if(!v){ const m=state.vehEditMeta||{key,kind:"単車",target:(vehicleById(key)?vehicleById(key).plate:key.replace(/^[VUS]:/,""))};
     v={key:m.key,kind:m.kind,target:m.target,total:0,byCat:{},count:0,last:"",lines:[],fuso:null}; }
   const isMaster=plateRegistered(v.target);
   const mtag=isMaster?`<span class="mtag exist">${I.check("#157F73",11,2.6)}既存マスタ</span>`
@@ -3276,7 +3285,7 @@ function saveMasterEdit(){
   if(VEHICLE_MASTER.find(v=>v.plate===plate && v.no!==e.no)){ toast("同じ車両番号がすでに登録されています"); return; }
   const fields={ plate, chassis:(e.chassis||"").trim(), code:(e.code||"").trim(), name:(e.name||"").trim(),
     note:(e.note||"").trim(), office:e.office||"", maxLoad:e.maxLoad, grossWeight:e.grossWeight, size:e.size, klass:e.klass };
-  if(e.mode==="new"){ VEHICLE_MASTER.push(Object.assign({no:nextMasterNo()},fields)); }
+  if(e.mode==="new"){ VEHICLE_MASTER.push(Object.assign({no:nextMasterNo(),id:nextVehicleId()},fields)); }
   else { const v=VEHICLE_MASTER.find(x=>x.no===e.no); if(v) Object.assign(v,fields); }
   syncMaster();
   state.masterEdit=null;
