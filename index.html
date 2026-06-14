@@ -878,6 +878,37 @@ function plateRegistered(p){ return PLATE_INDEX.has(normPlate(p)); }
 function resolveVehicleId(p){ return PLATE_INDEX.get(normPlate(p))||null; }
 function vehicleById(id){ return id?(VEHICLE_MASTER.find(v=>v.id===id)||null):null; }
 const CATS=["燃料費","修繕・維持費","通行料","保険料","調達コスト","税金"];
+/* ───── 修繕・維持費の内訳（連携用）。画面の分類は「修繕・維持費」のまま、
+   外部連携で必要な内訳を安定コード(code)で内部保持する。code↔label のみマスタ管理し、
+   判定キーワードは優先順位順(配列順)の別データで持つ（表示順とは独立） ───── */
+const REPAIR_CAT="修繕・維持費";
+const REPAIR_SUBCATS=[
+  {code:"shaken",label:"車検"},
+  {code:"inspection",label:"法定点検"},
+  {code:"repair",label:"修理"},
+  {code:"tire",label:"タイヤ"},
+  {code:"oil",label:"オイル"},
+  {code:"battery",label:"バッテリー"},
+  {code:"wash",label:"洗車・美装関連"},
+  {code:"onboard",label:"車載用品"},
+  {code:"consumable",label:"ドライバー利用消耗品"},
+];
+const _SUBCAT_LABEL=Object.fromEntries(REPAIR_SUBCATS.map(s=>[s.code,s.label]));
+/* 品名→内訳コードの判定キーワード（配列順=優先順位：具体的→一般的）。部分一致で評価 */
+const SUBCAT_KEYWORDS=[
+  {code:"shaken",keywords:["車検"]},
+  {code:"inspection",keywords:["点検"]},
+  {code:"battery",keywords:["バッテリ"]},
+  {code:"tire",keywords:["タイヤ","スタッドレス","チューブ","ホイール","バルブ"]},
+  {code:"oil",keywords:["オイル","エレメント","フィルタ","ＬＬＣ","LLC","クーラント","ウォッシャ","グリス","フルード"]},
+  {code:"wash",keywords:["洗車","ワックス","シャンプー","清掃","ウエス","美装"]},
+  {code:"onboard",keywords:["電球","ヒューズ","ワイパー","発煙筒","軍手","荷締"]},
+  {code:"repair",keywords:["修理","交換","板金","塗装","バンパー","パネル","ベルト","ガス補充","整備"]},
+];
+function inferRepairSubcat(item){ const it=item||""; const r=SUBCAT_KEYWORDS.find(r=>r.keywords.some(k=>it.includes(k))); return r?r.code:"consumable"; }
+function repairSubcatLabel(code){ return code?(_SUBCAT_LABEL[code]||code):""; }
+/* cat が修繕・維持費のときだけ内訳コードを返す。それ以外は null（内訳を持たない） */
+function resolveRepairSubcat(cat,item){ return cat===REPAIR_CAT?inferRepairSubcat(item):null; }
 const CAT_STYLE={
   "燃料費":{fg:"#1E55C8",bg:"#E5EDFB"},
   "修繕・維持費":{fg:"#157F73",bg:"#DCEFEC"},
@@ -924,7 +955,11 @@ function officeChip(name){ return name?`<span class="office-chip">${esc(name)}</
 
 /* ───── 書類データ（請求書1枚 ＝ 1レコード、明細を内包） ───── */
 let UID=300;
-function L(item,plate,cat,date,amount,conf,extra){ return Object.assign({lid:UID++,item,plate:plate||"",kind:"単車",cat,inspectedAt:date,amount,confidence:conf==null?.97:conf}, extra&&extra.fuso?{fuso:extra.fuso}:{}); }
+function L(item,plate,cat,date,amount,conf,extra){ const o=Object.assign({lid:UID++,item,plate:plate||"",kind:"単車",cat,inspectedAt:date,amount,confidence:conf==null?.97:conf}, extra&&extra.fuso?{fuso:extra.fuso}:{}); const sc=resolveRepairSubcat(cat,item); if(sc) o.subCat=sc; return o; }
+/* 内訳（連携用）の読み取り専用フィールドHTML。cat+item から都度導出（修繕・維持費のみ表示） */
+function subcatFieldHTML(l){ const sub=resolveRepairSubcat(l.cat,l.item); if(!sub) return ""; return `<div class="fld"><label>内訳（連携用）</label><input class="in" readonly value="${esc(repairSubcatLabel(sub))}" title="連携コード: ${esc(sub)}（項目名から自動判定）"></div>`; }
+/* 連携プランに載せる内訳タグ（例 " [内訳: tire/タイヤ]"）。cat+item から都度導出 */
+function subcatTag(l){ const s=resolveRepairSubcat(l.cat,l.item); return s?` [内訳: ${s}/${repairSubcatLabel(s)}]`:""; }
 
 const SEED = [
   {name:"月次整備まとめ_中部マツダ_202605.pdf", vendor:"中部マツダ整備", cat:"請求書", status:"連携済み", lines:[
@@ -1984,6 +2019,7 @@ function renderPanel(){
           <select class="in" ${dis} onchange="pnLine(${l.lid},'cat',this.value)">${CATS.map(c=>`<option ${c===l.cat?"selected":""}>${c}</option>`).join("")}</select></div>
         <div class="fld"><label>発生日</label><input class="in mono" ${ro} value="${esc(l.inspectedAt)}" oninput="pnLine(${l.lid},'inspectedAt',this.value)"></div>
       </div>
+      <div id="pn-subcat-wrap-${l.lid}">${subcatFieldHTML(l)}</div>
       <div class="grid2">
         ${targetFld}
         <div class="fld"><label>金額（税抜）</label>
@@ -2062,6 +2098,12 @@ function pnLine(lid,field,val){
   if(field==="amount"){l.amount=parseInt(String(val).replace(/[^0-9]/g,""))||0;
     const ck=document.getElementById("pn-amtck-"+lid); if(ck) ck.style.display=(state.draft._ocr||[]).includes(l.amount)?"":"none";}
   else l[field]=val;
+  if(field==="item"||field==="cat"){
+    // 内訳（連携用）は cat+item の従属値。項目名・分類を直すと判定ルールに従い再判定し、
+    // 読み取り専用表示をその場で更新する（直接編集は不可）。
+    const sc=resolveRepairSubcat(l.cat,l.item); if(sc) l.subCat=sc; else delete l.subCat;
+    const w=document.getElementById("pn-subcat-wrap-"+lid); if(w) w.innerHTML=subcatFieldHTML(l);
+  }
   refreshPreview();
 }
 /* 車番：2文字以上一致する登録車番の候補（一致順）＋「対象なし」 */
@@ -2148,11 +2190,11 @@ function buildPlanFromLines(allLines){
   const vNew=ws.filter(x=>x.st==="new"&&(x.l.plate||"").trim());
   [...new Set(vNew.map(x=>x.l.plate))].forEach(p=>{vid++;
     lines.push({phase:1,text:`POST /vehicles  新規車両マスタ ${p}`,ok:`→ vehicle_id: V-${vid} を発行`});
-    vNew.filter(x=>x.l.plate===p).forEach(x=>lines.push({phase:2,text:`POST /costs  V-${vid} ← ${x.l.item}`,ok:`→ ${yen(x.l.amount)} を紐付け`}));});
+    vNew.filter(x=>x.l.plate===p).forEach(x=>lines.push({phase:2,text:`POST /costs  V-${vid} ← ${x.l.item}${subcatTag(x.l)}`,ok:`→ ${yen(x.l.amount)} を紐付け`}));});
   // 既存マスタへの追記。低信頼度で一致した行（existing-suspect）は追記するが要確認を明示。
   ws.filter(x=>x.st==="existing"||x.st==="existing-suspect").forEach(x=>{
     const warn=x.st==="existing-suspect"?"（要確認）":"";
-    lines.push({phase:2,text:`POST /costs  ${x.l.plate} ← ${x.l.item}`,ok:`→ ${yen(x.l.amount)} を既存マスタに追記${warn}`});});
+    lines.push({phase:2,text:`POST /costs  ${x.l.plate} ← ${x.l.item}${subcatTag(x.l)}`,ok:`→ ${yen(x.l.amount)} を既存マスタに追記${warn}`});});
   // 車両を特定できない低信頼度の読み取りはスキップ（自動作成も追記もしない）。
   ws.filter(x=>x.st==="suspect").forEach(x=>
     lines.push({phase:2,text:`SKIP  ${x.l.item}（車番要確認）`,ok:`→ 読み取り信頼度が低いため連携をスキップ`}));
