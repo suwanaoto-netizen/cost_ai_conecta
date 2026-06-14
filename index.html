@@ -1172,8 +1172,8 @@ function statusChip(s){const m=STATUS_META[s];
 function statusHelp(){
   const rows=[
     ["未入力","取り込み直後の状態。取引先・車番・金額など、内容の確認・修正が必要です。"],
-    ["入力済み","内容を確認・確定した状態。ロジポケ（車両コスト）へ反映できます。"],
-    ["反映済み","車両コストへ反映済みの状態。書類一覧では編集できません（🔒）。修正はコストモニターから行えます。"],
+    ["入力済み","内容を確認・確定した状態。車両コストへデータ連携できます。"],
+    ["反映済み","車両コストへデータ連携済みの状態。書類一覧では編集できません（🔒）。修正はコストモニターから行えます。"],
   ].map(([s,d])=>`<div class="hp-row"><span class="hp-c" style="min-width:98px">${statusChip(s)}</span><span class="hp-d">${d}</span></div>`).join("");
   return `<span class="phase-help" onclick="event.stopPropagation()"><span class="help" tabindex="0">?</span><span class="help-pop"><span class="hp-h">ステータスの説明</span>
     <span class="hp-intro">書類は「未入力 → 入力済み → 反映済み」の順で進みます。</span>${rows}</span></span>`;
@@ -1203,7 +1203,11 @@ let state={
   manualLines:[],
   justUploaded:new Set(),
   settings:{ companyName:"サンプル物流株式会社", defaultOcr:true, matchThreshold:0.85,
-             defaultPageSize:20, logipokeUrl:"https://api.logipoke.example.com/v1", logipokeKey:"lpk_live_••••••••3a9f", autoReflect:false },
+             defaultPageSize:20,
+             logipokeEnabled:true, logipokeUrl:"https://api.logipoke.example.com/v1", logipokeKey:"lpk_live_••••••••3a9f", autoReflect:false,
+             mobipokeEnabled:false, mobipokeUrl:"https://api.mobipoke.example.com/v1", mobipokeKey:"mbp_live_••••••••7c2d", mobipokeAuto:false,
+             externalEnabled:false, externalName:"自社基幹システム", externalUrl:"https://example.com/webhook", externalKey:"ext_••••••••f10b", externalFormat:"json" },
+  dataLinkTab:"logipoke",
   settingsDraft:null, settingsSaveConfirm:false, settingsLeave:null,
   masterEdit:null, masterPage:1, masterPerPage:20,
 };
@@ -1287,7 +1291,7 @@ function renderDocuments(){
 
   const head=`<div class="pagehead">
     <button class="btn-green" onclick="openUpload()">${I.plus()} 新規アップロード</button>
-    <p class="page-desc">請求書をアップロード → 行をクリックして内容を確認・営業所を選択 → ロジポケへ反映、の流れで進みます。複数選択でまとめて処理できます。</p>
+    <p class="page-desc">請求書をアップロード → 行をクリックして内容を確認・営業所を選択 → データ連携、の流れで進みます。複数選択でまとめて処理できます。</p>
   </div>`;
 
   const seg=state.trash?"":`<div class="seg">
@@ -1357,7 +1361,7 @@ function renderDocBody(){
         ${state.bulkMenu?`<div class="bulk-scrim" onclick="toggleBulkMenu()"></div>
           <div class="bulk-menu">
             <button ${enterable?"":"disabled"} onclick="bulkMarkEntered()"><span class="lab">${I.check(enterable?'#0E7A4B':'#9AA3AD',14,2.6)} 入力済みにする</span><span class="mc">未入力 ${enterable}件</span></button>
-            <button ${reflectable?"":"disabled"} onclick="bulkReflect()"><span class="lab">${I.send(reflectable?'#0E7A4B':'#9AA3AD',14)} ロジポケに反映</span><span class="mc">入力済み ${reflectable}件</span></button>
+            <button ${reflectable?"":"disabled"} onclick="bulkReflect()"><span class="lab">${I.send(reflectable?'#0E7A4B':'#9AA3AD',14)} データ連携する</span><span class="mc">入力済み ${reflectable}件</span></button>
             <button ${officeable?"":"disabled"} onclick="bulkChangeOffice()"><span class="lab">${I.boxes(officeable?'#0E7A4B':'#9AA3AD',14)} 営業所を変更</span><span class="mc">選択 ${officeable}件</span></button>
             <button class="danger" onclick="bulkTrash()"><span class="lab">${I.trash('#B23A2E',14)} ゴミ箱へ移動</span><span class="mc">選択 ${sv.length}件</span></button>
           </div>`:""}
@@ -1431,8 +1435,8 @@ function renderEnterConfirm(){
     <div class="m-body">
       <p style="margin:0 0 13px;font-size:13.5px;color:var(--ink)">選択中の <b>${ec.count}</b> 件の書類を入力済みにします。</p>
       <div class="ce-warn" style="background:var(--greenSoft);border-color:var(--greenLine)">${I.check("#0E7A4B",18,2.6)}<div>
-        <div class="ce-q">入力済みにすると、<b>ロジポケ（車両コスト）へ反映できる</b>ようになります。</div>
-        <div class="ce-note">内容の修正は反映前であればいつでも行えます。</div></div></div>
+        <div class="ce-q">入力済みにすると、<b>車両コストへデータ連携できる</b>ようになります。</div>
+        <div class="ce-note">内容の修正はデータ連携前であればいつでも行えます。</div></div></div>
     </div>
     <div class="m-foot">
       <button class="btn-cancel" onclick="closeEnterConfirm()">キャンセル</button>
@@ -1447,9 +1451,9 @@ function bulkReflect(){ state.bulkMenu=false;
 function doBulkReflect(){
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="入力済み");
   if(t.length===0){ render(); return; }
-  runReflect(t.map(d=>({name:d.name,lines:docLines(d)})), `${t.length}件の書類をロジポケに反映しました`, ()=>{
+  runReflect(t.map(d=>({name:d.name,lines:docLines(d)})), `${t.length}件の書類をデータ連携しました`, ()=>{
     const ts=nowStamp(); t.forEach(d=>{d.status="反映済み";d.reflectedAt=ts;state.selected.delete(d.id);});
-    render(); toast(`${t.length}件をロジポケ（車両コスト）へ反映しました`, {label:"コストモニターを見る", fn:gotoVehicles}); }); }
+    render(); toast(`${t.length}件を車両コストへデータ連携しました`, {label:"コストモニターを見る", fn:gotoVehicles}); }); }
 function bulkChangeOffice(){ state.bulkMenu=false;
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status!=="反映済み");
   if(t.length===0){ render(); toast("営業所を変更できる書類が選択されていません（反映済みは変更不可）"); return; }
@@ -1881,13 +1885,13 @@ function renderPanel(){
   const isReflected=d.status==="反映済み";
   const st=d.status; // 未入力 / 入力済み / 反映済み
   const s2 = st==="未入力" ? "current" : "done";        // 内容を保存
-  const s3 = st==="反映済み" ? "done" : (st==="入力済み" ? "current" : "todo"); // ロジポケに反映
+  const s3 = st==="反映済み" ? "done" : (st==="入力済み" ? "current" : "todo"); // データ連携
   const stepper=`<div class="stepper">
     <div class="step done"><span class="sdot">${I.check("#fff",11,3)}</span><span class="slab">取込・データ化</span></div>
     <div class="sline done"></div>
     <div class="step ${s2}"><span class="sdot">${s2==="done"?I.check("#fff",11,3):"2"}</span><span class="slab">入力済みにする</span></div>
     <div class="sline ${st!=="未入力"?"done":""}"></div>
-    <div class="step ${s3}"><span class="sdot">${s3==="done"?I.check("#fff",11,3):"3"}</span><span class="slab">ロジポケに反映</span></div>
+    <div class="step ${s3}"><span class="sdot">${s3==="done"?I.check("#fff",11,3):"3"}</span><span class="slab">データ連携</span></div>
   </div>`;
   const _nl=visibleDocs(); const _ni=_nl.findIndex(x=>x.id===state.panelId);
   const hasPrev=_ni>0, hasNext=_ni>=0&&_ni<_nl.length-1;
@@ -1904,7 +1908,7 @@ function renderPanel(){
       ${st==="未入力"?`<span class="reflect-hint">${I.alert("#B87514",12)} 入力済みにすると反映ボタンが押下できます</span>`:""}
       ${isReflected?"":`<button class="btn-ghost" onclick="savePanel()">${I.check("#5A6472",14,2.6)} 入力済み</button>`}
       ${isReflected?`<span class="badge" style="color:var(--greenDark);background:var(--greenSoft)">${I.check("#0E7A4B",12,2.6)}反映済み（${d.reflectedAt||""}）</span>`
-        : `<button class="btn-green" ${d.status==="入力済み"?"":"disabled"} title="${d.status==="入力済み"?"":"先に入力済みにしてください"}" onclick="reflectPanel()">${I.send()} ロジポケに反映</button>`}
+        : `<button class="btn-green" ${d.status==="入力済み"?"":"disabled"} title="${d.status==="入力済み"?"":"先に入力済みにしてください"}" onclick="reflectPanel()">${I.send()} データ連携する</button>`}
       <button class="icon-btn" style="border-color:var(--line)" title="閉じる" onclick="closePanel()">${I.x("#5A6472",16)}</button>
     </div>
   </div>`;
@@ -1956,7 +1960,7 @@ function renderPanel(){
     </div>`;
   }).join("");
 
-  const note=`<div class="pn-foot-note">${I.db("#B87514",16)}<span>対象車両がロジポケに登録済みかは、上のバッジで自動判定しています（既存／新規／要確認）。<b>「ロジポケに反映」</b>すると、新規車両はマスタ作成、既存車両はコストを積み上げます。</span></div>`;
+  const note=`<div class="pn-foot-note">${I.db("#B87514",16)}<span>対象車両がロジポケに登録済みかは、上のバッジで自動判定しています（既存／新規／要確認）。<b>「データ連携する」</b>と、新規車両はマスタ作成、既存車両はコストを積み上げます。</span></div>`;
 
   const left=`<div class="pn-left">${stepper}${fields}
     <div class="pn-sec">明細 <span class="ct">${d.lines.length}件</span></div>
@@ -2100,7 +2104,7 @@ function savePanel(){
   toast("入力済みにしました");
 }
 
-/* ───── ロジポケ反映 ───── */
+/* ───── データ連携 ───── */
 function buildPlanFromLines(allLines){
   const lines=[]; let vid=10290;
   const ws=allLines.map(l=>({l,st:matchOf(l)}));
@@ -2125,7 +2129,7 @@ function runReflect(units, doneLabel, onFinish){
   const delay=plan.length>16?170:380;
   /* シェルは一度だけ生成（毎ステップ作り直すとフェードが再生され点滅するため） */
   ov.innerHTML=`<div class="ovl anim"><div class="log-modal">
-    <div class="mh">${I.db("#D98A1F",18)}<span style="font-weight:800;font-size:15px">ロジポケ連携ログ</span>
+    <div class="mh">${I.db("#D98A1F",18)}<span style="font-weight:800;font-size:15px">データ連携ログ</span>
       <span class="order">① マスタ登録 → ② コスト書込</span></div>
     <div class="log" id="reflect-log"></div>
     <div class="mf" id="reflect-foot"></div></div></div>`;
@@ -2162,11 +2166,11 @@ function reflectPanel(){
   state.reflectConfirm={kind:"panel", count:1, label:state.draft?state.draft.name:d.name}; renderOverlay(); }
 function doReflectPanel(){
   const d=docs.find(x=>x.id===state.panelId); if(!d||d.status!=="入力済み")return;
-  runReflect([{name:state.draft.name,lines:state.draft.lines}], `${state.draft.name} を反映しました`, ()=>{
+  runReflect([{name:state.draft.name,lines:state.draft.lines}], `${state.draft.name} をデータ連携しました`, ()=>{
     Object.assign(d,{cat:state.draft.cat,category:state.draft.category,vendor:state.draft.vendor}); writeLines(d.id, state.draft.lines);
     d.status="反映済み"; d.reflectedAt=nowStamp(); state.draft.status="反映済み"; state.draft.reflectedAt=d.reflectedAt;
     state.selected.delete(d.id);
-    render(); renderNav(); toast("ロジポケ（車両コスト）へ反映しました", {label:"コストモニターを見る", fn:()=>{ closePanel(); gotoVehicles(); }});
+    render(); renderNav(); toast("車両コストへデータ連携しました", {label:"コストモニターを見る", fn:()=>{ closePanel(); gotoVehicles(); }});
   });
 }
 function closeReflectConfirm(){ state.reflectConfirm=null; renderOverlay(); }
@@ -2176,17 +2180,17 @@ function renderReflectConfirm(){
   const rc=state.reflectConfirm; if(!rc) return "";
   const target = rc.kind==="bulk" ? `選択中の <b>${rc.count}</b> 件の書類` : `「${esc(rc.label)}」`;
   return `<div class="ovl anim" style="z-index:70" onclick="if(event.target===this)closeReflectConfirm()"><div class="modal" style="width:min(480px,100%)">
-    <div class="m-head"><span class="t">${I.send('#0E7A4B',18)} ロジポケに反映しますか？</span>
+    <div class="m-head"><span class="t">${I.send('#0E7A4B',18)} データ連携しますか？</span>
       <button class="x" onclick="closeReflectConfirm()">${I.x("#5A6472",18)}</button></div>
     <div class="m-body">
-      <p style="margin:0 0 13px;font-size:13.5px;color:var(--ink)">${target}を車両コストへ反映します。</p>
+      <p style="margin:0 0 13px;font-size:13.5px;color:var(--ink)">${target}を車両コストへデータ連携します。</p>
       <div class="ce-warn">${I.alert("#B87514",18)}<div>
-        <div class="ce-q">反映すると、<b>書類一覧画面では書類情報・明細の修正ができなくなります。</b></div>
-        <div class="ce-note">修正が必要になった場合も、反映後は<b>コストモニター画面</b>から内訳を編集できます。</div></div></div>
+        <div class="ce-q">データ連携すると、<b>書類一覧画面では書類情報・明細の修正ができなくなります。</b></div>
+        <div class="ce-note">修正が必要になった場合も、データ連携後は<b>コストモニター画面</b>から内訳を編集できます。</div></div></div>
     </div>
     <div class="m-foot">
       <button class="btn-cancel" onclick="closeReflectConfirm()">キャンセル</button>
-      <button class="btn-green" onclick="proceedReflect()">${I.send('#fff',14)} 反映する</button>
+      <button class="btn-green" onclick="proceedReflect()">${I.send('#fff',14)} データ連携する</button>
     </div>
   </div></div>`;
 }
@@ -2777,7 +2781,7 @@ function renderVehicles(){
       <div class="es">期間（${state.vehDateStart}〜${state.vehDateEnd}）を変更するか、「全期間に戻す」で絞り込みを解除してください。</div></div></div>`;
     return head+filterBar+`<div class="veh-card"><div class="empty">${I.truckN("#9AA3AD",40)}
       <div class="et">${state.vehCategoryFilter==="all"?"まだ反映された車両がありません":"この営業所の反映済みコストはありません"}</div>
-      <div class="es">${state.vehCategoryFilter==="all"?'書類一覧で内容を確認し「ロジポケに反映」すると、ここに車両ごとのコストが積み上がります。':"別の営業所を選ぶか、該当営業所の書類を反映してください。"}</div></div></div>`;
+      <div class="es">${state.vehCategoryFilter==="all"?'書類一覧で内容を確認し「データ連携する」と、ここに車両ごとのコストが積み上がります。':"別の営業所を選ぶか、該当営業所の書類をデータ連携してください。"}</div></div></div>`;
   }
 
   /* ───── サマリーカード（登録データから自動算出。先月＝直近データ月、前々月との前月比） ───── */
@@ -2942,7 +2946,7 @@ function renderSettings(){
         <button class="btn-cancel" onclick="discardSettingsEdits()">変更を破棄</button>
         <button class="btn-green" onclick="askSaveSettings()">${I.check("#fff",14,3)} 保存</button>
       </div></div>`:"";
-  return `<div class="pagehead"><div><h1>設定</h1><p>AI Fleet Pilot のデータ化・突合・ロジポケ連携に関する設定です。変更内容は<b>保存するまで反映されません</b>。編集後は下部の保存バーから確定してください。</p></div></div>
+  return `<div class="pagehead"><div><h1>設定</h1><p>AI Fleet Pilot のデータ化・突合・データ連携に関する設定です。変更内容は<b>保存するまで反映されません</b>。編集後は下部の保存バーから確定してください。</p></div></div>
   <div class="settings-wrap">
     <div class="set-card">
       <div class="set-h">${I.file("#16A571",16)} 会社情報</div>
@@ -2978,17 +2982,7 @@ function renderSettings(){
       <div class="set-add" style="margin-top:12px"><input class="in" id="new-cat" placeholder="新しい分類名（例：洗車費）" style="max-width:260px"><button class="btn-green" style="padding:8px 14px" onclick="addCat()">${I.plus()} 追加</button></div>
     </div>
 
-    <div class="set-card">
-      <div class="set-h">${I.db("#16A571",16)} ロジポケ連携</div>
-      <div class="set-row"><div class="set-l"><div class="set-t">連携先エンドポイント</div><div class="set-d">反映先のロジポケAPIのURL。</div></div>
-        <div class="set-c"><input class="in mono" style="max-width:340px" value="${esc(s.logipokeUrl)}" onchange="setSetting('logipokeUrl',this.value)"></div></div>
-      <div class="set-row"><div class="set-l"><div class="set-t">APIキー</div><div class="set-d">連携用のシークレットキー。</div></div>
-        <div class="set-c"><input class="in mono" style="max-width:340px" value="${esc(s.logipokeKey)}" onchange="setSetting('logipokeKey',this.value)"></div></div>
-      <div class="set-row"><div class="set-l"><div class="set-t">入力済みの書類を自動でロジポケに反映</div><div class="set-d">保存して入力済みになった書類を自動連携します（プロトタイプでは表示のみ）。</div></div>
-        <div class="set-c">${sw(s.autoReflect,"toggleSetting('autoReflect')")}</div></div>
-      <div class="set-row"><div class="set-l"><div class="set-t">接続テスト</div><div class="set-d">現在の設定でロジポケへの接続を確認します。</div></div>
-        <div class="set-c"><button class="btn-ghost" onclick="testLogipoke()">接続をテスト</button></div></div>
-    </div>
+    ${renderDataLinkCard(s)}
 
     <div class="set-card">
       <div class="set-h">${I.truck("#16A571",15)} 車両マスタ</div>
@@ -2998,6 +2992,68 @@ function renderSettings(){
     ${saveBar}
   </div>`;
 }
+
+/* ───── データ連携カード（ロジポケ／モビポケ／外部サービスをタブ切替） ───── */
+function renderDataLinkCard(s){
+  const sw=(on,fn)=>`<div class="switch ${on?"on":""}" onclick="${fn}"><div class="knob"></div></div>`;
+  const tab=state.dataLinkTab||"logipoke";
+  const tabs=[
+    ["logipoke","ロジポケ連携", s.logipokeEnabled],
+    ["mobipoke","モビポケ連携", s.mobipokeEnabled],
+    ["external","外部サービス連携", s.externalEnabled],
+  ];
+  const seg=`<div class="seg" style="margin-bottom:14px">${tabs.map(([k,label,on])=>
+    `<button class="${tab===k?"active":""}" onclick="setDataLinkTab('${k}')">${label}${on?`<span class="n">ON</span>`:""}</button>`).join("")}</div>`;
+
+  let body="";
+  if(tab==="logipoke"){
+    body=`
+      <div class="set-row"><div class="set-l"><div class="set-t">ロジポケ連携を有効にする</div><div class="set-d">車両コスト（車両マスタ）をロジポケへ連携します。</div></div>
+        <div class="set-c">${sw(s.logipokeEnabled,"toggleSetting('logipokeEnabled')")}</div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">連携先エンドポイント</div><div class="set-d">連携先のロジポケAPIのURL。</div></div>
+        <div class="set-c"><input class="in mono" style="max-width:340px" value="${esc(s.logipokeUrl)}" onchange="setSetting('logipokeUrl',this.value)"></div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">APIキー</div><div class="set-d">連携用のシークレットキー。</div></div>
+        <div class="set-c"><input class="in mono" style="max-width:340px" value="${esc(s.logipokeKey)}" onchange="setSetting('logipokeKey',this.value)"></div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">入力済みの書類を自動でデータ連携</div><div class="set-d">保存して入力済みになった書類をロジポケへ自動連携します（プロトタイプでは表示のみ）。</div></div>
+        <div class="set-c">${sw(s.autoReflect,"toggleSetting('autoReflect')")}</div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">接続テスト</div><div class="set-d">現在の設定でロジポケへの接続を確認します。</div></div>
+        <div class="set-c"><button class="btn-ghost" onclick="testLogipoke()">接続をテスト</button></div></div>`;
+  }else if(tab==="mobipoke"){
+    body=`
+      <div class="set-row"><div class="set-l"><div class="set-t">モビポケ連携を有効にする</div><div class="set-d">運行・車両データをモビポケへ連携します。</div></div>
+        <div class="set-c">${sw(s.mobipokeEnabled,"toggleSetting('mobipokeEnabled')")}</div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">連携先エンドポイント</div><div class="set-d">連携先のモビポケAPIのURL。</div></div>
+        <div class="set-c"><input class="in mono" style="max-width:340px" value="${esc(s.mobipokeUrl)}" onchange="setSetting('mobipokeUrl',this.value)"></div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">APIキー</div><div class="set-d">連携用のシークレットキー。</div></div>
+        <div class="set-c"><input class="in mono" style="max-width:340px" value="${esc(s.mobipokeKey)}" onchange="setSetting('mobipokeKey',this.value)"></div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">入力済みの書類を自動でデータ連携</div><div class="set-d">保存して入力済みになった書類をモビポケへ自動連携します（プロトタイプでは表示のみ）。</div></div>
+        <div class="set-c">${sw(s.mobipokeAuto,"toggleSetting('mobipokeAuto')")}</div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">接続テスト</div><div class="set-d">現在の設定でモビポケへの接続を確認します。</div></div>
+        <div class="set-c"><button class="btn-ghost" onclick="testMobipoke()">接続をテスト</button></div></div>`;
+  }else{
+    body=`
+      <div class="set-row"><div class="set-l"><div class="set-t">外部サービス連携を有効にする</div><div class="set-d">任意のWebhook／APIへ連携データを送信します。</div></div>
+        <div class="set-c">${sw(s.externalEnabled,"toggleSetting('externalEnabled')")}</div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">サービス名</div><div class="set-d">連携先サービスの表示名。</div></div>
+        <div class="set-c"><input class="in" style="max-width:300px" value="${esc(s.externalName)}" onchange="setSetting('externalName',this.value)"></div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">連携先エンドポイント</div><div class="set-d">連携データの送信先URL（Webhook）。</div></div>
+        <div class="set-c"><input class="in mono" style="max-width:340px" value="${esc(s.externalUrl)}" onchange="setSetting('externalUrl',this.value)"></div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">APIキー</div><div class="set-d">認証用のシークレットキー。</div></div>
+        <div class="set-c"><input class="in mono" style="max-width:340px" value="${esc(s.externalKey)}" onchange="setSetting('externalKey',this.value)"></div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">送信フォーマット</div><div class="set-d">連携データの形式。</div></div>
+        <div class="set-c"><select class="in" style="max-width:160px" onchange="setSetting('externalFormat',this.value)">${["json","csv","xml"].map(f=>`<option value="${f}" ${f===s.externalFormat?"selected":""}>${f.toUpperCase()}</option>`).join("")}</select></div></div>
+      <div class="set-row"><div class="set-l"><div class="set-t">接続テスト</div><div class="set-d">現在の設定で外部サービスへの接続を確認します。</div></div>
+        <div class="set-c"><button class="btn-ghost" onclick="testExternal()">接続をテスト</button></div></div>`;
+  }
+
+  return `<div class="set-card">
+      <div class="set-h">${I.db("#16A571",16)} データ連携</div>
+      <div class="set-d" style="margin-bottom:12px">車両コストや運行データの連携先を設定します。ロジポケ・モビポケ・外部サービスをタブで切り替えて設定してください。</div>
+      ${seg}
+      ${body}
+    </div>`;
+}
+function setDataLinkTab(t){ state.dataLinkTab=t; render(); }
 /* 設定は編集中ドラフトに溜め、保存（確認ステップ）で初めて実データへ反映する */
 function ensureSettingsDraft(){
   if(!state.settingsDraft){
@@ -3021,7 +3077,10 @@ function settingsDirty(){
 function settingsDiff(){
   const d=state.settingsDraft; if(!d) return [];
   const out=[];
-  const L={companyName:"自社名",defaultOcr:"既定でAI-OCRを使う",matchThreshold:"突合しきい値",defaultPageSize:"既定の表示件数",logipokeUrl:"連携先エンドポイント",logipokeKey:"APIキー",autoReflect:"自動でロジポケに反映"};
+  const L={companyName:"自社名",defaultOcr:"既定でAI-OCRを使う",matchThreshold:"突合しきい値",defaultPageSize:"既定の表示件数",
+    logipokeEnabled:"ロジポケ連携",logipokeUrl:"ロジポケ連携先エンドポイント",logipokeKey:"ロジポケAPIキー",autoReflect:"ロジポケへ自動でデータ連携",
+    mobipokeEnabled:"モビポケ連携",mobipokeUrl:"モビポケ連携先エンドポイント",mobipokeKey:"モビポケAPIキー",mobipokeAuto:"モビポケへ自動でデータ連携",
+    externalEnabled:"外部サービス連携",externalName:"外部サービス名",externalUrl:"外部連携先エンドポイント",externalKey:"外部サービスAPIキー",externalFormat:"送信フォーマット"};
   Object.keys(L).forEach(k=>{
     if(JSON.stringify(d.settings[k])===JSON.stringify(state.settings[k])) return;
     let was=state.settings[k], now=d.settings[k];
@@ -3056,6 +3115,8 @@ function addCategory(){ const d=ensureSettingsDraft(); const el=document.getElem
   d.categories.push(v); render(); }
 function removeCategory(c){ const d=ensureSettingsDraft(); const i=d.categories.indexOf(c); if(i>=0) d.categories.splice(i,1); render(); }
 function testLogipoke(){ toast("ロジポケへの接続テストに成功しました（ダミー）"); }
+function testMobipoke(){ toast("モビポケへの接続テストに成功しました（ダミー）"); }
+function testExternal(){ const n=(ensureSettingsDraft().settings.externalName||"外部サービス"); toast(`${n}への接続テストに成功しました（ダミー）`); }
 /* 変更を破棄してドラフトを作り直す */
 function discardSettingsEdits(){ state.settingsDraft=null; render(); toast("変更を破棄しました"); }
 /* 保存ボタン → 確認ステップ */
