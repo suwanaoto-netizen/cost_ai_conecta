@@ -13,6 +13,7 @@ import { seedVehicleMasters } from "../domain/masterSeed";
 import { buildPlateIndex } from "../domain/match";
 import { buildVehicles } from "../domain/vehicles";
 import { yen } from "../domain/format";
+import { resolveRepairSubcat } from "../domain/repairSubcat";
 
 export const CURRENT_USER = "諏訪 尚杜";
 
@@ -52,6 +53,8 @@ function replaceLines(all: Line[], docId: string, next: Line[], freeze: boolean)
   const fresh = next.map((l) => {
     const c = clone(l);
     c.docId = docId;
+    // 内訳（修繕・維持費のみ）は cat+item から再判定して常に同期させる。
+    c.subCat = resolveRepairSubcat(c.cat, c.item) ?? null;
     return freeze ? Object.freeze(c) : c;
   });
   return [...others, ...fresh];

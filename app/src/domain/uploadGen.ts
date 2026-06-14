@@ -1,6 +1,7 @@
 import type { Line } from "./types";
 import type { UploadEntry } from "../store/data";
 import { FLEET } from "./masterSeed";
+import { resolveRepairSubcat } from "./repairSubcat";
 
 const VENDORS = [
   { n: "中部マツダ整備", cat: "修繕・維持費" },
@@ -27,16 +28,21 @@ export function makeUploadEntry(name?: string): UploadEntry {
   const month = pick(["2026-04", "2026-05", "2026-06"]);
   const k = ri(1, 4);
   const plates = [...FLEET].sort(() => Math.random() - 0.5).slice(0, k);
-  const lines: Line[] = plates.map((p) => ({
-    lid: _uid++,
-    item: pick(ITEMS[v.cat]),
-    plate: p,
-    kind: "単車",
-    cat: v.cat,
-    inspectedAt: `${month}-${String(ri(1, 28)).padStart(2, "0")}`,
-    amount: ri(8, 40) * 2500,
-    confidence: 0.96,
-  }));
+  const lines: Line[] = plates.map((p) => {
+    const item = pick(ITEMS[v.cat]);
+    const subCat = resolveRepairSubcat(v.cat, item);
+    return {
+      lid: _uid++,
+      item,
+      plate: p,
+      kind: "単車",
+      cat: v.cat,
+      ...(subCat ? { subCat } : {}),
+      inspectedAt: `${month}-${String(ri(1, 28)).padStart(2, "0")}`,
+      amount: ri(8, 40) * 2500,
+      confidence: 0.96,
+    };
+  });
   return { name: name || `請求書サンプル_${v.n}_${month.replace("-", "")}.pdf`, vendor: v.n, cat: "請求書", lines };
 }
 
