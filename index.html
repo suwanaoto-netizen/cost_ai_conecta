@@ -2034,9 +2034,10 @@ function renderPanel(){
 
   const note=`<div class="pn-foot-note">${I.db("#B87514",16)}<span>対象車両がロジポケに登録済みかは、上のバッジで自動判定しています（既存／新規／要確認）。<b>「データ連携する」</b>と、新規車両はマスタ作成、既存車両はコストを積み上げます。</span></div>`;
 
+  const addLineBtn=isReflected?"":`<button class="vd-add" onclick="pnAddLine()">${I.plus("#0E7A4B",14)} 明細を追加</button>`;
   const left=`<div class="pn-left">${stepper}${fields}
     <div class="pn-sec">明細 <span class="ct">${d.lines.length}件</span></div>
-    ${legend}${lineCards}${note}</div>`;
+    ${legend}${lineCards}${addLineBtn}${note}</div>`;
   const right=`<div class="pn-right">
     <div class="pv-toolbar"><span style="display:flex">${I.file("#E5E7EB",14)}</span><span class="fn">${esc(d.name)}</span>
       <button onclick="pvZoom(-10)">−</button><span id="pv-zoom">${state.pvZoom}%</span><button onclick="pvZoom(10)">＋</button></div>
@@ -2143,6 +2144,13 @@ function pnPickAmount(lid,amount){
   const ck=document.getElementById("pn-amtck-"+lid); if(ck) ck.style.display="";
   refreshPreview();
   if(inp) inp.blur();
+}
+/* 明細カードの手動追加（空の明細を末尾に追加。保存または連携で確定する） */
+function pnAddLine(){
+  if(!state.draft || state.draft.status==="連携済み") return;
+  state.draft.lines.push(L("","",CATS[0]||"","",0,.99));
+  renderOverlay();
+  toast("明細を追加しました（保存または連携で確定します）");
 }
 /* 明細カードの削除（確認ステップを挟む） */
 function pnAskDeleteLine(lid){ state.pnDeleteLid=lid; renderOverlay(); }
