@@ -17,6 +17,9 @@ import { ReflectLog } from "./ReflectLog";
 import { InvoicePreview } from "./InvoicePreview";
 
 type DraftLine = Pick<Line, "lid" | "item" | "plate" | "kind" | "cat" | "inspectedAt" | "amount" | "confidence" | "vehicleId">;
+
+// 手動追加した明細用の lid。既存（正の整数）と衝突しないよう負の値を降順で採番する。
+let _newLid = -1;
 interface Draft {
   id: string;
   no: number;
@@ -88,6 +91,18 @@ export function DocumentPanel({
     setDraft((d) => (d ? { ...d, lines: d.lines.map((l) => (l.lid === lid ? { ...l, ...patch } : l)) } : d));
   const setPlate = (lid: number, plate: string) =>
     patchLine(lid, { plate, confidence: 0.99, vehicleId: resolveVehicleId(plateIndex, plate) });
+  const addLine = () =>
+    setDraft((d) =>
+      d
+        ? {
+            ...d,
+            lines: [
+              ...d.lines,
+              { lid: _newLid--, item: "", plate: "", kind: "単車", cat: cats[0] ?? "", inspectedAt: "", amount: 0, confidence: 0.99, vehicleId: null },
+            ],
+          }
+        : d
+    );
 
   const save = () => {
     saveDocDraft(draft.id, { vendor: draft.vendor, cat: draft.cat, category: draft.category }, draft.lines as Line[]);
@@ -320,6 +335,12 @@ export function DocumentPanel({
                   </div>
                 );
               })}
+
+              {!ro && (
+                <button className="vd-add" onClick={addLine}>
+                  ＋ 明細を追加
+                </button>
+              )}
 
               <div className="pn-foot-note">
                 <IconAlert color="#B87514" size={16} />
