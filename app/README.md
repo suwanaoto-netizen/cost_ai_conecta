@@ -3,14 +3,20 @@
 プロトタイプ（Vanilla JS 単一ファイル `../index.html`）からの段階移行プロジェクト。
 本ディレクトリは (A) 再描画アーキテクチャ改善のための足場（手順1・2）。
 
-## 現状（手順1・2 完了）
+## 現状
 - **足場**: Vite + React + TypeScript + Vitest + Zustand。
 - **ドメイン移植**: プロトタイプの純ロジックを副作用なしの純関数として `src/domain/` に移植し、単体テストで挙動を固定（リグレッション基準）。
   - `match.ts` — 車番正規化・突合（`normPlate` / `matchOf` / `PlateIndex` / `resolveVehicleId` / `countUnresolved`）
   - `adjustments.ts` — 連携済み明細の override 調整（不変・undo 可能）
   - `vehicles.ts` — コスト集計 `buildVehicles`（車両ID集計・override 適用）
+  - `catStyle.ts` — 分類色 / ステータス / 突合バッジの表示メタ
   - `types.ts` — ドメイン型
-- UI（AppShell/各ビュー）は `App.tsx` のプレースホルダのみ。以降の手順で順次実装。
+- **共通UI + AppShell**:
+  - 状態管理 `store.ts`（Zustand、セレクタ購読で部分再レンダ）。`view` / サイドバー / **overlayStack** / トースト。
+  - `components/common/` — Button / StatusChip / CatPill / MatchBadge / Switch / Pager / **Modal**（フォーカストラップ・Esc・背景閉じ・aria-modal）/ OverlayHost（モーダルスタック）/ Toast / Icon。
+  - `components/` — AppShell / Sidebar（折りたたみ・未入力バッジ）/ Topbar（パンくず）。
+  - イベントはすべて props 束縛（インライン onclick 文字列ゼロ＝XSS構造排除）。
+- 各ビュー本体は `views/Placeholder`（新アーキの動作デモ兼用）。後続手順で順次実装。
 
 ## コマンド
 ```bash
