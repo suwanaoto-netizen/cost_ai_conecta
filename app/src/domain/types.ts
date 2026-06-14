@@ -85,3 +85,20 @@ export interface Adjustment {
   ts: string;
   user: string;
 }
+
+export type ChangelogAction = "変更" | "追加" | "削除" | "ゴミ箱" | "復元";
+
+export interface ChangelogEntry {
+  ts: string;
+  user: string;
+  action: ChangelogAction;
+  vehKey: string;
+  kind: string;
+  vehTarget: string;
+  item?: string;
+  cat?: string;
+  lid?: string | number;
+  docId?: string;
+  vehTrash?: boolean;
+  detail: string;
+}

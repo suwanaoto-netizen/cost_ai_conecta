@@ -25,7 +25,13 @@
   - **車台番号 → 自検協データ突合**（`domain/jikenkyo.ts`）で車格・最大積載量・車両総重量・サイズを自動反映。制御コンポーネントのためフォーカスは自然に保持（旧コードのDOMセル更新ハック不要）。
   - 車番重複チェック・削除。`store/master.ts` がシードデータ（`domain/masterSeed.ts`）と CRUD を保持。
   - jikenkyo/seed のロジックはテスト済み。
-- 残りビュー（書類一覧/詳細/アップロード・コストモニター）は `views/Placeholder`。後続手順で順次実装。
+- **コストモニター（移植済み）**: `views/CostMonitorView` + `costmonitor/*`。
+  - `domain/docSeed.ts` で書類・明細のデモデータを決定論生成（連携済み明細は凍結）。`store/data.ts` が docs/lines/manualLines/adjustments/changelog/vehTrash を保持。
+  - KPIカード / 営業所フィルタ / **期間カレンダー**（範囲ポップオーバー）/ 車両テーブル（内訳バー）/ ページャ。
+  - **内訳編集モーダル**＝override調整UI：連携済み明細の修正は調整として記録、原本は不変（元値に戻すと調整消滅）。手動明細の追加・削除。保存時に**変更履歴**へ差分記録。
+  - 変更履歴スライドパネル（未読バッジ）/ 車両のゴミ箱（確認＋履歴記録）。
+- 残りビュー（書類一覧/詳細/アップロード）は `views/Placeholder`。後続手順で実装。
+- 注: 書類一覧用の curated SEED（明示シード）は書類一覧ビュー移植時に追加予定。
 
 ## コマンド
 ```bash
