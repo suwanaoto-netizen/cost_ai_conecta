@@ -1897,16 +1897,16 @@ function renderCoach(){
 /* ───── 右サイドパネル（書類詳細） ───── */
 function openPanel(id){
   const d=docs.find(x=>x.id===id); if(!d)return;
-  state.panelId=id; state.draft=Object.assign(JSON.parse(JSON.stringify(d)),{lines:JSON.parse(JSON.stringify(linesOf(id)))}); state.draft._ocr=ocrAmountCandidates(state.draft.lines); state.pvZoom=100; state.panelJustOpened=true; renderOverlay();
+  state.panelId=id; state.draft=Object.assign(JSON.parse(JSON.stringify(d)),{lines:JSON.parse(JSON.stringify(linesOf(id)))}); state.draft._ocr=ocrAmountCandidates(state.draft.lines); state.pvOriginal=JSON.parse(JSON.stringify(state.draft)); state.pvZoom=100; state.panelJustOpened=true; renderOverlay();
 }
-function closePanel(){state.panelId=null;state.draft=null;state.pnDeleteLid=null;renderOverlay();}
+function closePanel(){state.panelId=null;state.draft=null;state.pvOriginal=null;state.pnDeleteLid=null;renderOverlay();}
 function panelNav(delta){
   const list=visibleDocs();
   const idx=list.findIndex(d=>d.id===state.panelId);
   if(idx<0) return;
   const ni=idx+delta; if(ni<0||ni>=list.length) return;
   const d=list[ni];
-  state.panelId=d.id; state.draft=Object.assign(JSON.parse(JSON.stringify(d)),{lines:JSON.parse(JSON.stringify(linesOf(d.id)))}); state.draft._ocr=ocrAmountCandidates(state.draft.lines); state.pvZoom=100; state.panelJustOpened=false; state.pnDeleteLid=null;
+  state.panelId=d.id; state.draft=Object.assign(JSON.parse(JSON.stringify(d)),{lines:JSON.parse(JSON.stringify(linesOf(d.id)))}); state.draft._ocr=ocrAmountCandidates(state.draft.lines); state.pvOriginal=JSON.parse(JSON.stringify(state.draft)); state.pvZoom=100; state.panelJustOpened=false; state.pnDeleteLid=null;
   state.docPage=Math.floor(ni/state.docPerPage)+1; // 背面の一覧ページも同期
   render();
 }
@@ -1999,7 +1999,7 @@ function renderPanel(){
   const right=`<div class="pn-right">
     <div class="pv-toolbar"><span style="display:flex">${I.file("#E5E7EB",14)}</span><span class="fn">${esc(d.name)}</span>
       <button onclick="pvZoom(-10)">−</button><span id="pv-zoom">${state.pvZoom}%</span><button onclick="pvZoom(10)">＋</button></div>
-    <div class="pv-page-wrap" id="pv-page-wrap">${buildPreview(d)}</div>
+    <div class="pv-page-wrap" id="pv-page-wrap">${buildPreview(state.pvOriginal||d)}</div>
     <div class="pv-foot"><button class="pv-download" onclick="downloadOriginal('${d.id}')">${I.download("#1B2330",17)} ファイルの原本をダウンロード</button></div>
   </div>`;
 
@@ -2023,7 +2023,7 @@ function buildPreview(d){
       <div class="iv-total"><span>合計</span><span>${yen(total)}</span></div></div>
   </div>`;
 }
-function refreshPreview(){const w=document.getElementById("pv-page-wrap");if(w)w.innerHTML=buildPreview(state.draft);  const z=document.getElementById("pv-zoom");if(z)z.textContent=state.pvZoom+"%";
+function refreshPreview(){const w=document.getElementById("pv-page-wrap");if(w)w.innerHTML=buildPreview(state.pvOriginal||state.draft);  const z=document.getElementById("pv-zoom");if(z)z.textContent=state.pvZoom+"%";
   const t=document.getElementById("pn-total");if(t)t.textContent=yen(docTotal(state.draft));}
 function pvZoom(dz){state.pvZoom=Math.max(50,Math.min(200,state.pvZoom+dz));refreshPreview();}
 function downloadOriginal(docId){
