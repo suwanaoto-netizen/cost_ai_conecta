@@ -7,6 +7,7 @@ import type { DocType, Document, Line } from "../../domain/types";
 import { buildPlateIndex, matchOf, resolveVehicleId } from "../../domain/match";
 import { docTotal, expectedDocTypes, ocrAmountCandidates, plateSuggestions } from "../../domain/documents";
 import { DOC_TYPES } from "../../domain/settings";
+import { resolveRepairSubcat, repairSubcatLabel } from "../../domain/repairSubcat";
 import { yen } from "../../domain/format";
 import { MatchBadge } from "../common/MatchBadge";
 import { StatusChip } from "../common/StatusChip";
@@ -256,6 +257,18 @@ export function DocumentPanel({
                         <input className="in mono" readOnly={ro} value={l.inspectedAt} onChange={(e) => patchLine(l.lid, { inspectedAt: e.target.value })} />
                       </div>
                     </div>
+                    {(() => {
+                      // 内訳（連携用）は cat+item から都度導出する従属値。直接編集は不可で、
+                      // 項目名を正すと判定ルールに従って自動で変わる（保存時に永続化される値と一致）。
+                      const sub = resolveRepairSubcat(l.cat, l.item);
+                      if (!sub) return null;
+                      return (
+                        <div className="fld">
+                          <label>内訳（連携用）</label>
+                          <input className="in" readOnly value={repairSubcatLabel(sub)} title={`連携コード: ${sub}（項目名から自動判定）`} />
+                        </div>
+                      );
+                    })()}
                     <div className="grid2">
                       <div className="fld">
                         <label>対象車両（車番）</label>
