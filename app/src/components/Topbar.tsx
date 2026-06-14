@@ -1,4 +1,5 @@
 import { useStore, type View } from "../store";
+import { useSettingsStore } from "../store/settings";
 
 const CRUMB: Record<View, string> = {
   documents: "書類一覧",
@@ -7,11 +8,11 @@ const CRUMB: Record<View, string> = {
   settings: "設定",
 };
 
-const COMPANY = "サンプル物流株式会社";
 const USER = "諏訪 尚杜";
 
 export function Topbar() {
   const view = useStore((s) => s.view);
+  const COMPANY = useSettingsStore((s) => s.live.settings.companyName);
   const initial = USER.trim().charAt(0);
   return (
     <header className="topbar">

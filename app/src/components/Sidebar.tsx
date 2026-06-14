@@ -1,4 +1,5 @@
 import { useStore, type View } from "../store";
+import { navigateGuarded } from "../nav";
 import { IconDocs, IconDb, IconTruck, IconGear, IconChevron } from "./common/Icon";
 
 interface NavItem {
@@ -12,7 +13,6 @@ export function Sidebar() {
   const view = useStore((s) => s.view);
   const collapsed = useStore((s) => s.sidebarCollapsed);
   const todoCount = useStore((s) => s.todoCount);
-  const setView = useStore((s) => s.setView);
   const toggleSidebar = useStore((s) => s.toggleSidebar);
 
   const items: NavItem[] = [
@@ -51,7 +51,7 @@ export function Sidebar() {
               key={it.view}
               className={`navbtn ${active ? "active" : ""}`}
               aria-current={active ? "page" : undefined}
-              onClick={() => setView(it.view)}
+              onClick={() => navigateGuarded(it.view)}
               title={it.label}
             >
               <span className="nic">

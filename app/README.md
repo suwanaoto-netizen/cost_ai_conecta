@@ -16,7 +16,11 @@
   - `components/common/` — Button / StatusChip / CatPill / MatchBadge / Switch / Pager / **Modal**（フォーカストラップ・Esc・背景閉じ・aria-modal）/ OverlayHost（モーダルスタック）/ Toast / Icon。
   - `components/` — AppShell / Sidebar（折りたたみ・未入力バッジ）/ Topbar（パンくず）。
   - イベントはすべて props 束縛（インライン onclick 文字列ゼロ＝XSS構造排除）。
-- 各ビュー本体は `views/Placeholder`（新アーキの動作デモ兼用）。後続手順で順次実装。
+- **設定ビュー（移植済み）**: `views/SettingsView`。
+  - ドラフト/保存方式（`store/settings.ts`）。会社情報 / AI-OCR・突合しきい値 / 表示件数 / 営業所 / コスト分類×想定書類タイプ / データ連携（ロジポケ・モビポケ・外部のタブ）/ 車両マスタ導線。
+  - 未保存変更バー＋保存確認（差分一覧）＋**離脱ガード**（`nav.tsx`、overlayStack で確認）。
+  - `domain/settings.ts`（dirty/diff 純関数）はテスト済み。
+- 残りビュー（書類一覧/詳細/アップロード・コストモニター・マスタ）は `views/Placeholder`。後続手順で順次実装。
 
 ## コマンド
 ```bash
