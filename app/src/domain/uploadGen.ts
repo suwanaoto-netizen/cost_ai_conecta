@@ -1,7 +1,7 @@
 import type { Line } from "./types";
 import type { UploadEntry } from "../store/data";
 import { FLEET } from "./masterSeed";
-import { resolveRepairSubcat } from "./repairSubcat";
+import { resolveSubcat } from "./repairSubcat";
 
 const VENDORS = [
   { n: "中部マツダ整備", cat: "修繕・維持費" },
@@ -30,7 +30,7 @@ export function makeUploadEntry(name?: string): UploadEntry {
   const plates = [...FLEET].sort(() => Math.random() - 0.5).slice(0, k);
   const lines: Line[] = plates.map((p) => {
     const item = pick(ITEMS[v.cat]);
-    const subCat = resolveRepairSubcat(v.cat, item);
+    const subCat = resolveSubcat(v.cat, item);
     return {
       lid: _uid++,
       item,

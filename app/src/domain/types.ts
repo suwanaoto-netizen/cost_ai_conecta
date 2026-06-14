@@ -23,8 +23,12 @@ export interface Line {
   plate: string;
   kind: string; // "単車"
   cat: string; // コスト分類
-  /** 修繕・維持費の内訳コード（外部連携用・任意）。REPAIR_SUBCATS の code 値。 */
+  /** コスト分類の内訳コード（外部連携用・任意）。SUBCATS_BY_CAT の code 値。 */
   subCat?: string | null;
+  /** 給油量（L）。燃料費の手入力・任意。 */
+  liters?: number | null;
+  /** 単価（円/L）。燃料費の手入力・任意。 */
+  unitPrice?: number | null;
   inspectedAt: string; // 発生日 "YYYY-MM-DD"
   amount: number;
   confidence: number; // 0..1

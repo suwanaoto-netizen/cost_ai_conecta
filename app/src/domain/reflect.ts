@@ -1,11 +1,20 @@
 import type { Line } from "./types";
 import { matchOf, type PlateIndex } from "./match";
 import { yen } from "./format";
-import { repairSubcatLabel } from "./repairSubcat";
+import { resolveSubcat, subcatLabel } from "./repairSubcat";
 
-/** 連携先へ送る内訳の表記（例 " [内訳: tire/タイヤ]"）。内訳が無ければ空文字。 */
-const subCatTag = (l: Line) =>
-  l.subCat ? ` [内訳: ${l.subCat}/${repairSubcatLabel(l.subCat)}]` : "";
+/**
+ * 連携先へ送る内訳・燃料情報の表記（例 " [内訳: tire/タイヤ]"、
+ * 燃料費は " [内訳: diesel/軽油 | 120L | 155円/L]"）。該当が無ければ空文字。
+ */
+const subCatTag = (l: Line) => {
+  const code = l.subCat ?? resolveSubcat(l.cat, l.item);
+  const parts: string[] = [];
+  if (code) parts.push(`内訳: ${code}/${subcatLabel(code)}`);
+  if (l.liters != null) parts.push(`${l.liters}L`);
+  if (l.unitPrice != null) parts.push(`${l.unitPrice}円/L`);
+  return parts.length ? ` [${parts.join(" | ")}]` : "";
+};
 
 export interface ReflectStep {
   phase: 0 | 1 | 2;
