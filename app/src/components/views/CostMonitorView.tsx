@@ -152,6 +152,7 @@ export function CostMonitorView() {
             <div>
               <p style={{ margin: 0, fontSize: 12.5, color: "var(--inkSoft)" }}>
                 連携済みの書類から、登録車両全体のコスト動向を集計します。前月比やデータ収集状況を一目で把握できます。
+                <span style={{ color: "#d32f2f" }}>※給与・運賃・間接費は含まれていません</span>
               </p>
             </div>
           </div>
