@@ -413,7 +413,7 @@
   .cat-del{border:none;background:#EEF0EC;color:var(--inkSoft);width:22px;height:22px;border-radius:999px;cursor:pointer;font-size:14px;line-height:1}
   .cat-del:hover{background:var(--alertSoft);color:var(--alert)}
   /* コスト分類マスタ（マスタデータ → コスト分類タブ） */
-  .ccat-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px 18px}
+  .ccat-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 18px;flex:1;min-height:0;overflow:auto}
   .ccat-row{display:flex;align-items:flex-start;gap:14px;padding:16px 0;border-bottom:1px solid var(--lineSoft)}
   .ccat-row:last-child{border-bottom:none}
   .ccat-head{min-width:120px;display:inline-flex;align-items:center;padding-top:3px}
@@ -3350,40 +3350,13 @@ function renderCostCats(){
         <div class="ccat-field"><span class="ccat-lab">想定書類タイプ</span>${dts}</div>
         <div class="ccat-field"><span class="ccat-lab">内訳（連携コード）</span>${subHtml}</div>
       </div>
-      <button class="cat-del" title="分類を削除" onclick="masterRemoveCat('${esc(c)}')">×</button>
     </div>`;
   }).join("");
-  const head=`<div class="pagehead"><div><h1>コスト分類</h1><p>明細のコスト分類（コスト構造）のマスタです。分類ごとに <b>想定書類タイプ</b>（書類タイプのヒント・コストモニター内訳集計に使用）を紐付けます。<b>連携用の内訳コード</b>は外部サービス連携の契約キーのため、参照のみ（システム側で固定）です。</p></div>
-    <div class="set-add" style="margin-left:auto"><input class="in" id="new-master-cat" placeholder="新しい分類名（例：洗車費）" style="max-width:220px"><button class="btn-green" onclick="masterAddCat()">${I.plus()} 分類を追加</button></div></div>`;
+  const head=`<div class="pagehead"><div><h1>コスト分類</h1><p>原価区分（コスト構造）のマスタです。分類はシステム固定で、分類ごとに <b>想定書類タイプ</b>（書類タイプのヒント・コストモニター内訳集計に使用）を編集できます。<b>連携用の内訳コード</b>は外部サービス連携の契約キーのため、参照のみです。</p></div></div>`;
   return head+`<div class="ccat-card">${rows}</div>`;
 }
-function masterAddCat(){ const el=document.getElementById("new-master-cat"); const v=(el?el.value:"").trim();
-  if(!v){ toast("分類名を入力してください"); return; } if(CATS.includes(v)){ toast("すでに存在します"); return; }
-  CATS.push(v); if(!CAT_DOCTYPES[v]) CAT_DOCTYPES[v]=["請求書"]; render(); toast("コスト分類を追加しました"); }
 function masterToggleCatDocType(cat,dtype){ const arr=CAT_DOCTYPES[cat]||(CAT_DOCTYPES[cat]=[]);
   const i=arr.indexOf(dtype); if(i>=0) arr.splice(i,1); else arr.push(dtype); render(); }
-/* 削除は連携済み（凍結）データへの影響を警告する確認モーダルを挟む */
-function masterRemoveCat(c){ state.costCatDelete=c; renderOverlay(); }
-function cancelCostCatDelete(){ state.costCatDelete=null; renderOverlay(); }
-function confirmCostCatDelete(){ const c=state.costCatDelete; const i=CATS.indexOf(c); if(i>=0) CATS.splice(i,1); delete CAT_DOCTYPES[c];
-  state.costCatDelete=null; render(); toast("コスト分類を削除しました"); }
-function renderCostCatDeleteConfirm(){
-  if(!state.costCatDelete) return "";
-  const c=state.costCatDelete;
-  return `<div class="ovl anim" style="z-index:80" onclick="if(event.target===this)cancelCostCatDelete()"><div class="modal" style="width:min(480px,100%)">
-    <div class="m-head"><span class="t">${I.alert("#B87514",18)} コスト分類を削除</span>
-      <button class="x" onclick="cancelCostCatDelete()">${I.x("#5A6472",18)}</button></div>
-    <div class="m-body">
-      <div class="ce-warn">${I.alert("#B87514",18)}<div>
-        <div class="ce-q">コスト分類「${esc(c)}」を削除しますか？</div>
-        <div class="ce-note">連携済み（凍結）の明細にこの分類が残っている場合、表示は既定色にフォールバックします。新しい明細でこの分類は選べなくなります。</div></div></div>
-    </div>
-    <div class="m-foot">
-      <button class="btn-cancel" onclick="cancelCostCatDelete()">キャンセル</button>
-      <button class="btn-danger" onclick="confirmCostCatDelete()">削除する</button>
-    </div>
-  </div></div>`;
-}
 function renderVehicleMaster(){
   const list=VEHICLE_MASTER.slice().sort((a,b)=>b.no-a.no);
   const per=state.masterPerPage;
@@ -3544,7 +3517,6 @@ function renderOverlay(){
   if(state.docTrashAction) h+=renderDocTrashConfirm();
   if(state.settingsSaveConfirm) h+=renderSettingsSaveConfirm();
   if(state.settingsLeave) h+=renderSettingsLeaveConfirm();
-  if(state.costCatDelete) h+=renderCostCatDeleteConfirm();
   const os=_captureScroll(ov);
   ov.innerHTML=h;
   _restoreScroll(ov,os);
@@ -3564,7 +3536,7 @@ function gotoVehicles(){ state.view="vehicles"; state.vehCategoryFilter="all"; r
 /* ───── ルート ───── */
 /* 再描画（innerHTML 差し替え）でスクロール位置が先頭へ戻らないよう、
    既知のスクロール領域の scrollTop を保持・復元する */
-const _SCROLL_SELECTORS=[".tscroll",".settings-wrap",".vp-body",".pn-left",".pn-right",".ve-left",".ve-rprev",".tl-scroll",".clog-body",".pv-page-wrap",".chips",".log",".spm-strip"];
+const _SCROLL_SELECTORS=[".tscroll",".ccat-card",".settings-wrap",".vp-body",".pn-left",".pn-right",".ve-left",".ve-rprev",".tl-scroll",".clog-body",".pv-page-wrap",".chips",".log",".spm-strip"];
 function _captureScroll(root){ const m={}; if(!root) return m; _SCROLL_SELECTORS.forEach(sel=>{ const e=root.querySelector(sel); if(e&&(e.scrollTop||e.scrollLeft)) m[sel]={t:e.scrollTop,l:e.scrollLeft}; }); return m; }
 function _restoreScroll(root,m){ if(!root||!m) return; for(const sel in m){ const e=root.querySelector(sel); if(e){ e.scrollTop=m[sel].t; e.scrollLeft=m[sel].l; } } }
 function render(){

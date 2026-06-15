@@ -158,7 +158,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .dt-chip.on { background: var(--greenSoft); border-color: var(--green); color: var(--greenDark); }
 
 /* cost classification master (master page → コスト分類 tab) */
-.ccat-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 4px 18px; }
+.ccat-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 0 18px; flex: 1; min-height: 0; overflow: auto; }
 .ccat-row { display: flex; align-items: flex-start; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--lineSoft); }
 .ccat-row:last-child { border-bottom: none; }
 .ccat-head { min-width: 120px; display: inline-flex; align-items: center; padding-top: 3px; }
