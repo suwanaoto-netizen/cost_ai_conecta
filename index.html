@@ -2998,8 +2998,8 @@ function renderCostTrendBar(){
   body+=`<line x1="${ML}" y1="${MT+PH}" x2="${W-MR}" y2="${MT+PH}" stroke="var(--line)" stroke-width="1"/>`;
   const legend=SERIES_CATS.map(c=>{const s=CAT_STYLE[c]||CAT_STYLE["税金"];return `<span class="cl-item"><span class="cl-sw" style="background:${s.fg}"></span>${esc(c)}</span>`;}).join("");
   const sel=`<div class="filter-sel chart-sel"><span class="fs-l">営業所</span><select onchange="setChartOffice(this.value)"><option value="all" ${office==="all"?"selected":""}>全社</option>${SERIES_OFFICES.map(o=>`<option value="${esc(o)}" ${office===o?"selected":""}>${esc(o)}</option>`).join("")}</select></div>`;
-  return `<div class="chart-card"><div class="chart-head"><div><div class="chart-title">原価推移（分類構成比）</div><div class="chart-sub">月次・直近12ヶ月／薄い棒＝昨年同月</div></div>${sel}</div>
-    <svg class="chart-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="原価推移グラフ">${body}</svg>
+  return `<div class="chart-card"><div class="chart-head"><div><div class="chart-title">車両維持コスト推移（分類構成比）</div><div class="chart-sub">月次・直近12ヶ月／薄い棒＝昨年同月</div></div>${sel}</div>
+    <svg class="chart-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="車両維持コスト推移グラフ">${body}</svg>
     <div class="chart-legend">${legend}</div></div>`;
 }
 /* ② 営業所別のコスト分類推移：月次12ヶ月。コスト分類＆車格で絞り込み。 */

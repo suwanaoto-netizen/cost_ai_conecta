@@ -65,7 +65,7 @@ export function CostTrendBarChart() {
     <div className="chart-card">
       <div className="chart-head">
         <div>
-          <div className="chart-title">原価推移（分類構成比）</div>
+          <div className="chart-title">車両維持コスト推移（分類構成比）</div>
           <div className="chart-sub">月次・直近12ヶ月／薄い棒＝昨年同月</div>
         </div>
         <div className="filter-sel chart-sel">
@@ -79,7 +79,7 @@ export function CostTrendBarChart() {
         </div>
       </div>
 
-      <svg className="chart-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="原価推移グラフ">
+      <svg className="chart-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="車両維持コスト推移グラフ">
         {ticks.map((t, i) => (
           <g key={i}>
             <line x1={ML} y1={yOf(t)} x2={W - MR} y2={yOf(t)} stroke="var(--lineSoft)" strokeWidth={1} />
