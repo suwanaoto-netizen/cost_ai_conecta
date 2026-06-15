@@ -24,7 +24,7 @@ describe("jikenkyo lookup", () => {
   });
   it("fmtKg", () => {
     expect(fmtKg(13600)).toBe("13,600 kg");
-    expect(fmtKg("")).toBe("");
+    expect(fmtKg(null)).toBe("");
   });
 });
 

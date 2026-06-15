@@ -7,8 +7,6 @@ import {
   type SettingsSnapshot,
 } from "../domain/settings";
 
-const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
-
 type BooleanSettingKey = {
   [K in keyof Settings]: Settings[K] extends boolean ? K : never;
 }[keyof Settings];
@@ -28,14 +26,13 @@ interface SettingsStore {
   commit: () => void;
 }
 
+/** 編集中ドラフトの基点（無ければ live）。live は不変なので参照共有してよい。 */
+const base = (s: Pick<SettingsStore, "live" | "draft">): SettingsSnapshot => s.draft ?? s.live;
+
 export const useSettingsStore = create<SettingsStore>((set, get) => {
-  // ドラフトを必ず用意してから patch を当てる共通ヘルパ
-  const mutate = (fn: (d: SettingsSnapshot) => void) =>
-    set((s) => {
-      const d = clone(s.draft ?? s.live);
-      fn(d);
-      return { draft: d };
-    });
+  // 変更箇所だけ新オブジェクトに差し替える構造共有の更新（全体ディープクローンを廃止）。
+  const patch = (fn: (d: SettingsSnapshot) => SettingsSnapshot) =>
+    set((s) => ({ draft: fn(base(s)) }));
 
   return {
     live: freshSnapshot(),
@@ -44,23 +41,24 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
     ensureDraft: () => {
       const cur = get().draft;
       if (cur) return cur;
-      const d = clone(get().live);
+      // live は以後イミュータブル更新でしか触らないため、初期ドラフトは参照共有でよい。
+      const d = get().live;
       set({ draft: d });
       return d;
     },
-    setSetting: (k, v) => mutate((d) => { d.settings[k] = v; }),
-    toggleSetting: (k) => mutate((d) => { d.settings[k] = !d.settings[k]; }),
+    setSetting: (k, v) => patch((d) => ({ ...d, settings: { ...d.settings, [k]: v } })),
+    toggleSetting: (k) => patch((d) => ({ ...d, settings: { ...d.settings, [k]: !d.settings[k] } })),
     setMatchThreshold: (pct) =>
-      mutate((d) => { d.settings.matchThreshold = Math.max(0.5, Math.min(0.99, pct / 100)); }),
-    setDefaultPageSize: (n) => mutate((d) => { d.settings.defaultPageSize = n; }),
+      patch((d) => ({ ...d, settings: { ...d.settings, matchThreshold: Math.max(0.5, Math.min(0.99, pct / 100)) } })),
+    setDefaultPageSize: (n) => patch((d) => ({ ...d, settings: { ...d.settings, defaultPageSize: n } })),
     addCategory: (name) => {
       const t = name.trim();
-      if (!t) return false;
-      if ((get().draft ?? get().live).categories.includes(t)) return false;
-      mutate((d) => { d.categories.push(t); });
+      if (!t || base(get()).categories.includes(t)) return false;
+      patch((d) => ({ ...d, categories: [...d.categories, t] }));
       return true;
     },
-    removeCategory: (name) => mutate((d) => { d.categories = d.categories.filter((c) => c !== name); }),
+    removeCategory: (name) =>
+      patch((d) => ({ ...d, categories: d.categories.filter((c) => c !== name) })),
     discard: () => set({ draft: null }),
     commit: () =>
       set((s) => (s.draft ? { live: s.draft, draft: null } : {})),

@@ -8,7 +8,7 @@ import { IconCheck, IconAlert } from "../common/Icon";
 
 const EMPTY: MasterForm = {
   no: null, plate: "", chassis: "", code: "", name: "", note: "", office: "",
-  maxLoad: "", grossWeight: "", size: "", klass: "",
+  maxLoad: null, grossWeight: null, size: "", klass: "",
 };
 
 function KlassBadge({ matched, klass, raw }: { matched: boolean; klass: string; raw: string }) {
@@ -47,8 +47,8 @@ export function MasterEditModal({ initial, onClose }: { initial?: MasterForm; on
     setForm((f) => ({
       ...f,
       chassis: val,
-      maxLoad: spec ? spec.maxLoad : "",
-      grossWeight: spec ? spec.gross : "",
+      maxLoad: spec ? spec.maxLoad : null,
+      grossWeight: spec ? spec.gross : null,
       size: spec ? spec.size : "",
       klass: spec ? spec.klass : "",
     }));
@@ -65,9 +65,18 @@ export function MasterEditModal({ initial, onClose }: { initial?: MasterForm; on
 
   const del = () => {
     if (form.no == null) return;
-    remove(form.no);
+    // FK 整合はストア層が保証する：連携済み（不変）明細が紐づく車両は削除拒否、
+    // 手動明細だけならカスケード削除して整合を保つ。
+    const res = remove(form.no);
+    if (!res.ok) {
+      return showToast(
+        `この車両には連携済みのコスト明細が ${res.blockedByReflected ?? 0} 件あるため削除できません`,
+      );
+    }
     onClose();
-    showToast("車両を削除しました");
+    showToast(
+      res.removedManual ? `車両を削除しました（手動明細 ${res.removedManual} 件も削除）` : "車両を削除しました",
+    );
   };
 
   return (

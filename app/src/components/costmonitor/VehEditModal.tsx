@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { useDataStore, CURRENT_USER, type DocLineEdit } from "../../store/data";
 import { useMasterStore } from "../../store/master";
+import { useVehicles } from "../../store/selectors";
 import { useStore } from "../../store";
-import { buildPlateIndex } from "../../domain/match";
-import { buildVehicles } from "../../domain/vehicles";
 import { yen } from "../../domain/format";
+import { asLid } from "../../domain/ids";
 import type { ChangelogEntry, ManualLine } from "../../domain/types";
 import { Button } from "../common/Button";
 
@@ -12,7 +12,7 @@ interface Row {
   key: string; // 一意行キー（doc: docId|lid / manual: id）
   src: "doc" | "manual";
   docId?: string;
-  lid: string | number;
+  lid: string; // doc は Lid、manual は ManualLine.id（いずれも string）
   item: string;
   cat: string;
   date: string;
@@ -35,19 +35,14 @@ export function VehEditModal({
   office: string;
   onClose: () => void;
 }) {
-  const docs = useDataStore((s) => s.docs);
-  const lines = useDataStore((s) => s.lines);
-  const manualLines = useDataStore((s) => s.manualLines);
-  const adjustments = useDataStore((s) => s.adjustments);
   const commit = useDataStore((s) => s.commitVehicleEdit);
-  const masters = useMasterStore((s) => s.vehicles);
   const cats = useMasterStore((s) => s.costCats);
   const showToast = useStore((s) => s.showToast);
+  const vehicles = useVehicles();
 
-  // この車両の全明細（期間フィルタ非適用）を実効値で取得
+  // この車両の全明細（期間フィルタ非適用）を実効値で、開いた時点のスナップショットとして取得
   const initial = useMemo(() => {
-    const plateIndex = buildPlateIndex(masters);
-    const v = buildVehicles({ docs, lines, manualLines, adjustments, masters, plateIndex }).find((x) => x.key === vkey);
+    const v = vehicles.find((x) => x.key === vkey);
     const rows: Row[] = (v?.lines ?? []).map((l) =>
       l.src === "doc"
         ? { key: `${l.docId}|${l.lid}`, src: "doc", docId: l.docId, lid: l.lid, item: l.item, cat: l.cat, date: l.date, amount: l.amount, vendor: l.vendor }
@@ -100,7 +95,7 @@ export function VehEditModal({
 
     const docEdits: DocLineEdit[] = rows
       .filter((r) => r.src === "doc" && r.docId)
-      .map((r) => ({ docId: r.docId!, lid: r.lid, item: r.item, cat: r.cat, inspectedAt: r.date, amount: +r.amount || 0 }));
+      .map((r) => ({ docId: r.docId!, lid: asLid(r.lid), item: r.item, cat: r.cat, inspectedAt: r.date, amount: +r.amount || 0 }));
 
     const manual: ManualLine[] = rows
       .filter((r) => r.src === "manual")

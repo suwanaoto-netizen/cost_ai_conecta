@@ -1,10 +1,10 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useDataStore } from "../../store/data";
-import { useMasterStore } from "../../store/master";
+import { useDocs, useLines, usePlateIndex } from "../../store/selectors";
 import { useSettingsStore } from "../../store/settings";
 import { useStore } from "../../store";
 import type { Line } from "../../domain/types";
-import { buildPlateIndex, countUnresolved } from "../../domain/match";
+import { countUnresolved } from "../../domain/match";
 import { docDate, docTotal } from "../../domain/documents";
 import { yen } from "../../domain/format";
 import { StatusChip } from "../common/StatusChip";
@@ -18,13 +18,13 @@ import { ReflectLog } from "../documents/ReflectLog";
 type StatusFilter = "all" | "未入力" | "入力済み" | "連携済み";
 
 export function DocumentsView() {
-  const docs = useDataStore((s) => s.docs);
-  const lines = useDataStore((s) => s.lines);
+  const docs = useDocs();
+  const lines = useLines();
   const markEntered = useDataStore((s) => s.markEntered);
   const reflectMany = useDataStore((s) => s.reflectMany);
   const changeOffice = useDataStore((s) => s.changeOffice);
   const setDeleted = useDataStore((s) => s.setDeleted);
-  const masters = useMasterStore((s) => s.vehicles);
+  const plateIndex = usePlateIndex();
   const categories = useSettingsStore((s) => s.live.categories);
   const threshold = useSettingsStore((s) => s.live.settings.matchThreshold);
   const defaultPageSize = useSettingsStore((s) => s.live.settings.defaultPageSize);
@@ -46,7 +46,6 @@ export function DocumentsView() {
   const [reflectConfirm, setReflectConfirm] = useState<{ ids: string[]; warn: number } | null>(null);
   const [reflectingIds, setReflectingIds] = useState<string[] | null>(null);
 
-  const plateIndex = useMemo(() => buildPlateIndex(masters), [masters]);
   const linesOf = (id: string): Line[] => lines.filter((l) => l.docId === id);
 
   const counts = { all: 0, 未入力: 0, 入力済み: 0, 連携済み: 0 } as Record<string, number>;

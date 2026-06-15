@@ -2,10 +2,11 @@ import { describe, it, expect } from "vitest";
 import { docTotal, docDate, ocrAmountCandidates, plateSuggestions, expectedDocTypes } from "./documents";
 import { buildReflectPlan } from "./reflect";
 import { buildPlateIndex } from "./match";
+import { asLid } from "./ids";
 import type { Line, VehicleMaster } from "./types";
 
 const line = (lid: number, plate: string, amount: number, conf = 0.97, cat = "燃料費"): Line => ({
-  lid, item: "軽油", plate, kind: "単車", cat, inspectedAt: "2026-04-30", amount, confidence: conf,
+  lid: asLid(lid), item: "軽油", plate, kind: "単車", cat, inspectedAt: "2026-04-30", amount, confidence: conf,
 });
 
 describe("documents helpers", () => {
@@ -31,7 +32,7 @@ describe("documents helpers", () => {
 
 describe("buildReflectPlan", () => {
   const master = (id: string, plate: string): VehicleMaster => ({
-    no: 1, id, plate, chassis: "", code: "", name: "", note: "", office: "", maxLoad: "", grossWeight: "", size: "", klass: "",
+    no: 1, id, plate, chassis: "", code: "", name: "", note: "", office: "", maxLoad: null, grossWeight: null, size: "", klass: "",
   });
   const idx = buildPlateIndex([master("veh_1", "名古屋100あ1234")]);
 

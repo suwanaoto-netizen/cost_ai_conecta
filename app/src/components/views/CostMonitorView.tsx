@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useDataStore, CURRENT_USER } from "../../store/data";
-import { useMasterStore } from "../../store/master";
 import { useSettingsStore, currentSnapshot } from "../../store/settings";
+import { usePlateIndex, useVehicles } from "../../store/selectors";
 import { nextOverlayId, useStore } from "../../store";
-import { buildPlateIndex, plateRegistered } from "../../domain/match";
-import { buildVehicles, type Vehicle } from "../../domain/vehicles";
+import { plateRegistered } from "../../domain/match";
+import { type Vehicle } from "../../domain/vehicles";
 import { catStyleOf } from "../../domain/catStyle";
 import { yen } from "../../domain/format";
 import type { ChangelogEntry } from "../../domain/types";
@@ -17,17 +17,12 @@ import { Button } from "../common/Button";
 import { IconCheck, IconTruck, IconAlert } from "../common/Icon";
 
 export function CostMonitorView() {
-  const docs = useDataStore((s) => s.docs);
-  const lines = useDataStore((s) => s.lines);
-  const manualLines = useDataStore((s) => s.manualLines);
-  const adjustments = useDataStore((s) => s.adjustments);
   const vehTrash = useDataStore((s) => s.vehTrash);
   const changelog = useDataStore((s) => s.changelog);
   const changelogSeenCount = useDataStore((s) => s.changelogSeenCount);
   const trashVehicle = useDataStore((s) => s.trashVehicle);
   const restoreVehicle = useDataStore((s) => s.restoreVehicle);
   const markChangelogSeen = useDataStore((s) => s.markChangelogSeen);
-  const masters = useMasterStore((s) => s.vehicles);
   const categories = useSettingsStore((s) => currentSnapshot(s).categories);
   const defaultPageSize = useSettingsStore((s) => s.live.settings.defaultPageSize);
   const pushOverlay = useStore((s) => s.pushOverlay);
@@ -40,19 +35,11 @@ export function CostMonitorView() {
   const [perPage, setPerPage] = useState(defaultPageSize);
   const [clogOpen, setClogOpen] = useState(false);
 
-  const plateIndex = useMemo(() => buildPlateIndex(masters), [masters]);
-  const allVeh = useMemo(
-    () =>
-      buildVehicles({
-        docs, lines, manualLines, adjustments, masters, plateIndex,
-        catFilter: office,
-        range: range.start && range.end ? { start: range.start, end: range.end } : null,
-      }),
-    [docs, lines, manualLines, adjustments, masters, plateIndex, office, range],
-  );
+  const plateIndex = usePlateIndex();
+  const allVeh = useVehicles(office, range.start && range.end ? { start: range.start, end: range.end } : null);
 
-  const trashCount = allVeh.filter((v) => vehTrash.has(v.key)).length;
-  const visible = allVeh.filter((v) => (trashView ? vehTrash.has(v.key) : !vehTrash.has(v.key)));
+  const trashCount = allVeh.filter((v) => vehTrash[v.key]).length;
+  const visible = allVeh.filter((v) => (trashView ? vehTrash[v.key] : !vehTrash[v.key]));
   const unread = changelog.length - changelogSeenCount;
   const hasRange = !!(range.start && range.end);
 
