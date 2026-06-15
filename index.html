@@ -233,6 +233,15 @@
   .btn-upload{background:var(--green);border:none;color:#fff;border-radius:8px;padding:9px 22px;font-size:14px;font-weight:800;cursor:pointer}
   .btn-upload:hover:not(:disabled){filter:brightness(1.05)}
   .btn-upload:disabled{background:#E5E9EE;color:#B7BEC7;cursor:not-allowed}
+  /* 重複アラート */
+  .dup-lead{margin:0 0 14px;font-size:13.5px;line-height:1.7;color:var(--ink)}
+  .dup-list{display:flex;flex-direction:column;gap:12px}
+  .dup-item{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+  .dup-item input{margin:2px 0 0;width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--blue)}
+  .dup-main{min-width:0}
+  .dup-name{font-size:13.5px;font-weight:700;color:var(--ink);word-break:break-all}
+  .dup-sub{font-size:12px;color:var(--inkSoft);margin-top:3px}
+  .dup-no{color:var(--blue);font-weight:700}
   .uprog{padding:4px 2px}
   .up-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
   .up-label{font-size:12.5px;color:var(--ink);font-weight:700;display:flex;align-items:center;gap:7px}
@@ -1784,6 +1793,26 @@ function uplDrop(e){ e.preventDefault(); const dz=e.currentTarget; if(dz)dz.clas
 function useSampleFiles(){ if(state.upload.processing.active)return; uploadBatch().forEach(f=>state.upload.files.push(f)); renderOverlay(); }
 function doUpload(){
   const u=state.upload; if(u.files.length===0)return;
+  // 同一書類名の重複を自動検知。重複があれば確認モーダルを表示し、含める書類を選んでもらう。
+  const items=[]; u.files.forEach((f,i)=>{ const doc=findDupDoc(f.name); if(doc) items.push({i, name:f.name, doc}); });
+  if(items.length){ u.dupAlert={items, checked:{}}; renderOverlay(); return; }
+  startUploadProgress();
+}
+/* 既存書類（ゴミ箱を除く）と書類名が完全一致するものを重複とみなす。 */
+function findDupDoc(name){ return docs.find(d=>!d.deleted && d.name===name); }
+function dupToggle(i){ const da=state.upload.dupAlert; if(!da)return; da.checked[i]=!da.checked[i]; renderOverlay(); }
+function dupCancel(){ state.upload.dupAlert=null; renderOverlay(); }
+function dupConfirm(){
+  const u=state.upload, da=u.dupAlert; if(!da)return;
+  const dupIdx=new Set(da.items.map(x=>x.i));
+  // 重複でない書類は常に含め、重複書類はチェックされたものだけ含める。
+  u.files=u.files.filter((f,i)=> !dupIdx.has(i) || da.checked[i]);
+  u.dupAlert=null;
+  if(u.files.length===0){ closeUpload(); toast("アップロードする書類がありません"); return; }
+  startUploadProgress();
+}
+function startUploadProgress(){
+  const u=state.upload; if(u.files.length===0)return;
   u.processing={active:true,pct:0,label:u.ocr?"データ化中（AI-OCR / 明細OCR）":"ファイルを保存中…"};
   renderOverlay();
   u._timer=setInterval(()=>{
@@ -1792,6 +1821,33 @@ function doUpload(){
     const pct=document.getElementById("up-pct"); if(pct)pct.textContent=Math.round(u.processing.pct)+"%";
     if(u.processing.pct>=100){clearInterval(u._timer);setTimeout(finishUpload,360);}
   },170);
+}
+/* ───── 重複アラート（同一書類名を自動検知。含める書類をチェックで選択） ───── */
+function renderDupAlert(){
+  const u=state.upload, da=u.dupAlert; if(!da) return "";
+  const total=u.files.length, dupCount=da.items.length;
+  const rows=da.items.map(it=>{
+    const d=it.doc;
+    const meta=[d.vendor, d.category||"営業所未選択", d.status].filter(Boolean).map(esc).join("・");
+    return `<label class="dup-item">
+      <input type="checkbox" ${da.checked[it.i]?"checked":""} onchange="dupToggle(${it.i})">
+      <div class="dup-main">
+        <div class="dup-name">${esc(it.name)}</div>
+        <div class="dup-sub">・ <span class="dup-no">No.${d.no}</span> ${meta}</div>
+      </div>
+    </label>`;
+  }).join("");
+  return `<div class="ovl anim" style="z-index:80" onclick="if(event.target===this)dupCancel()"><div class="modal" style="width:min(560px,100%)">
+    <div class="m-head"><span class="t"></span><button class="x" onclick="dupCancel()">${I.x("#5A6472",18)}</button></div>
+    <div class="m-body">
+      <p class="dup-lead">今回選択した書類全${total}件のうち${dupCount}件が、すでに同じ書類名で保存されています。<br>アップロードに含める書類をチェックしてください。</p>
+      <div class="dup-list">${rows}</div>
+    </div>
+    <div class="m-foot">
+      <button class="btn-cancel" onclick="dupCancel()">キャンセル</button>
+      <button class="btn-upload" onclick="dupConfirm()">アップロード</button>
+    </div>
+  </div></div>`;
 }
 function finishUpload(){
   const u=state.upload;
@@ -3646,6 +3702,7 @@ function renderOverlay(){
     if(state.splitUpload.settingsOpen) h+=renderSplitSettingsModal();
     if(state.splitUpload.zoom!=null) h+=renderSplitZoom();
     if(state.splitUpload.guide) h+=renderCoach();
+    if(state.upload.dupAlert) h+=renderDupAlert();
   }
   else if(state.panelId){ h=renderPanel(); state.panelJustOpened=false; }
   else if(state.vehPanel) h=renderVehPanel();
