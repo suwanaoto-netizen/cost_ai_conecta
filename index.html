@@ -3039,7 +3039,7 @@ function renderVehMonitor(){
   const allVeh=buildVehicles("all", null);
   const vehicles=allVeh.filter(v=>!state.vehTrash.has(v.key));
   const head=`<div class="pagehead pagehead-veh">
-    <div><p>連携済みの書類から、登録車両全体のコスト動向を集計します。前月比やデータ収集状況を一目で把握できます。</p></div>
+    <div><p>連携済みの書類から、登録車両全体のコスト動向を集計します。前月比やデータ収集状況を一目で把握できます。<span style="color:#d32f2f">※給与・運賃・間接費は含まれていません</span></p></div>
   </div>`;
   if(vehicles.length===0){
     return head+`<div class="veh-card"><div class="empty">${I.truckN("#9AA3AD",40)}
