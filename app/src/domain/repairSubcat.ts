@@ -26,8 +26,9 @@ export const FUEL_SUBCATS: readonly Subcat[] = [
 
 /** 修繕・維持費の内訳マスタ。 */
 export const REPAIR_SUBCATS: readonly Subcat[] = [
-  { code: "shaken", label: "車検" },
-  { code: "inspection", label: "法定点検" },
+  { code: "inspect_shaken", label: "定期点検(車検)" },
+  { code: "inspect_3m", label: "定期点検(3ヵ月)" },
+  { code: "inspect_other", label: "定期点検(その他)" },
   { code: "repair", label: "修理" },
   { code: "tire", label: "タイヤ" }, // タイヤ/スタッドレス/チューブ/バルブ/ホイール関連部品
   { code: "oil", label: "オイル" }, // エンジンオイル/フィルター/LLC/ウォッシャー液/グリス/ブレーキフルード
@@ -73,8 +74,10 @@ const KEYWORDS_BY_CAT: Record<string, KeywordRule[]> = {
     { code: "diesel", keywords: ["軽油", "ディーゼル"] },
   ],
   [REPAIR_CAT]: [
-    { code: "shaken", keywords: ["車検"] },
-    { code: "inspection", keywords: ["点検"] },
+    // 定期点検は具体的→一般的の順。車検＞3ヵ月点検＞その他点検。
+    { code: "inspect_shaken", keywords: ["車検"] },
+    { code: "inspect_3m", keywords: ["3ヶ月", "３ヶ月", "3ヵ月", "３ヵ月", "3カ月", "３カ月", "3か月", "３か月"] },
+    { code: "inspect_other", keywords: ["点検"] },
     { code: "battery", keywords: ["バッテリ"] },
     { code: "tire", keywords: ["タイヤ", "スタッドレス", "チューブ", "ホイール", "バルブ"] },
     { code: "oil", keywords: ["オイル", "エレメント", "フィルタ", "ＬＬＣ", "LLC", "クーラント", "ウォッシャ", "グリス", "フルード"] },
