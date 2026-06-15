@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useDataStore, type UploadEntry } from "../../store/data";
 import { useSettingsStore } from "../../store/settings";
+import type { Document } from "../../domain/types";
 import { makeUploadEntry, sampleBatch } from "../../domain/uploadGen";
 import { buildSplitPages, splitGroups, type SplitPage } from "../../domain/splitDemo";
 import { Button } from "../common/Button";
@@ -10,8 +11,12 @@ import { SplitSettingsModal } from "./SplitSettingsModal";
 
 type Tab = "new" | "split";
 
+type DupItem = { idx: number; name: string; doc: Document };
+type DupAlert = { items: DupItem[]; checked: Record<number, boolean> };
+
 export function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: (count: number) => void }) {
   const addDocuments = useDataStore((s) => s.addDocuments);
+  const documents = useDataStore((s) => s.documents);
   const defaultOcr = useSettingsStore((s) => s.live.settings.defaultOcr);
   const categories = useSettingsStore((s) => s.live.categories);
 
@@ -28,6 +33,8 @@ export function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: 
   const [split, setSplit] = useState(false);
   const [pages, setPages] = useState<SplitPage[] | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // 重複アラート（同一書類名を自動検知。含める書類をチェックで選択）
+  const [dupAlert, setDupAlert] = useState<DupAlert | null>(null);
 
   // 進捗アニメーション → 完了で確定
   useEffect(() => {
@@ -68,6 +75,27 @@ export function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: 
   };
 
   const canUpload = tab === "new" ? files.length > 0 : !!splitFile;
+
+  // 既存書類（ゴミ箱を除く）と書類名が完全一致するものを重複とみなす。
+  const findDup = (name: string) => Object.values(documents).find((d) => !d.deleted && d.name === name);
+  const startUpload = () => {
+    if (tab === "new") {
+      const items: DupItem[] = [];
+      files.forEach((f, idx) => { const doc = findDup(f.name); if (doc) items.push({ idx, name: f.name, doc }); });
+      if (items.length) { setDupAlert({ items, checked: {} }); return; }
+    }
+    setProgress(0);
+  };
+  const confirmDup = () => {
+    if (!dupAlert) return;
+    const dupIdx = new Set(dupAlert.items.map((x) => x.idx));
+    // 重複でない書類は常に含め、重複書類はチェックされたものだけ含める。
+    const kept = files.filter((_, i) => !dupIdx.has(i) || dupAlert.checked[i]);
+    setDupAlert(null);
+    if (kept.length === 0) { onClose(); return; }
+    setFiles(kept);
+    setProgress(0);
+  };
 
   // アップロード中は新規・分割どちらのタブでも右下のプログレスバーのみで表示を統一
   if (proc) {
@@ -185,9 +213,48 @@ export function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: 
 
         <div className="m-foot">
           <Button variant="cancel" onClick={onClose}>キャンセル</Button>
-          <button className="btn-upload" disabled={!canUpload} onClick={() => setProgress(0)}>アップロード</button>
+          <button className="btn-upload" disabled={!canUpload} onClick={startUpload}>アップロード</button>
         </div>
       </div>
+
+      {dupAlert && (
+        <div className="ovl" style={{ zIndex: 80 }} onMouseDown={(e) => e.target === e.currentTarget && setDupAlert(null)}>
+          <div className="modal" style={{ width: "min(560px, 100%)" }}>
+            <div className="m-head">
+              <span className="t" />
+              <button className="x" onClick={() => setDupAlert(null)}><IconX /></button>
+            </div>
+            <div className="m-body">
+              <p className="dup-lead">
+                今回選択した書類全{files.length}件のうち{dupAlert.items.length}件が、すでに同じ書類名で保存されています。<br />
+                アップロードに含める書類をチェックしてください。
+              </p>
+              <div className="dup-list">
+                {dupAlert.items.map((it) => {
+                  const meta = [it.doc.vendor, it.doc.category || "営業所未選択", it.doc.status].filter(Boolean).join("・");
+                  return (
+                    <label className="dup-item" key={it.idx}>
+                      <input
+                        type="checkbox"
+                        checked={!!dupAlert.checked[it.idx]}
+                        onChange={() => setDupAlert((d) => d && { ...d, checked: { ...d.checked, [it.idx]: !d.checked[it.idx] } })}
+                      />
+                      <div className="dup-main">
+                        <div className="dup-name">{it.name}</div>
+                        <div className="dup-sub">・ <span className="dup-no">No.{it.doc.no}</span> {meta}</div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="m-foot">
+              <Button variant="cancel" onClick={() => setDupAlert(null)}>キャンセル</Button>
+              <button className="btn-upload blue" onClick={confirmDup}>アップロード</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {settingsOpen && pages && (
         <SplitSettingsModal
