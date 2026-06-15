@@ -250,7 +250,7 @@ export function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: 
             </div>
             <div className="m-foot">
               <Button variant="cancel" onClick={() => setDupAlert(null)}>キャンセル</Button>
-              <button className="btn-upload blue" onClick={confirmDup}>アップロード</button>
+              <button className="btn-upload" onClick={confirmDup}>アップロード</button>
             </div>
           </div>
         </div>
