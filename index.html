@@ -84,6 +84,10 @@
   .side.collapsed .navbtn .lbl,
   .side.collapsed .navbtn .ct{display:none}
   .side.collapsed .side-foot{display:none}
+  /* collapsed: ホバーで名称ツールチップ */
+  .navbtn{position:relative}
+  .side.collapsed .navbtn::after{content:attr(data-l);position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);background:#0C3D27;color:#fff;padding:6px 10px;border-radius:7px;font-size:12px;font-weight:700;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;z-index:60;box-shadow:0 6px 18px rgba(0,0,0,.28);transition:opacity .12s ease}
+  .side.collapsed .navbtn:hover::after{opacity:1;visibility:visible}
 
   /* ───── main ───── */
   .main{flex:1;min-width:0;display:flex;flex-direction:column;height:100vh;min-height:0}
@@ -848,7 +852,7 @@
 </head>
 <body>
 <div class="shell">
-  <aside class="side" id="side">
+  <aside class="side collapsed" id="side">
     <div class="brand">
       <div class="mark">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E7A4B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><line x1="12" y1="3.5" x2="12" y2="9.5"/><line x1="12" y1="14.5" x2="12" y2="20.5"/><line x1="3.5" y1="12" x2="9.5" y2="12"/><line x1="14.5" y1="12" x2="20.5" y2="12"/><line x1="6" y1="6" x2="10.2" y2="10.2"/><line x1="13.8" y1="13.8" x2="18" y2="18"/><line x1="18" y1="6" x2="13.8" y2="10.2"/><line x1="10.2" y1="13.8" x2="6" y2="18"/></svg>
@@ -1335,7 +1339,7 @@ function statusHelp(){
 /* ───── 状態 ───── */
 let state={
   view:"documents",
-  collapsed:false,
+  collapsed:true,
   statusSel:[],   // 選択中のステータス（複数可・空＝すべて）
   categoryFilter:"all", vehCategoryFilter:"all", vehTab:"monitor",
   chartOffice:"all", chart2Cat:"燃料費", chart2Klass:"all",
@@ -1381,7 +1385,7 @@ function renderNav(){
       const active=state.view===it.k;
       const ic=active?it.ic.replace(/#fff/g,'#0E7A4B'):it.ic.replace(/#fff/g,'#CFEAD9');
       const ct=(it.ct==null)?"":((it.hideZero && it.ct===0)?"":`<span class="ct">${it.ct}</span>`);
-      return `<button class="navbtn ${active?"active":""}" title="${it.l}" onclick="setView('${it.k}')">
+      return `<button class="navbtn ${active?"active":""}" title="${it.l}" data-l="${it.l}" onclick="setView('${it.k}')">
         <span class="nic">${ic}</span><span class="lbl">${it.l}</span>${ct}</button>`;
     }).join("");
 }
