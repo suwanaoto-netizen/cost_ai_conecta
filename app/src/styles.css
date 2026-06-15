@@ -503,6 +503,7 @@ table.dt { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width:
 .up-pct { font-size: 12px; color: var(--inkSoft); font-family: var(--mono); }
 .up-track { height: 7px; background: #e7ebef; border-radius: 999px; overflow: hidden; }
 .up-fill { height: 100%; background: var(--green); border-radius: 999px; transition: width 0.18s linear; }
+.up-toast { position: fixed; right: 26px; bottom: 26px; width: 320px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: 0 12px 32px rgba(0,0,0,0.18); z-index: 80; animation: fade 0.2s ease; }
 .uplcat { display: flex; align-items: center; gap: 10px; margin: 16px 2px 0; font-size: 12.5px; }
 
 /* reflect log overlay */
