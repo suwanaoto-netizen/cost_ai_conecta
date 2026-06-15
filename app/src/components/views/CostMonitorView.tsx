@@ -51,8 +51,8 @@ export function CostMonitorView() {
     [docs, lines, manualLines, adjustments, masters, plateIndex, office, range],
   );
 
-  const trashCount = allVeh.filter((v) => vehTrash.has(v.key)).length;
-  const visible = allVeh.filter((v) => (trashView ? vehTrash.has(v.key) : !vehTrash.has(v.key)));
+  const trashCount = allVeh.filter((v) => vehTrash[v.key]).length;
+  const visible = allVeh.filter((v) => (trashView ? vehTrash[v.key] : !vehTrash[v.key]));
   const unread = changelog.length - changelogSeenCount;
   const hasRange = !!(range.start && range.end);
 

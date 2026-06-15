@@ -75,7 +75,8 @@ interface DataStore {
   manualLines: ManualLine[];
   adjustments: Adjustment[];
   changelog: ChangelogEntry[];
-  vehTrash: Set<string>;
+  /** ゴミ箱入り車両キー（encodeVehKey の文字列）。JSON 永続化可能な集合表現。 */
+  vehTrash: Record<string, true>;
   changelogSeenCount: number;
 
   commitVehicleEdit: (c: VehEditCommit) => void;
@@ -131,7 +132,7 @@ export const useDataStore = create<DataStore>((set) => ({
   manualLines: [],
   adjustments: [],
   changelog: initialChangelog,
-  vehTrash: new Set(),
+  vehTrash: {},
   changelogSeenCount: initialChangelog.length,
 
   commitVehicleEdit: ({ vkey, docEdits, manualLines, changelog }) =>
@@ -164,16 +165,14 @@ export const useDataStore = create<DataStore>((set) => ({
     }),
 
   trashVehicle: (entry) =>
-    set((s) => {
-      const t = new Set(s.vehTrash);
-      t.add(entry.vehKey);
-      return { vehTrash: t, changelog: [...s.changelog, entry] };
-    }),
+    set((s) => ({
+      vehTrash: { ...s.vehTrash, [entry.vehKey]: true },
+      changelog: [...s.changelog, entry],
+    })),
   restoreVehicle: (entry) =>
     set((s) => {
-      const t = new Set(s.vehTrash);
-      t.delete(entry.vehKey);
-      return { vehTrash: t, changelog: [...s.changelog, entry] };
+      const { [entry.vehKey]: _omit, ...vehTrash } = s.vehTrash;
+      return { vehTrash, changelog: [...s.changelog, entry] };
     }),
   markChangelogSeen: () => set((s) => ({ changelogSeenCount: s.changelog.length })),
 
