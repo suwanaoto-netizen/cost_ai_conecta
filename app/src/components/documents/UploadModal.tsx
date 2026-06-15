@@ -69,19 +69,32 @@ export function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: 
 
   const canUpload = tab === "new" ? files.length > 0 : !!splitFile;
 
+  // アップロード中は新規・分割どちらのタブでも右下のプログレスバーのみで表示を統一
+  if (proc) {
+    return (
+      <div className="up-toast" role="status" aria-live="polite">
+        <div className="up-row">
+          <span className="up-label">{ocr ? "データ化中（AI-OCR / 明細OCR）" : "ファイルを保存中…"}</span>
+          <span className="up-pct">{Math.round(progress!)}%</span>
+        </div>
+        <div className="up-track">
+          <div className="up-fill" style={{ width: `${progress}%` }} />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="ovl" onMouseDown={(e) => !proc && e.target === e.currentTarget && onClose()}>
+    <div className="ovl" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="m-head">
           <span className="t">{tab === "split" ? "請求書（PDFアップロード）の一括作成" : "アップロード"}</span>
-          {!proc && (
-            <button className="x" onClick={onClose}>
-              <IconX />
-            </button>
-          )}
+          <button className="x" onClick={onClose}>
+            <IconX />
+          </button>
         </div>
 
-        <div className="m-body" style={proc ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+        <div className="m-body">
           <div className="upl-tabs">
             <button className={`upl-tab ${tab === "new" ? "active" : ""}`} onClick={() => setTab("new")}>
               新規アップロード
@@ -170,24 +183,10 @@ export function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: 
           )}
         </div>
 
-        {proc ? (
-          <div className="m-foot" style={{ display: "block" }}>
-            <div className="uprog">
-              <div className="up-row">
-                <span className="up-label">{ocr ? "データ化中（AI-OCR / 明細OCR）" : "ファイルを保存中…"}</span>
-                <span className="up-pct">{Math.round(progress!)}%</span>
-              </div>
-              <div className="up-track">
-                <div className="up-fill" style={{ width: `${progress}%` }} />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="m-foot">
-            <Button variant="cancel" onClick={onClose}>キャンセル</Button>
-            <button className="btn-upload" disabled={!canUpload} onClick={() => setProgress(0)}>アップロード</button>
-          </div>
-        )}
+        <div className="m-foot">
+          <Button variant="cancel" onClick={onClose}>キャンセル</Button>
+          <button className="btn-upload" disabled={!canUpload} onClick={() => setProgress(0)}>アップロード</button>
+        </div>
       </div>
 
       {settingsOpen && pages && (

@@ -235,6 +235,7 @@
   .up-pct{font-size:12px;color:var(--inkSoft);font-family:var(--mono)}
   .up-track{height:7px;background:#E7EBEF;border-radius:999px;overflow:hidden}
   .up-fill{height:100%;background:var(--green);border-radius:999px;transition:width .18s linear}
+  .up-toast{position:fixed;right:26px;bottom:26px;width:320px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:0 12px 32px rgba(0,0,0,.18);z-index:80;animation:fade .2s ease}
 
   /* ───── PDF分割アップロード（フォーム） ───── */
   .sp-desc{font-size:12px;color:var(--inkSoft);line-height:1.75;margin-bottom:6px}
@@ -1704,6 +1705,14 @@ function uplRemove(i){if(state.upload.processing.active)return;state.upload.file
 function toggleOcr(){if(state.upload.processing.active)return;state.upload.ocr=!state.upload.ocr;renderOverlay();}
 function renderUploadModal(){
   const u=state.upload, proc=u.processing.active, has=u.files.length>0;
+  // アップロード中は新規・分割どちらのタブでも右下のプログレスバーのみで表示を統一
+  if(proc){
+    return `<div class="up-toast" role="status" aria-live="polite">
+      <div class="up-row"><span class="up-label" id="up-label">${I.loader('#16A571',14)}<span>${esc(u.processing.label)}</span></span>
+        <span class="up-pct" id="up-pct">${Math.round(u.processing.pct)}%</span></div>
+      <div class="up-track"><div class="up-fill" id="up-fill" style="width:${u.processing.pct}%"></div></div>
+    </div>`;
+  }
   const fileInput=`<input type="file" id="upl-file" multiple accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx,.xls" style="display:none" onchange="handleUploadFiles(this.files)">`;
   const dzAttrs=proc?"":`onclick="pickFiles()" ondragover="uplDragOver(event)" ondragleave="uplDragLeave(event)" ondrop="uplDrop(event)"`;
   let dz;
