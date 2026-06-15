@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDataStore } from "../../store/data";
-import { useMasterStore } from "../../store/master";
+import { useDocs, useLinesOfDoc, useVehicleMasters } from "../../store/selectors";
 import { useSettingsStore } from "../../store/settings";
 import { useStore } from "../../store";
 import type { DocType, Document, Lid, Line } from "../../domain/types";
@@ -43,11 +43,11 @@ export function DocumentPanel({
   onNavigate: (id: string) => void;
   onClose: () => void;
 }) {
-  const docs = useDataStore((s) => s.docs);
-  const lines = useDataStore((s) => s.lines);
+  const docs = useDocs();
+  const docLines = useLinesOfDoc(docId);
   const saveDocDraft = useDataStore((s) => s.saveDocDraft);
   const reflectDocDraft = useDataStore((s) => s.reflectDocDraft);
-  const masters = useMasterStore((s) => s.vehicles);
+  const masters = useVehicleMasters();
   const settings = useSettingsStore((s) => s.live.settings);
   const catDocTypes = useSettingsStore((s) => s.live.catDocTypes);
   const cats = useSettingsStore((s) => s.live.cats);
@@ -70,8 +70,7 @@ export function DocumentPanel({
   useEffect(() => {
     const d = docs.find((x) => x.id === docId);
     if (!d) return;
-    const dl: DraftLine[] = lines
-      .filter((l) => l.docId === docId)
+    const dl: DraftLine[] = docLines
       .map((l) => ({ lid: l.lid, item: l.item, plate: l.plate, kind: l.kind, cat: l.cat, inspectedAt: l.inspectedAt, amount: l.amount, confidence: l.confidence, vehicleId: l.vehicleId, liters: l.liters, unitPrice: l.unitPrice }));
     setDraft({ id: d.id, no: d.no, name: d.name, vendor: d.vendor, cat: d.cat, category: d.category, status: d.status, reflectedAt: d.reflectedAt, lines: dl });
     // 原本スナップショット（プレビュー用・以後の編集では不変）

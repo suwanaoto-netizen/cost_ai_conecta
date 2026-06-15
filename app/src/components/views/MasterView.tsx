@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useMasterStore, type MasterForm } from "../../store/master";
+import { type MasterForm } from "../../store/master";
+import { useVehicleMasters } from "../../store/selectors";
 import { nextOverlayId, useStore } from "../../store";
 import { useSettingsStore } from "../../store/settings";
 import type { VehicleMaster } from "../../domain/types";
@@ -31,7 +32,7 @@ function downloadCsv(vehicles: VehicleMaster[]) {
 }
 
 export function MasterView() {
-  const vehicles = useMasterStore((s) => s.vehicles);
+  const vehicles = useVehicleMasters();
   const pushOverlay = useStore((s) => s.pushOverlay);
   const showToast = useStore((s) => s.showToast);
   const defaultPageSize = useSettingsStore((s) => s.live.settings.defaultPageSize);
