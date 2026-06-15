@@ -334,7 +334,7 @@ table.vt { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width:
 .vcal-close { background: none; border: none; font-size: 12px; font-weight: 800; color: var(--greenDark); cursor: pointer; }
 
 /* documents toolbar */
-.toolbar { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 13px 16px; margin-bottom: var(--space-rel); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.toolbar { padding: 0; margin-bottom: var(--space-rel); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .srch { display: flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 9px; padding: 7px 11px; background: #fff; min-width: 210px; }
 .srch input { border: none; outline: none; font-size: 13px; font-family: var(--sans); flex: 1; background: none; color: var(--ink); }
 .tb-spacer { flex: 1; }
