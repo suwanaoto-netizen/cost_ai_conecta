@@ -7,13 +7,11 @@ import {
 } from "../../store/settings";
 import { nextOverlayId, useStore } from "../../store";
 import { navigateGuarded } from "../../nav";
-import { DOC_TYPES } from "../../domain/settings";
 import { SettingCard, SettingRow } from "../settings/SettingCard";
 import { DataLinkCard } from "../settings/DataLinkCard";
 import { SettingsSaveConfirm } from "../settings/confirms";
 import { Switch } from "../common/Switch";
 import { Button } from "../common/Button";
-import { CatPill } from "../common/CatPill";
 import { IconGear, IconDocs, IconDb, IconTruck, IconAlert, IconCheck } from "../common/Icon";
 
 export function SettingsView() {
@@ -23,7 +21,6 @@ export function SettingsView() {
   const pushOverlay = useStore((s) => s.pushOverlay);
   const showToast = useStore((s) => s.showToast);
   const officeRef = useRef<HTMLInputElement>(null);
-  const catRef = useRef<HTMLInputElement>(null);
 
   const s = snap.settings;
   const pct = Math.round(s.matchThreshold * 100);
@@ -54,12 +51,6 @@ export function SettingsView() {
     if (!v.trim()) return showToast("営業所名を入力してください");
     if (!st.addCategory(v)) return showToast("すでに存在します");
     if (officeRef.current) officeRef.current.value = "";
-  };
-  const addCat = () => {
-    const v = catRef.current?.value ?? "";
-    if (!v.trim()) return showToast("分類名を入力してください");
-    if (!st.addCat(v)) return showToast("すでに存在します");
-    if (catRef.current) catRef.current.value = "";
   };
 
   return (
@@ -145,43 +136,14 @@ export function SettingsView() {
           </div>
         </SettingCard>
 
-        <SettingCard title="コスト分類と想定書類タイプ" icon={<IconDb color="#16A571" size={15} />}>
-          <div className="set-d" style={{ marginBottom: 10 }}>
-            明細のコスト分類ごとに、想定される書類タイプを紐付けます（チップをクリックで切替）。コストモニターの内訳集計にも使われます。
+        <SettingCard title="コスト分類" icon={<IconDb color="#16A571" size={15} />}>
+          <div className="set-d">
+            コスト分類（コスト構造）の管理は <b>「マスタデータ」</b> ページの <b>「コスト分類」</b> タブに移動しました。
+            分類の追加・削除、想定書類タイプの紐付け、連携用内訳コードの確認が行えます。
           </div>
-          <div>
-            {snap.cats.map((c) => (
-              <div className="cat-row" key={c}>
-                <span className="cat-name">
-                  <CatPill cat={c} />
-                </span>
-                <span className="cat-dts">
-                  {DOC_TYPES.map((t) => {
-                    const on = (snap.catDocTypes[c] ?? []).includes(t);
-                    return (
-                      <span
-                        key={t}
-                        className={`dt-chip ${on ? "on" : ""}`}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => st.toggleCatDocType(c, t)}
-                        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && st.toggleCatDocType(c, t)}
-                      >
-                        {t}
-                      </span>
-                    );
-                  })}
-                </span>
-                <button className="cat-del" title="分類を削除" onClick={() => st.removeCat(c)}>
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="set-add" style={{ marginTop: 12 }}>
-            <input ref={catRef} className="in" placeholder="新しい分類名（例：洗車費）" style={{ maxWidth: 260 }} onKeyDown={(e) => e.key === "Enter" && addCat()} />
-            <Button variant="green" style={{ padding: "8px 14px" }} onClick={addCat}>
-              追加
+          <div style={{ marginTop: 12 }}>
+            <Button variant="ghost" onClick={() => navigateGuarded("master")}>
+              <IconDb color="#0E7A4B" size={15} /> マスタデータを開く
             </Button>
           </div>
         </SettingCard>

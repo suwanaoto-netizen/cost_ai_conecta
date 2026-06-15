@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { VehicleMaster } from "../domain/types";
 import { seedVehicleMasters } from "../domain/masterSeed";
+import { DEFAULT_COST_CATS, type CostCat } from "../domain/costCats";
 
 /** 編集フォームの入力値（保存前の作業用）。 */
 export interface MasterForm {
@@ -26,6 +27,15 @@ interface MasterStore {
   /** 新規追加または既存更新。 */
   upsert: (form: MasterForm) => void;
   remove: (no: number) => void;
+
+  /** コスト分類マスタ（車両マスタと同じく即時反映）。 */
+  costCats: CostCat[];
+  /** コスト分類を追加（既定の想定書類タイプ=請求書）。false=重複。 */
+  addCostCat: (name: string) => boolean;
+  /** コスト分類を削除。 */
+  removeCostCat: (name: string) => void;
+  /** 想定書類タイプのトグル。 */
+  toggleCatDocType: (cat: string, dtype: string) => void;
 }
 
 let _seq = seeded.length; // 車両ID採番の継続
@@ -62,4 +72,26 @@ export const useMasterStore = create<MasterStore>((set, get) => ({
     }),
 
   remove: (no) => set((s) => ({ vehicles: s.vehicles.filter((v) => v.no !== no) })),
+
+  costCats: DEFAULT_COST_CATS.map((c) => ({ ...c, docTypes: [...c.docTypes] })),
+
+  addCostCat: (name) => {
+    const t = name.trim();
+    if (!t) return false;
+    if (get().costCats.some((c) => c.name === t)) return false;
+    set((s) => ({ costCats: [...s.costCats, { name: t, docTypes: ["請求書"] }] }));
+    return true;
+  },
+
+  removeCostCat: (name) =>
+    set((s) => ({ costCats: s.costCats.filter((c) => c.name !== name) })),
+
+  toggleCatDocType: (cat, dtype) =>
+    set((s) => ({
+      costCats: s.costCats.map((c) => {
+        if (c.name !== cat) return c;
+        const on = c.docTypes.includes(dtype);
+        return { ...c, docTypes: on ? c.docTypes.filter((t) => t !== dtype) : [...c.docTypes, dtype] };
+      }),
+    })),
 }));

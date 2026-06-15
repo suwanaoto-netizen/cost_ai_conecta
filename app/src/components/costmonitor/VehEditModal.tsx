@@ -22,8 +22,6 @@ interface Row {
 
 let _mlSeq = 1;
 
-const CATS = ["燃料費", "修繕・維持費", "通行料", "保険料", "調達コスト", "税金"];
-
 export function VehEditModal({
   vkey,
   kind,
@@ -43,6 +41,7 @@ export function VehEditModal({
   const adjustments = useDataStore((s) => s.adjustments);
   const commit = useDataStore((s) => s.commitVehicleEdit);
   const masters = useMasterStore((s) => s.vehicles);
+  const cats = useMasterStore((s) => s.costCats);
   const showToast = useStore((s) => s.showToast);
 
   // この車両の全明細（期間フィルタ非適用）を実効値で取得
@@ -150,8 +149,8 @@ export function VehEditModal({
                   </td>
                   <td>
                     <select className="vd-in" value={r.cat} onChange={(e) => setField(r.key, "cat", e.target.value)}>
-                      {CATS.map((c) => (
-                        <option key={c}>{c}</option>
+                      {cats.map((c) => (
+                        <option key={c.name}>{c.name}</option>
                       ))}
                     </select>
                   </td>
