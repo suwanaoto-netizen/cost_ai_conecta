@@ -1837,7 +1837,7 @@ function renderDupAlert(){
       </div>
     </label>`;
   }).join("");
-  return `<div class="ovl anim" style="z-index:80" onclick="if(event.target===this)dupCancel()"><div class="modal" style="width:min(560px,100%)">
+  return `<div class="ovl ${state._ovFresh?'anim':''}" style="z-index:80" onclick="if(event.target===this)dupCancel()"><div class="modal" style="width:min(560px,100%)">
     <div class="m-head"><span class="t"></span><button class="x" onclick="dupCancel()">${I.x("#5A6472",18)}</button></div>
     <div class="m-body">
       <p class="dup-lead">今回選択した書類全${total}件のうち${dupCount}件が、すでに同じ書類名で保存されています。<br>アップロードに含める書類をチェックしてください。</p>
