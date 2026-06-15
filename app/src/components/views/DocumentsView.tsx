@@ -23,6 +23,7 @@ export function DocumentsView() {
   const lines = useLines();
   const markEntered = useDataStore((s) => s.markEntered);
   const reflectMany = useDataStore((s) => s.reflectMany);
+  const recomputeAlerts = useDataStore((s) => s.recomputeAlerts);
   const changeOffice = useDataStore((s) => s.changeOffice);
   const setDeleted = useDataStore((s) => s.setDeleted);
   const plateIndex = usePlateIndex();
@@ -345,7 +346,7 @@ export function DocumentsView() {
           plateIndex={plateIndex}
           threshold={threshold}
           doneLabel={`${reflectingIds.length}件の書類をデータ連携しました`}
-          onClose={() => { const n = reflectingIds.length; reflectMany(reflectingIds); setReflectingIds(null); resetSelection(); showToast(`${n}件を車両コストへデータ連携しました`); }}
+          onClose={() => { const n = reflectingIds.length; reflectMany(reflectingIds); recomputeAlerts(); setReflectingIds(null); resetSelection(); showToast(`${n}件を車両コストへデータ連携しました`); }}
         />
       )}
     </>
