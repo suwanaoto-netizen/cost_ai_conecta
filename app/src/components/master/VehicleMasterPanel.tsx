@@ -96,6 +96,7 @@ export function VehicleMasterPanel() {
                 <th>No</th>
                 <th>車両番号</th>
                 <th>車台番号</th>
+                <th>車格</th>
                 <th>車両コード</th>
                 <th>社内名称</th>
                 <th>営業所</th>
@@ -108,7 +109,7 @@ export function VehicleMasterPanel() {
             <tbody>
               {pageList.length === 0 ? (
                 <tr>
-                  <td colSpan={10} style={{ textAlign: "center", padding: 34, color: "var(--inkSoft)" }}>
+                  <td colSpan={11} style={{ textAlign: "center", padding: 34, color: "var(--inkSoft)" }}>
                     登録済みの車両がありません。右上から登録してください。
                   </td>
                 </tr>
@@ -120,6 +121,7 @@ export function VehicleMasterPanel() {
                       <span className="plate">{v.plate}</span>
                     </td>
                     <td style={{ fontFamily: "var(--mono)", fontSize: 11.5, color: "var(--inkSoft)" }}>{cell(v.chassis)}</td>
+                    <td>{cell(v.klass)}</td>
                     <td>{cell(v.code)}</td>
                     <td>{cell(v.name)}</td>
                     <td>{cell(v.office)}</td>
