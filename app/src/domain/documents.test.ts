@@ -32,7 +32,7 @@ describe("documents helpers", () => {
 
 describe("buildReflectPlan", () => {
   const master = (id: string, plate: string): VehicleMaster => ({
-    no: 1, id, plate, chassis: "", code: "", name: "", note: "", office: "", maxLoad: "", grossWeight: "", size: "", klass: "",
+    no: 1, id, plate, chassis: "", code: "", name: "", note: "", office: "", maxLoad: null, grossWeight: null, size: "", klass: "",
   });
   const idx = buildPlateIndex([master("veh_1", "名古屋100あ1234")]);
 

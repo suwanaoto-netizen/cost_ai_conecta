@@ -11,7 +11,7 @@ import { IconCheck, IconAlert } from "../common/Icon";
 
 const EMPTY: MasterForm = {
   no: null, plate: "", chassis: "", code: "", name: "", note: "", office: "",
-  maxLoad: "", grossWeight: "", size: "", klass: "",
+  maxLoad: null, grossWeight: null, size: "", klass: "",
 };
 
 function KlassBadge({ matched, klass, raw }: { matched: boolean; klass: string; raw: string }) {
@@ -54,8 +54,8 @@ export function MasterEditModal({ initial, onClose }: { initial?: MasterForm; on
     setForm((f) => ({
       ...f,
       chassis: val,
-      maxLoad: spec ? spec.maxLoad : "",
-      grossWeight: spec ? spec.gross : "",
+      maxLoad: spec ? spec.maxLoad : null,
+      grossWeight: spec ? spec.gross : null,
       size: spec ? spec.size : "",
       klass: spec ? spec.klass : "",
     }));

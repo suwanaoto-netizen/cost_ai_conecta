@@ -34,8 +34,8 @@ export function seedVehicleMasters(): VehicleMaster[] {
       name: "",
       note: "",
       office: officeFromPlate(p, DEFAULT_CATEGORIES),
-      maxLoad: spec ? spec.maxLoad : "",
-      grossWeight: spec ? spec.gross : "",
+      maxLoad: spec ? spec.maxLoad : null,
+      grossWeight: spec ? spec.gross : null,
       size: spec ? spec.size : "",
       klass: spec ? spec.klass : "",
     });
