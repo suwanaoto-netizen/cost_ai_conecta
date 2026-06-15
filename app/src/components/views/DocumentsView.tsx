@@ -100,18 +100,19 @@ export function DocumentsView() {
           <div className="statusfilter" role="group" aria-label="ステータスで絞り込み">
             {STATUS_OPTIONS.map((s) => {
               const on = statusSel.has(s);
+              const showCount = s !== "連携済み";
               return (
                 <button
                   key={s}
                   type="button"
                   className={`stchip ${STATUS_CLASS[s]} ${on ? "on" : ""}`}
                   aria-pressed={on}
-                  aria-label={`${s} ${counts[s]}件${on ? "（絞り込み中）" : ""}`}
+                  aria-label={`${s}${showCount ? ` ${counts[s]}件` : ""}${on ? "（絞り込み中）" : ""}`}
                   onClick={() => toggleStatus(s)}
                 >
                   <span className="dot" />
                   {s}
-                  <span className="n">{counts[s]}</span>
+                  {showCount && <span className="n">{counts[s]}</span>}
                   {on && <span className="ck" aria-hidden>✓</span>}
                 </button>
               );
