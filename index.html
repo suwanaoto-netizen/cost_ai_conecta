@@ -412,6 +412,17 @@
   .dt-chip.on{background:var(--greenSoft);border-color:var(--green);color:var(--greenDark)}
   .cat-del{border:none;background:#EEF0EC;color:var(--inkSoft);width:22px;height:22px;border-radius:999px;cursor:pointer;font-size:14px;line-height:1}
   .cat-del:hover{background:var(--alertSoft);color:var(--alert)}
+  /* コスト分類マスタ（マスタデータ → コスト分類タブ） */
+  .ccat-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px 18px}
+  .ccat-row{display:flex;align-items:flex-start;gap:14px;padding:16px 0;border-bottom:1px solid var(--lineSoft)}
+  .ccat-row:last-child{border-bottom:none}
+  .ccat-head{min-width:120px;display:inline-flex;align-items:center;padding-top:3px}
+  .ccat-body{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0}
+  .ccat-field{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .ccat-lab{font-size:11.5px;font-weight:800;color:var(--inkSoft);min-width:132px}
+  .ccat-sub{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--ink);border:1px solid var(--lineSoft);background:var(--panel);border-radius:999px;padding:4px 11px}
+  .ccat-sub .mono{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--inkFaint)}
+  .ccat-empty{font-size:11.5px;color:var(--inkFaint)}
   .exp-hint{font-weight:600;font-size:11px;color:var(--green);margin-left:6px}
   /* 金額：OCR読み取り候補ドロップダウン */
   .amt-combo{position:relative}
@@ -3094,13 +3105,6 @@ function renderSettings(){
   const d=ensureSettingsDraft();
   const s=d.settings;
   const sw=(on,fn)=>`<div class="switch ${on?"on":""}" onclick="${fn}"><div class="knob"></div></div>`;
-  const catRows=d.cats.map(c=>{
-    const dts=DOC_TYPES.map(t=>{const on=(d.catDocTypes[c]||[]).includes(t);
-      return `<span class="dt-chip ${on?"on":""}" onclick="toggleCatDocType('${esc(c)}','${esc(t)}')">${esc(t)}</span>`;}).join("");
-    return `<div class="cat-row"><span class="cat-name">${catPill(c)}</span>
-      <span class="cat-dts">${dts}</span>
-      <button class="cat-del" title="分類を削除" onclick="removeCat('${esc(c)}')">×</button></div>`;
-  }).join("");
   const officeChips=d.categories.map(c=>`<span class="set-chip">${esc(c)}<button title="削除" onclick="removeCategory('${esc(c)}')">×</button></span>`).join("");
   const dirty=settingsDirty();
   const saveBar=dirty?`<div class="set-savebar">
@@ -3139,10 +3143,9 @@ function renderSettings(){
     </div>
 
     <div class="set-card">
-      <div class="set-h">${I.db("#16A571",15)} コスト分類と想定書類タイプ</div>
-      <div class="set-d" style="margin-bottom:10px">明細のコスト分類ごとに、想定される書類タイプを紐付けます（チップをクリックで切替）。コストモニターの内訳集計にも使われます。</div>
-      <div>${catRows}</div>
-      <div class="set-add" style="margin-top:12px"><input class="in" id="new-cat" placeholder="新しい分類名（例：洗車費）" style="max-width:260px"><button class="btn-green" style="padding:8px 14px" onclick="addCat()">${I.plus()} 追加</button></div>
+      <div class="set-h">${I.db("#16A571",15)} コスト分類</div>
+      <div class="set-d">コスト分類（コスト構造）の管理は <b>「マスタデータ」</b> ページの <b>「コスト分類」</b> タブに移動しました。分類の追加・削除、想定書類タイプの紐付け、連携用内訳コードの確認が行えます。</div>
+      <div style="margin-top:12px"><button class="btn-ghost" onclick="openMasterCostCats()">${I.db("#0E7A4B",15)} マスタデータを開く</button></div>
     </div>
 
     ${renderDataLinkCard(s)}
@@ -3223,8 +3226,6 @@ function ensureSettingsDraft(){
     state.settingsDraft={
       settings:JSON.parse(JSON.stringify(state.settings)),
       categories:[...CATEGORIES],
-      cats:[...CATS],
-      catDocTypes:JSON.parse(JSON.stringify(CAT_DOCTYPES)),
     };
   }
   return state.settingsDraft;
@@ -3232,9 +3233,7 @@ function ensureSettingsDraft(){
 function settingsDirty(){
   const d=state.settingsDraft; if(!d) return false;
   return JSON.stringify(d.settings)!==JSON.stringify(state.settings)
-    || JSON.stringify(d.categories)!==JSON.stringify(CATEGORIES)
-    || JSON.stringify(d.cats)!==JSON.stringify(CATS)
-    || JSON.stringify(d.catDocTypes)!==JSON.stringify(CAT_DOCTYPES);
+    || JSON.stringify(d.categories)!==JSON.stringify(CATEGORIES);
 }
 /* 変更点を人が読める差分として列挙（保存確認モーダルで使用） */
 function settingsDiff(){
@@ -3256,23 +3255,12 @@ function settingsDiff(){
     live.filter(x=>!draft.includes(x)).forEach(x=>out.push(`${label}を削除：${x}`));
   };
   diffArr(CATEGORIES,d.categories,"営業所");
-  diffArr(CATS,d.cats,"コスト分類");
-  d.cats.forEach(c=>{ if(!CATS.includes(c)) return;
-    const a=(CAT_DOCTYPES[c]||[]).slice().sort(), b=(d.catDocTypes[c]||[]).slice().sort();
-    if(JSON.stringify(a)!==JSON.stringify(b)) out.push(`「${c}」の想定書類タイプを変更`);
-  });
   return out;
 }
 function setSetting(k,v){ ensureSettingsDraft().settings[k]=v; render(); }
 function toggleSetting(k){ const d=ensureSettingsDraft(); d.settings[k]=!d.settings[k]; render(); }
 function setMatchThreshold(pct){ ensureSettingsDraft().settings.matchThreshold=Math.max(.5,Math.min(.99,(+pct)/100)); render(); }
 function setDefaultPageSize(n){ ensureSettingsDraft().settings.defaultPageSize=+n; render(); }
-function addCat(){ const d=ensureSettingsDraft(); const el=document.getElementById("new-cat"); const v=(el?el.value:"").trim();
-  if(!v){ toast("分類名を入力してください"); return; } if(d.cats.includes(v)){ toast("すでに存在します"); return; }
-  d.cats.push(v); if(!d.catDocTypes[v]) d.catDocTypes[v]=["請求書"]; render(); }
-function removeCat(c){ const d=ensureSettingsDraft(); const i=d.cats.indexOf(c); if(i>=0) d.cats.splice(i,1); delete d.catDocTypes[c]; render(); }
-function toggleCatDocType(cat,dtype){ const d=ensureSettingsDraft(); const arr=d.catDocTypes[cat]||(d.catDocTypes[cat]=[]);
-  const i=arr.indexOf(dtype); if(i>=0) arr.splice(i,1); else arr.push(dtype); render(); }
 function addCategory(){ const d=ensureSettingsDraft(); const el=document.getElementById("new-office"); const v=(el?el.value:"").trim();
   if(!v){ toast("営業所名を入力してください"); return; } if(d.categories.includes(v)){ toast("すでに存在します"); return; }
   d.categories.push(v); render(); }
@@ -3294,9 +3282,6 @@ function commitSettings(){
     CATEGORIES.length=0; d.categories.forEach(c=>CATEGORIES.push(c));
     if(!CATEGORIES.includes(state.categoryFilter)) state.categoryFilter="all";
     if(!CATEGORIES.includes(state.vehCategoryFilter)) state.vehCategoryFilter="all";
-    CATS.length=0; d.cats.forEach(c=>CATS.push(c));
-    Object.keys(CAT_DOCTYPES).forEach(k=>delete CAT_DOCTYPES[k]);
-    d.cats.forEach(c=>{ CAT_DOCTYPES[c]=(d.catDocTypes[c]||["請求書"]).slice(); });
   }
   state.settingsDraft=null; state.settingsSaveConfirm=false;
   render(); toast("設定を保存しました");
@@ -3337,9 +3322,69 @@ function renderSettingsLeaveConfirm(){
   </div></div>`;
 }
 
-/* ───── マスタデータ（車両マスタ） ───── */
+/* ───── マスタデータ（車両マスタ / コスト分類のタブ構成） ───── */
 function _fmtKg(n){ return (n===""||n==null||isNaN(+n))?"":Number(n).toLocaleString("ja-JP")+" kg"; }
+function setMasterTab(t){ state.masterTab=t; render(); }
+/* 設定 → コスト分類マスタへの導線（タブをコスト分類に合わせて遷移） */
+function openMasterCostCats(){ state.masterTab="costCats"; setView("master"); }
 function renderMaster(){
+  const tab=state.masterTab||"vehicles";
+  const tabs=`<div class="upl-tabs" style="margin-bottom:18px">
+    <button class="upl-tab ${tab==="vehicles"?"active":""}" onclick="setMasterTab('vehicles')">車両マスタ</button>
+    <button class="upl-tab ${tab==="costCats"?"active":""}" onclick="setMasterTab('costCats')">コスト分類</button>
+  </div>`;
+  return tabs + (tab==="costCats" ? renderCostCats() : renderVehicleMaster());
+}
+/* コスト分類マスタ（コスト構造の真実源 CATS / CAT_DOCTYPES を直接編集＝即時反映） */
+function renderCostCats(){
+  const rows=CATS.map(c=>{
+    const dts=DOC_TYPES.map(t=>{const on=(CAT_DOCTYPES[c]||[]).includes(t);
+      return `<span class="dt-chip ${on?"on":""}" onclick="masterToggleCatDocType('${esc(c)}','${esc(t)}')">${esc(t)}</span>`;}).join("");
+    const subs=SUBCATS_BY_CAT[c]||[];
+    const subHtml=subs.length
+      ? subs.map(s=>`<span class="ccat-sub" title="連携コード: ${esc(s.code)}"><span class="mono">${esc(s.code)}</span>${esc(s.label)}</span>`).join("")
+      : `<span class="ccat-empty">内訳なし（連携コードを持たない分類）</span>`;
+    return `<div class="ccat-row">
+      <div class="ccat-head">${catPill(c)}</div>
+      <div class="ccat-body">
+        <div class="ccat-field"><span class="ccat-lab">想定書類タイプ</span>${dts}</div>
+        <div class="ccat-field"><span class="ccat-lab">内訳（連携コード）</span>${subHtml}</div>
+      </div>
+      <button class="cat-del" title="分類を削除" onclick="masterRemoveCat('${esc(c)}')">×</button>
+    </div>`;
+  }).join("");
+  const head=`<div class="pagehead"><div><h1>コスト分類</h1><p>明細のコスト分類（コスト構造）のマスタです。分類ごとに <b>想定書類タイプ</b>（書類タイプのヒント・コストモニター内訳集計に使用）を紐付けます。<b>連携用の内訳コード</b>は外部サービス連携の契約キーのため、参照のみ（システム側で固定）です。</p></div>
+    <div class="set-add" style="margin-left:auto"><input class="in" id="new-master-cat" placeholder="新しい分類名（例：洗車費）" style="max-width:220px"><button class="btn-green" onclick="masterAddCat()">${I.plus()} 分類を追加</button></div></div>`;
+  return head+`<div class="ccat-card">${rows}</div>`;
+}
+function masterAddCat(){ const el=document.getElementById("new-master-cat"); const v=(el?el.value:"").trim();
+  if(!v){ toast("分類名を入力してください"); return; } if(CATS.includes(v)){ toast("すでに存在します"); return; }
+  CATS.push(v); if(!CAT_DOCTYPES[v]) CAT_DOCTYPES[v]=["請求書"]; render(); toast("コスト分類を追加しました"); }
+function masterToggleCatDocType(cat,dtype){ const arr=CAT_DOCTYPES[cat]||(CAT_DOCTYPES[cat]=[]);
+  const i=arr.indexOf(dtype); if(i>=0) arr.splice(i,1); else arr.push(dtype); render(); }
+/* 削除は連携済み（凍結）データへの影響を警告する確認モーダルを挟む */
+function masterRemoveCat(c){ state.costCatDelete=c; renderOverlay(); }
+function cancelCostCatDelete(){ state.costCatDelete=null; renderOverlay(); }
+function confirmCostCatDelete(){ const c=state.costCatDelete; const i=CATS.indexOf(c); if(i>=0) CATS.splice(i,1); delete CAT_DOCTYPES[c];
+  state.costCatDelete=null; render(); toast("コスト分類を削除しました"); }
+function renderCostCatDeleteConfirm(){
+  if(!state.costCatDelete) return "";
+  const c=state.costCatDelete;
+  return `<div class="ovl anim" style="z-index:80" onclick="if(event.target===this)cancelCostCatDelete()"><div class="modal" style="width:min(480px,100%)">
+    <div class="m-head"><span class="t">${I.alert("#B87514",18)} コスト分類を削除</span>
+      <button class="x" onclick="cancelCostCatDelete()">${I.x("#5A6472",18)}</button></div>
+    <div class="m-body">
+      <div class="ce-warn">${I.alert("#B87514",18)}<div>
+        <div class="ce-q">コスト分類「${esc(c)}」を削除しますか？</div>
+        <div class="ce-note">連携済み（凍結）の明細にこの分類が残っている場合、表示は既定色にフォールバックします。新しい明細でこの分類は選べなくなります。</div></div></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn-cancel" onclick="cancelCostCatDelete()">キャンセル</button>
+      <button class="btn-danger" onclick="confirmCostCatDelete()">削除する</button>
+    </div>
+  </div></div>`;
+}
+function renderVehicleMaster(){
   const list=VEHICLE_MASTER.slice().sort((a,b)=>b.no-a.no);
   const per=state.masterPerPage;
   const pages=Math.max(1,Math.ceil(list.length/per));
@@ -3363,7 +3408,7 @@ function renderMaster(){
     <td style="text-align:right;white-space:nowrap">
       <button class="veh-edit-btn" onclick="event.stopPropagation();openMasterEdit(${v.no})">${I.pencil("#0E7A4B",13)} 編集</button>
     </td></tr>`).join("");
-  const head=`<div class="pagehead"><div><h1>マスタデータ</h1><p>車両を登録しておくと、請求書の突合や支払申請などで選択できるようになります。車台番号を入力すると<b>自検協データと突合</b>し、車格・最大積載量・車両総重量・サイズを自動反映します。</p></div>
+  const head=`<div class="pagehead"><div><h1>車両マスタ</h1><p>車両を登録しておくと、請求書の突合や支払申請などで選択できるようになります。車台番号を入力すると<b>自検協データと突合</b>し、車格・最大積載量・車両総重量・サイズを自動反映します。</p></div>
     <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
       <button class="btn-ghost" onclick="downloadMasterCsv()">${I.docs("#0E7A4B",16)} CSVダウンロード</button>
       <button class="btn-green" onclick="openMasterNew()">${I.plus()} 新しい車両を登録</button>
@@ -3499,6 +3544,7 @@ function renderOverlay(){
   if(state.docTrashAction) h+=renderDocTrashConfirm();
   if(state.settingsSaveConfirm) h+=renderSettingsSaveConfirm();
   if(state.settingsLeave) h+=renderSettingsLeaveConfirm();
+  if(state.costCatDelete) h+=renderCostCatDeleteConfirm();
   const os=_captureScroll(ov);
   ov.innerHTML=h;
   _restoreScroll(ov,os);

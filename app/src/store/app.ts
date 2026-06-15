@@ -19,6 +19,7 @@ import { yen } from "../domain/format";
 import { resolveSubcat } from "../domain/repairSubcat";
 import { pruneAdjustments } from "../domain/adjustments";
 import { freezeLine } from "../domain/freeze";
+import { DEFAULT_COST_CATS, type CostCat } from "../domain/costCats";
 
 export const CURRENT_USER = "諏訪 尚杜";
 
@@ -97,6 +98,8 @@ interface AppStore {
   // 車両マスタ（id 索引 + 表示順）
   vehiclesById: Record<string, VehicleMaster>;
   vehicleOrder: string[];
+  // コスト分類マスタ（コスト構造の真実源。車両マスタと同じく即時反映）
+  costCats: CostCat[];
   // その他
   changelog: ChangelogEntry[];
   vehTrash: Record<string, true>;
@@ -121,6 +124,11 @@ interface AppStore {
   isPlateTaken: (plate: string, exceptNo: number | null) => boolean;
   upsert: (form: MasterForm) => void;
   remove: (no: number) => VehicleRemoveResult;
+
+  // コスト分類マスタ
+  addCostCat: (name: string) => boolean; // false=重複
+  removeCostCat: (name: string) => void;
+  toggleCatDocType: (cat: string, dtype: string) => void;
 }
 
 // ---- 初期シードを正規化形へ ----
@@ -205,6 +213,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   adjustmentsById: {},
   vehiclesById: initVehiclesById,
   vehicleOrder: initVehicleOrder,
+  costCats: DEFAULT_COST_CATS.map((c) => ({ ...c, docTypes: [...c.docTypes] })),
   changelog: initialChangelog,
   vehTrash: {},
   changelogSeenCount: initialChangelog.length,
@@ -384,6 +393,26 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ vehiclesById, vehicleOrder: s.vehicleOrder.filter((id) => id !== target.id), manualLinesById });
     return { ok: true, removedManual };
   },
+
+  addCostCat: (name) => {
+    const t = name.trim();
+    if (!t) return false;
+    if (get().costCats.some((c) => c.name === t)) return false;
+    set((s) => ({ costCats: [...s.costCats, { name: t, docTypes: ["請求書"] }] }));
+    return true;
+  },
+
+  removeCostCat: (name) =>
+    set((s) => ({ costCats: s.costCats.filter((c) => c.name !== name) })),
+
+  toggleCatDocType: (cat, dtype) =>
+    set((s) => ({
+      costCats: s.costCats.map((c) => {
+        if (c.name !== cat) return c;
+        const on = c.docTypes.includes(dtype);
+        return { ...c, docTypes: on ? c.docTypes.filter((t) => t !== dtype) : [...c.docTypes, dtype] };
+      }),
+    })),
 }));
 
 export function nowStamp(): string {

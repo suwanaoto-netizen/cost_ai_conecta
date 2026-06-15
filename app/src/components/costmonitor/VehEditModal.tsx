@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useDataStore, CURRENT_USER, type DocLineEdit } from "../../store/data";
+import { useMasterStore } from "../../store/master";
 import { useVehicles } from "../../store/selectors";
 import { useStore } from "../../store";
 import { yen } from "../../domain/format";
@@ -21,8 +22,6 @@ interface Row {
 
 let _mlSeq = 1;
 
-const CATS = ["燃料費", "修繕・維持費", "通行料", "保険料", "調達コスト", "税金"];
-
 export function VehEditModal({
   vkey,
   kind,
@@ -37,6 +36,7 @@ export function VehEditModal({
   onClose: () => void;
 }) {
   const commit = useDataStore((s) => s.commitVehicleEdit);
+  const cats = useMasterStore((s) => s.costCats);
   const showToast = useStore((s) => s.showToast);
   const vehicles = useVehicles();
 
@@ -144,8 +144,8 @@ export function VehEditModal({
                   </td>
                   <td>
                     <select className="vd-in" value={r.cat} onChange={(e) => setField(r.key, "cat", e.target.value)}>
-                      {CATS.map((c) => (
-                        <option key={c}>{c}</option>
+                      {cats.map((c) => (
+                        <option key={c.name}>{c.name}</option>
                       ))}
                     </select>
                   </td>

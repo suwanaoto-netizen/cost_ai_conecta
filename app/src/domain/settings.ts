@@ -22,12 +22,13 @@ export interface Settings {
   externalFormat: ExternalFormat;
 }
 
-/** 設定ページが編集対象とする全データのスナップショット。 */
+/**
+ * 設定ページが編集対象とする全データのスナップショット。
+ * コスト分類（旧 cats / catDocTypes）はマスタデータへ移管したため、ここでは扱わない（master ストア参照）。
+ */
 export interface SettingsSnapshot {
   settings: Settings;
   categories: string[]; // 営業所
-  cats: string[]; // コスト分類
-  catDocTypes: Record<string, string[]>; // 分類 → 想定書類タイプ
 }
 
 export const DOC_TYPES: DocType[] = [
@@ -58,34 +59,19 @@ export const DEFAULT_CATEGORIES = [
   "名古屋営業所", "岡崎営業所", "一宮営業所", "岐阜営業所", "四日市営業所",
 ];
 
-export const DEFAULT_CATS = ["燃料費", "修繕・維持費", "通行料", "保険料", "調達コスト", "税金"];
-
-export const DEFAULT_CAT_DOCTYPES: Record<string, string[]> = {
-  燃料費: ["請求書"],
-  "修繕・維持費": ["請求書", "見積書"],
-  通行料: ["明細書", "請求書"],
-  保険料: ["保険証券", "請求書"],
-  調達コスト: ["請求書", "明細書"],
-  税金: ["納付書", "明細書"],
-};
-
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 
 export function freshSnapshot(): SettingsSnapshot {
   return {
     settings: clone(DEFAULT_SETTINGS),
     categories: [...DEFAULT_CATEGORIES],
-    cats: [...DEFAULT_CATS],
-    catDocTypes: clone(DEFAULT_CAT_DOCTYPES),
   };
 }
 
 export function snapshotEquals(a: SettingsSnapshot, b: SettingsSnapshot): boolean {
   return (
     JSON.stringify(a.settings) === JSON.stringify(b.settings) &&
-    JSON.stringify(a.categories) === JSON.stringify(b.categories) &&
-    JSON.stringify(a.cats) === JSON.stringify(b.cats) &&
-    JSON.stringify(a.catDocTypes) === JSON.stringify(b.catDocTypes)
+    JSON.stringify(a.categories) === JSON.stringify(b.categories)
   );
 }
 
@@ -130,12 +116,5 @@ export function diffSnapshots(live: SettingsSnapshot, draft: SettingsSnapshot): 
     l.filter((x) => !d.includes(x)).forEach((x) => out.push(`${label}を削除：${x}`));
   };
   diffArr(live.categories, draft.categories, "営業所");
-  diffArr(live.cats, draft.cats, "コスト分類");
-  draft.cats.forEach((c) => {
-    if (!live.cats.includes(c)) return;
-    const a = (live.catDocTypes[c] ?? []).slice().sort();
-    const b = (draft.catDocTypes[c] ?? []).slice().sort();
-    if (JSON.stringify(a) !== JSON.stringify(b)) out.push(`「${c}」の想定書類タイプを変更`);
-  });
   return out;
 }

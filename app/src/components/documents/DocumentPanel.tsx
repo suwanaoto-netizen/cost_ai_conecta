@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDataStore } from "../../store/data";
+import { useMasterStore } from "../../store/master";
 import { useDocs, useLinesOfDoc, useVehicleMasters } from "../../store/selectors";
 import { useSettingsStore } from "../../store/settings";
 import { useStore } from "../../store";
@@ -9,6 +10,7 @@ import { usePlateIndex } from "../../store/selectors";
 import { matchOf, resolveVehicleId } from "../../domain/match";
 import { docTotal, expectedDocTypes, ocrAmountCandidates, plateSuggestions } from "../../domain/documents";
 import { DOC_TYPES } from "../../domain/settings";
+import { catDocTypesRecord } from "../../domain/costCats";
 import { resolveSubcat, subcatLabel, FUEL_CAT } from "../../domain/repairSubcat";
 import { yen } from "../../domain/format";
 import { MatchBadge } from "../common/MatchBadge";
@@ -49,8 +51,9 @@ export function DocumentPanel({
   const reflectDocDraft = useDataStore((s) => s.reflectDocDraft);
   const masters = useVehicleMasters();
   const settings = useSettingsStore((s) => s.live.settings);
-  const catDocTypes = useSettingsStore((s) => s.live.catDocTypes);
-  const cats = useSettingsStore((s) => s.live.cats);
+  const costCats = useMasterStore((s) => s.costCats);
+  const catDocTypes = useMemo(() => catDocTypesRecord(costCats), [costCats]);
+  const cats = useMemo(() => costCats.map((c) => c.name), [costCats]);
   const categories = useSettingsStore((s) => s.live.categories);
   const showToast = useStore((s) => s.showToast);
   const setView = useStore((s) => s.setView);

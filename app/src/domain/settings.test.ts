@@ -22,15 +22,13 @@ describe("settings snapshot diff / equals", () => {
     expect(d).toContain("既定でAI-OCRを使う：ON → OFF");
   });
 
-  it("営業所・分類の追加削除と想定書類タイプ変更を検出", () => {
+  it("営業所の追加削除を検出", () => {
     const live = freshSnapshot();
     const draft = freshSnapshot();
     draft.categories.push("豊橋営業所");
-    draft.cats = draft.cats.filter((c) => c !== "税金");
-    draft.catDocTypes["燃料費"] = ["請求書", "明細書"];
+    draft.categories = draft.categories.filter((c) => c !== "岡崎営業所");
     const d = diffSnapshots(live, draft);
     expect(d).toContain("営業所を追加：豊橋営業所");
-    expect(d).toContain("コスト分類を削除：税金");
-    expect(d).toContain("「燃料費」の想定書類タイプを変更");
+    expect(d).toContain("営業所を削除：岡崎営業所");
   });
 });

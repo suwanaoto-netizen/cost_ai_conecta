@@ -22,9 +22,6 @@ interface SettingsStore {
   setDefaultPageSize: (n: number) => void;
   addCategory: (name: string) => boolean; // false=重複
   removeCategory: (name: string) => void;
-  addCat: (name: string) => boolean; // false=重複
-  removeCat: (name: string) => void;
-  toggleCatDocType: (cat: string, dtype: string) => void;
   discard: () => void;
   commit: () => void;
 }
@@ -62,27 +59,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
     },
     removeCategory: (name) =>
       patch((d) => ({ ...d, categories: d.categories.filter((c) => c !== name) })),
-    addCat: (name) => {
-      const t = name.trim();
-      if (!t || base(get()).cats.includes(t)) return false;
-      patch((d) => ({
-        ...d,
-        cats: [...d.cats, t],
-        catDocTypes: d.catDocTypes[t] ? d.catDocTypes : { ...d.catDocTypes, [t]: ["請求書"] },
-      }));
-      return true;
-    },
-    removeCat: (name) =>
-      patch((d) => {
-        const { [name]: _omit, ...catDocTypes } = d.catDocTypes;
-        return { ...d, cats: d.cats.filter((c) => c !== name), catDocTypes };
-      }),
-    toggleCatDocType: (cat, dtype) =>
-      patch((d) => {
-        const arr = d.catDocTypes[cat] ?? [];
-        const next = arr.includes(dtype) ? arr.filter((t) => t !== dtype) : [...arr, dtype];
-        return { ...d, catDocTypes: { ...d.catDocTypes, [cat]: next } };
-      }),
     discard: () => set({ draft: null }),
     commit: () =>
       set((s) => (s.draft ? { live: s.draft, draft: null } : {})),
