@@ -9,6 +9,7 @@
 
 export const REPAIR_CAT = "修繕・維持費";
 export const FUEL_CAT = "燃料費";
+export const INSURANCE_CAT = "保険料";
 
 export interface Subcat {
   code: string;
@@ -36,10 +37,17 @@ export const REPAIR_SUBCATS: readonly Subcat[] = [
   { code: "consumable", label: "ドライバー利用消耗品" },
 ] as const;
 
+/** 保険料の内訳マスタ。 */
+export const INSURANCE_SUBCATS: readonly Subcat[] = [
+  { code: "jibaiseki", label: "自賠責保険" },
+  { code: "voluntary", label: "任意保険" },
+] as const;
+
 /** 親コスト分類 → 内訳マスタ。 */
 export const SUBCATS_BY_CAT: Record<string, readonly Subcat[]> = {
   [FUEL_CAT]: FUEL_SUBCATS,
   [REPAIR_CAT]: REPAIR_SUBCATS,
+  [INSURANCE_CAT]: INSURANCE_SUBCATS,
 };
 
 const LABEL_BY_CODE: Record<string, string> = Object.fromEntries(
@@ -74,12 +82,17 @@ const KEYWORDS_BY_CAT: Record<string, KeywordRule[]> = {
     { code: "onboard", keywords: ["電球", "ヒューズ", "ワイパー", "発煙筒", "軍手", "荷締"] },
     { code: "repair", keywords: ["修理", "交換", "板金", "塗装", "バンパー", "パネル", "ベルト", "ガス補充", "整備"] },
   ],
+  [INSURANCE_CAT]: [
+    // 「自賠責」「自動車損害賠償責任保険」→ 自賠責保険。それ以外の保険関連はフォールバックの任意保険。
+    { code: "jibaiseki", keywords: ["自賠責", "自動車損害賠償責任保険"] },
+  ],
 };
 
 /** いずれのキーワードにも当たらなかった場合のフォールバック内訳。 */
 const FALLBACK_BY_CAT: Record<string, string> = {
   [FUEL_CAT]: "diesel", // 物流車両は軽油が主のため既定を軽油に寄せる
   [REPAIR_CAT]: "consumable",
+  [INSURANCE_CAT]: "voluntary", // 自賠責以外の保険関連は任意保険に寄せる
 };
 
 /** その分類が内訳を持つか。 */
