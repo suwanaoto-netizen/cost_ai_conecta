@@ -2,20 +2,20 @@ import { useState } from "react";
 import { useMasterStore, type MasterForm } from "../../store/master";
 import { useSettingsStore, currentSnapshot } from "../../store/settings";
 import { useStore } from "../../store";
-import { fmtKg, lookupJikenkyo } from "../../domain/jikenkyo";
+import { fmtKg, lookupJikenkyo, klassLabel } from "../../domain/jikenkyo";
 import { Button } from "../common/Button";
 import { IconCheck, IconAlert } from "../common/Icon";
 
 const EMPTY: MasterForm = {
   no: null, plate: "", chassis: "", code: "", name: "", note: "", office: "",
-  maxLoad: null, grossWeight: null, size: "", klass: "",
+  maxLoad: null, grossWeight: null, size: "", klass: "", subClass: "",
 };
 
-function KlassBadge({ matched, klass, raw }: { matched: boolean; klass: string; raw: string }) {
+function KlassBadge({ matched, label, raw }: { matched: boolean; label: string; raw: string }) {
   if (matched)
     return (
       <span className="mtag exist">
-        <IconCheck color="#157F73" size={11} /> 自検協突合：車格 {klass}
+        <IconCheck color="#157F73" size={11} /> 自検協突合：車格 {label}
       </span>
     );
   if (raw.trim())
@@ -51,6 +51,7 @@ export function MasterEditModal({ initial, onClose }: { initial?: MasterForm; on
       grossWeight: spec ? spec.gross : null,
       size: spec ? spec.size : "",
       klass: spec ? spec.klass : "",
+      subClass: spec ? spec.subClass : "",
     }));
   };
 
@@ -91,7 +92,7 @@ export function MasterEditModal({ initial, onClose }: { initial?: MasterForm; on
         <div className="fld">
           <label>
             車台番号（任意）
-            <KlassBadge matched={matched} klass={form.klass} raw={form.chassis} />
+            <KlassBadge matched={matched} label={klassLabel(form.klass, form.subClass)} raw={form.chassis} />
           </label>
           <input className="in mono" value={form.chassis} onChange={(e) => onChassis(e.target.value)} placeholder="例：2KG-FK71F-590481" />
         </div>

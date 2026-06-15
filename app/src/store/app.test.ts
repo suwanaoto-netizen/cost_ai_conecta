@@ -6,7 +6,7 @@ import type { Document, Line, ManualLine, VehicleMaster } from "../domain/types"
 
 const master = (no: number, id: string, plate: string): VehicleMaster => ({
   no, id, plate, chassis: "", code: "", name: "", note: "", office: "",
-  maxLoad: null, grossWeight: null, size: "", klass: "",
+  maxLoad: null, grossWeight: null, size: "", klass: "", subClass: "",
 });
 const reflectedDoc = (id: string): Document => ({
   id, no: 1, name: `inv_${id}.pdf`, vendor: "v", cat: "請求書",

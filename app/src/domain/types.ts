@@ -79,6 +79,8 @@ export interface VehicleMaster {
   grossWeight: number | null;
   size: string;
   klass: string;
+  /** 車格の細分類（1t/2t/3t/4t/増トン/10t）。トレーラー・未突合は空文字。 */
+  subClass: string;
 }
 
 export interface ManualLine {

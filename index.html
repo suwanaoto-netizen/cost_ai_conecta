@@ -1112,35 +1112,35 @@ FLEET.forEach(p=>{ if(!NEW_PLATES.has(p)) MASTER.add(p); });
 /* ───── 自検協データ（車台番号 → 車格・諸元の突合） ───── */
 /* 車台番号の型式コードから車格を判定し、最大積載量・車両総重量・サイズを引き当てる。
    登録車両の諸元もここから生成するため、画面表示と突合結果は常に一致する。 */
-const JIKEN_CLASSES={
-  "小型":{maxLoad:2000, gross:4965, size:"4.69 × 1.69 × 1.98 m"},
-  "中型":{maxLoad:3800, gross:7985, size:"8.18 × 2.29 × 3.10 m"},
-  "大型":{maxLoad:13600, gross:24795, size:"11.99 × 2.49 × 3.78 m"},
-};
+/* 自検協モデル：大分類(klass)＋細分類(sub)＋諸元。トレーラーは細分類なし。 */
 const JIKEN_MODELS=[
-  {code:"FE", emi:"2RG", model:"FEAV0", klass:"小型"},
-  {code:"FK", emi:"2KG", model:"FK71F", klass:"中型"},
-  {code:"FS", emi:"2PG", model:"FS70HZ", klass:"大型"},
-  {code:"FU", emi:"QPG", model:"FU54VZ", klass:"大型"},
+  {code:"FD", emi:"2RG", model:"FDA10",  klass:"小型",   sub:"1t",   maxLoad:1500,  gross:3490,  size:"4.69 × 1.69 × 1.98 m"},
+  {code:"FE", emi:"2RG", model:"FEAV0",  klass:"小型",   sub:"2t",   maxLoad:2000,  gross:4965,  size:"4.69 × 1.69 × 1.98 m"},
+  {code:"FG", emi:"2KG", model:"FGA30",  klass:"中型",   sub:"3t",   maxLoad:3000,  gross:6985,  size:"7.55 × 2.20 × 3.00 m"},
+  {code:"FK", emi:"2KG", model:"FK71F",  klass:"中型",   sub:"4t",   maxLoad:3800,  gross:7985,  size:"8.18 × 2.29 × 3.10 m"},
+  {code:"FU", emi:"QPG", model:"FU54VZ", klass:"大型",   sub:"増トン", maxLoad:8200,  gross:14995, size:"9.99 × 2.49 × 3.50 m"},
+  {code:"FS", emi:"2PG", model:"FS70HZ", klass:"大型",   sub:"10t",  maxLoad:13600, gross:24795, size:"11.99 × 2.49 × 3.78 m"},
+  {code:"FP", emi:"QKG", model:"FP54VDR",klass:"トレーラー", sub:"",  maxLoad:24000, gross:35980, size:"12.00 × 2.49 × 3.78 m（トラクタ）"},
 ];
 function _genChassis(plate){
   const h=_hash(plate); const m=JIKEN_MODELS[h%JIKEN_MODELS.length];
   const serial=500000+(h%480000);
   return `${m.emi}-${m.model}-${serial}`;
 }
-/* 車台番号から車格を判定（登録済みは型式一致、手入力は型式コード部分一致で突合） */
-function _classFromChassis(chassis){
+/* 車台番号から自検協モデルを判定（登録済みは型式一致、手入力は型式コード部分一致で突合） */
+function _modelFromChassis(chassis){
   const up=(chassis||"").replace(/\s/g,"").toUpperCase();
   if(up.length<2) return null;
-  for(const m of JIKEN_MODELS){ if(up.includes(m.code)) return m.klass; }
+  for(const m of JIKEN_MODELS){ if(up.includes(m.code)) return m; }
   return null;
 }
 function lookupJikenkyo(chassis){
-  const klass=_classFromChassis(chassis); if(!klass) return null;
-  const base=JIKEN_CLASSES[klass];
+  const m=_modelFromChassis(chassis); if(!m) return null;
   const h=_hash((chassis||"").toUpperCase());
-  return {klass, maxLoad:base.maxLoad + (h%5)*100, gross:base.gross, size:base.size};
+  return {klass:m.klass, subClass:m.sub, maxLoad:m.maxLoad + (h%5)*100, gross:m.gross, size:m.size};
 }
+/* 車格の表示ラベル：「大分類 / 細分類」（細分類が無ければ大分類のみ）。 */
+function klassLabel(klass, subClass){ if(!klass) return ""; return subClass ? `${klass} / ${subClass}` : klass; }
 
 /* ───── 車両マスタ（マスタデータ画面のソース） ───── */
 /* MASTER（車番の集合）が突合の真実源であり続けるよう、編集後は syncMaster() で同期する。 */
@@ -1156,9 +1156,9 @@ function officeFromPlate(plate){
   FLEET.forEach(p=>{
     if(NEW_PLATES.has(p)) return;
     const chassis=_genChassis(p);
-    const spec=lookupJikenkyo(chassis)||{maxLoad:"",gross:"",size:"",klass:""};
+    const spec=lookupJikenkyo(chassis)||{maxLoad:"",gross:"",size:"",klass:"",subClass:""};
     VEHICLE_MASTER.push({ no:no++, id:nextVehicleId(), plate:p, chassis, code:`V${String(++idx).padStart(3,"0")}`, name:"", note:"", office:officeFromPlate(p),
-      maxLoad:spec.maxLoad, grossWeight:spec.gross, size:spec.size, klass:spec.klass });
+      maxLoad:spec.maxLoad, grossWeight:spec.gross, size:spec.size, klass:spec.klass, subClass:spec.subClass });
   });
 })();
 rebuildPlateIndex();
@@ -3402,7 +3402,7 @@ function renderVehicleMaster(){
     <td style="font-family:var(--mono);color:var(--inkSoft)">${v.no}</td>
     <td><span class="plate">${esc(v.plate)}</span></td>
     <td style="font-family:var(--mono);font-size:11.5px;color:var(--inkSoft)">${cell(v.chassis)}</td>
-    <td>${cell(v.klass)}</td>
+    <td style="white-space:nowrap">${cell(klassLabel(v.klass,v.subClass))}</td>
     <td>${cell(v.code)}</td>
     <td>${cell(v.name)}</td>
     <td>${cell(v.office)}</td>
@@ -3424,13 +3424,13 @@ function renderVehicleMaster(){
 }
 function openMasterNew(){
   state.masterEdit={mode:"new", no:null, plate:"", chassis:"", code:"", name:"", note:"", office:"",
-    maxLoad:"", grossWeight:"", size:"", klass:"", matched:false};
+    maxLoad:"", grossWeight:"", size:"", klass:"", subClass:"", matched:false};
   renderOverlay();
 }
 function openMasterEdit(no){
   const v=VEHICLE_MASTER.find(x=>x.no===+no); if(!v) return;
   state.masterEdit={mode:"edit", no:v.no, plate:v.plate, chassis:v.chassis, code:v.code, name:v.name, note:v.note, office:v.office||"",
-    maxLoad:v.maxLoad, grossWeight:v.grossWeight, size:v.size, klass:v.klass, matched:!!v.klass};
+    maxLoad:v.maxLoad, grossWeight:v.grossWeight, size:v.size, klass:v.klass, subClass:v.subClass, matched:!!v.klass};
   renderOverlay();
 }
 function closeMasterEdit(){ state.masterEdit=null; renderOverlay(); }
@@ -3440,15 +3440,15 @@ function masterEditChassis(val){
   const e=state.masterEdit; if(!e) return;
   e.chassis=val;
   const spec=lookupJikenkyo(val);
-  if(spec){ e.maxLoad=spec.maxLoad; e.grossWeight=spec.gross; e.size=spec.size; e.klass=spec.klass; e.matched=true; }
-  else { e.maxLoad=""; e.grossWeight=""; e.size=""; e.klass=""; e.matched=false; }
+  if(spec){ e.maxLoad=spec.maxLoad; e.grossWeight=spec.gross; e.size=spec.size; e.klass=spec.klass; e.subClass=spec.subClass; e.matched=true; }
+  else { e.maxLoad=""; e.grossWeight=""; e.size=""; e.klass=""; e.subClass=""; e.matched=false; }
   const setv=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=v; };
   setv("me-maxload",_fmtKg(e.maxLoad)); setv("me-gross",_fmtKg(e.grossWeight)); setv("me-size",e.size||"");
   const badge=document.getElementById("me-klass");
   if(badge) badge.innerHTML=masterKlassBadge(e,val);
 }
 function masterKlassBadge(e,raw){
-  if(e.matched) return `<span class="mtag exist">${I.check("#157F73",11,2.6)} 自検協突合：車格 ${esc(e.klass)}</span>`;
+  if(e.matched) return `<span class="mtag exist">${I.check("#157F73",11,2.6)} 自検協突合：車格 ${esc(klassLabel(e.klass,e.subClass))}</span>`;
   return (raw&&raw.trim())?`<span class="mtag newv">${I.alert("#B87514",11)} 該当データなし</span>`:"";
 }
 function saveMasterEdit(){
@@ -3457,7 +3457,7 @@ function saveMasterEdit(){
   if(!plate){ toast("車両番号を入力してください"); return; }
   if(VEHICLE_MASTER.find(v=>v.plate===plate && v.no!==e.no)){ toast("同じ車両番号がすでに登録されています"); return; }
   const fields={ plate, chassis:(e.chassis||"").trim(), code:(e.code||"").trim(), name:(e.name||"").trim(),
-    note:(e.note||"").trim(), office:e.office||"", maxLoad:e.maxLoad, grossWeight:e.grossWeight, size:e.size, klass:e.klass };
+    note:(e.note||"").trim(), office:e.office||"", maxLoad:e.maxLoad, grossWeight:e.grossWeight, size:e.size, klass:e.klass, subClass:e.subClass };
   if(e.mode==="new"){ VEHICLE_MASTER.push(Object.assign({no:nextMasterNo(),id:nextVehicleId()},fields)); }
   else { const v=VEHICLE_MASTER.find(x=>x.no===e.no); if(v) Object.assign(v,fields); }
   syncMaster();
@@ -3510,10 +3510,10 @@ function renderMasterEditModal(){
   </div></div>`;
 }
 function downloadMasterCsv(){
-  const cols=["No","車両番号","車台番号","車両コード","社内名称","営業所","備考","最大積載量(kg)","車両総重量(kg)","サイズ","車格"];
+  const cols=["No","車両番号","車台番号","車格","細分類","車両コード","社内名称","営業所","備考","最大積載量(kg)","車両総重量(kg)","サイズ"];
   const q=s=>`"${String(s==null?"":s).replace(/"/g,'""')}"`;
   const body=VEHICLE_MASTER.slice().sort((a,b)=>a.no-b.no)
-    .map(v=>[v.no,v.plate,v.chassis,v.code,v.name,v.office,v.note,v.maxLoad,v.grossWeight,v.size,v.klass].map(q).join(","));
+    .map(v=>[v.no,v.plate,v.chassis,v.klass,v.subClass,v.code,v.name,v.office,v.note,v.maxLoad,v.grossWeight,v.size].map(q).join(","));
   const csv="﻿"+cols.map(q).join(",")+"\r\n"+body.join("\r\n");
   const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
   const url=URL.createObjectURL(blob);

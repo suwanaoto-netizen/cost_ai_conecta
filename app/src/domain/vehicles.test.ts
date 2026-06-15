@@ -7,7 +7,7 @@ import type { Adjustment, Document, Line, ManualLine, VehicleMaster } from "./ty
 
 const master = (id: string, plate: string): VehicleMaster => ({
   no: 1, id, plate, chassis: "", code: "", name: "", note: "", office: "",
-  maxLoad: null, grossWeight: null, size: "", klass: "",
+  maxLoad: null, grossWeight: null, size: "", klass: "", subClass: "",
 });
 
 const line = (lid: number, docId: string, plate: string, amount: number, extra: Partial<Line> = {}): Line => ({

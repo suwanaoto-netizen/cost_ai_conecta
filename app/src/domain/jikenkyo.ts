@@ -12,19 +12,25 @@ export function hash(s: string): number {
   return h >>> 0;
 }
 
-type Klass = "小型" | "中型" | "大型";
+type Klass = "小型" | "中型" | "大型" | "トレーラー";
 
-const JIKEN_CLASSES: Record<Klass, { maxLoad: number; gross: number; size: string }> = {
-  小型: { maxLoad: 2000, gross: 4965, size: "4.69 × 1.69 × 1.98 m" },
-  中型: { maxLoad: 3800, gross: 7985, size: "8.18 × 2.29 × 3.10 m" },
-  大型: { maxLoad: 13600, gross: 24795, size: "11.99 × 2.49 × 3.78 m" },
-};
+interface ClassSpec {
+  klass: Klass;
+  /** 細分類（1t/2t/3t/4t/増トン/10t）。トレーラーは細分類なし＝空文字。 */
+  sub: string;
+  maxLoad: number;
+  gross: number;
+  size: string;
+}
 
-const JIKEN_MODELS = [
-  { code: "FE", emi: "2RG", model: "FEAV0", klass: "小型" as Klass },
-  { code: "FK", emi: "2KG", model: "FK71F", klass: "中型" as Klass },
-  { code: "FS", emi: "2PG", model: "FS70HZ", klass: "大型" as Klass },
-  { code: "FU", emi: "QPG", model: "FU54VZ", klass: "大型" as Klass },
+const JIKEN_MODELS: { code: string; emi: string; model: string; spec: ClassSpec }[] = [
+  { code: "FD", emi: "2RG", model: "FDA10", spec: { klass: "小型", sub: "1t", maxLoad: 1500, gross: 3490, size: "4.69 × 1.69 × 1.98 m" } },
+  { code: "FE", emi: "2RG", model: "FEAV0", spec: { klass: "小型", sub: "2t", maxLoad: 2000, gross: 4965, size: "4.69 × 1.69 × 1.98 m" } },
+  { code: "FG", emi: "2KG", model: "FGA30", spec: { klass: "中型", sub: "3t", maxLoad: 3000, gross: 6985, size: "7.55 × 2.20 × 3.00 m" } },
+  { code: "FK", emi: "2KG", model: "FK71F", spec: { klass: "中型", sub: "4t", maxLoad: 3800, gross: 7985, size: "8.18 × 2.29 × 3.10 m" } },
+  { code: "FU", emi: "QPG", model: "FU54VZ", spec: { klass: "大型", sub: "増トン", maxLoad: 8200, gross: 14995, size: "9.99 × 2.49 × 3.50 m" } },
+  { code: "FS", emi: "2PG", model: "FS70HZ", spec: { klass: "大型", sub: "10t", maxLoad: 13600, gross: 24795, size: "11.99 × 2.49 × 3.78 m" } },
+  { code: "FP", emi: "QKG", model: "FP54VDR", spec: { klass: "トレーラー", sub: "", maxLoad: 24000, gross: 35980, size: "12.00 × 2.49 × 3.78 m（トラクタ）" } },
 ];
 
 /** 車番から決定論的に車台番号を生成（登録車両のシード用）。 */
@@ -35,15 +41,17 @@ export function genChassis(plate: string): string {
   return `${m.emi}-${m.model}-${serial}`;
 }
 
-function classFromChassis(chassis: string): Klass | null {
+function modelFromChassis(chassis: string): (typeof JIKEN_MODELS)[number] | null {
   const up = (chassis || "").replace(/\s/g, "").toUpperCase();
   if (up.length < 2) return null;
-  for (const m of JIKEN_MODELS) if (up.includes(m.code)) return m.klass;
+  for (const m of JIKEN_MODELS) if (up.includes(m.code)) return m;
   return null;
 }
 
 export interface JikenkyoSpec {
   klass: Klass;
+  /** 細分類（トレーラーは空文字）。 */
+  subClass: string;
   maxLoad: number;
   gross: number;
   size: string;
@@ -51,11 +59,16 @@ export interface JikenkyoSpec {
 
 /** 車台番号から車格・諸元を引く。該当なしは null。 */
 export function lookupJikenkyo(chassis: string): JikenkyoSpec | null {
-  const klass = classFromChassis(chassis);
-  if (!klass) return null;
-  const base = JIKEN_CLASSES[klass];
+  const m = modelFromChassis(chassis);
+  if (!m) return null;
   const h = hash((chassis || "").toUpperCase());
-  return { klass, maxLoad: base.maxLoad + (h % 5) * 100, gross: base.gross, size: base.size };
+  return { klass: m.spec.klass, subClass: m.spec.sub, maxLoad: m.spec.maxLoad + (h % 5) * 100, gross: m.spec.gross, size: m.spec.size };
+}
+
+/** 車格の表示ラベル。「大分類 / 細分類」（細分類が無ければ大分類のみ）。 */
+export function klassLabel(klass: string, subClass: string): string {
+  if (!klass) return "";
+  return subClass ? `${klass} / ${subClass}` : klass;
 }
 
 /** ナンバープレートの地名から営業所を推定（一致がなければ空）。 */
