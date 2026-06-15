@@ -19,8 +19,9 @@ import { seedDocuments } from "./docSeed";
 
 describe("subcat（修繕・維持費）", () => {
   it("品名から内訳コードを推定する", () => {
-    expect(inferSubcat(REPAIR_CAT, "継続車検 / 24ヶ月点検")).toBe("shaken");
-    expect(inferSubcat(REPAIR_CAT, "12ヶ月点検")).toBe("inspection");
+    expect(inferSubcat(REPAIR_CAT, "継続車検 / 24ヶ月点検")).toBe("inspect_shaken");
+    expect(inferSubcat(REPAIR_CAT, "3ヶ月点検")).toBe("inspect_3m");
+    expect(inferSubcat(REPAIR_CAT, "12ヶ月点検")).toBe("inspect_other");
     expect(inferSubcat(REPAIR_CAT, "バッテリー交換")).toBe("battery");
     expect(inferSubcat(REPAIR_CAT, "タイヤ4本交換")).toBe("tire");
     expect(inferSubcat(REPAIR_CAT, "スタッドレス組替")).toBe("tire");
@@ -85,8 +86,8 @@ describe("subcat 共通", () => {
   it("後方互換エイリアスが従来通り動作する", () => {
     expect(inferRepairSubcat("タイヤ4本交換")).toBe("tire");
     expect(repairSubcatLabel("oil")).toBe("オイル");
-    expect(resolveRepairSubcat(REPAIR_CAT, "12ヶ月点検")).toBe("inspection");
-    expect(REPAIR_SUBCATS.length).toBe(9);
+    expect(resolveRepairSubcat(REPAIR_CAT, "12ヶ月点検")).toBe("inspect_other");
+    expect(REPAIR_SUBCATS.length).toBe(10);
     expect(FUEL_SUBCATS.length).toBe(4);
   });
 
