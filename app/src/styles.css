@@ -599,27 +599,22 @@ table.dt { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width:
 .placeholder code { font-family: var(--mono); background: var(--bg); padding: 1px 5px; border-radius: 4px; }
 
 /* コストモニター グラフ（①原価推移 ②営業所別コスト分類推移） */
-.mon-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; align-items: start; }
-@media (max-width: 860px) { .mon-charts { grid-template-columns: 1fr; } }
-.chart-card { background: var(--card); border: 1px solid var(--line); border-radius: 0; padding: 14px 16px 12px; display: flex; flex-direction: column; min-width: 0; }
+.mon-charts { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr); gap: 12px; margin-top: 10px; flex: 1; min-height: 0; }
+@media (max-width: 860px) { .mon-charts { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); } }
+.chart-card { background: var(--card); border: 1px solid var(--line); border-radius: 0; padding: 14px 16px 12px; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
 .chart-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
 .chart-title { font-size: 13.5px; font-weight: 800; color: var(--ink); }
 .chart-sub { font-size: 11px; color: var(--inkSoft); margin-top: 2px; }
 .chart-filters { display: flex; gap: 8px; flex-wrap: wrap; }
 .chart-sel { padding: 4px 9px; }
 .chart-sel select { font-size: 12px; max-width: 130px; }
-.chart-svg { width: 100%; height: auto; display: block; }
+.chart-svg { flex: 1 1 0; min-height: 0; width: 100%; height: 100%; display: block; }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; }
 .chart-legend .cl-item { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--inkSoft); font-weight: 600; }
 .chart-legend .cl-sw { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
 
 /* ピックアップ（要確認車両／コスト上位／コスト増加） */
-.pickup-toggle { display: inline-flex; align-items: center; gap: 5px; background: none; border: none; cursor: pointer; font-size: 11.5px; font-weight: 800; color: var(--inkSoft); padding: 3px 6px; margin: 0 0 6px -6px; border-radius: 6px; transition: background .12s, color .12s; }
-.pickup-toggle:hover { background: rgba(0,0,0,.04); color: var(--ink); }
-.pickup-toggle svg { transition: transform .15s; transform: rotate(90deg); }
-.pickup-toggle.collapsed { margin-bottom: 10px; }
-.pickup-toggle.collapsed svg { transform: rotate(0); }
-.pickup { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: stretch; }
+.pickup { display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap; align-items: stretch; }
 .pk-card { flex: 1; min-width: 248px; background: var(--card); border: 1px solid var(--line); border-radius: 0; padding: 8px 12px; display: flex; flex-direction: column; }
 .pk-card-alert { border-color: var(--alert); box-shadow: 0 0 0 1px var(--alert) inset; }
 .pk-h { font-size: 11.5px; font-weight: 800; color: var(--ink); margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
