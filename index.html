@@ -650,6 +650,21 @@
   .pk-detail{flex-shrink:0;display:inline-flex;align-items:center;gap:1px;font-size:10.5px;font-weight:700;color:var(--greenDark);white-space:nowrap}
   .pk-empty{font-size:11px;color:var(--inkFaint);font-weight:700;padding:6px 4px}
 
+  /* ───── コストモニター グラフ（①原価推移 ②営業所別コスト分類推移） ───── */
+  .mon-charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  @media (max-width:1080px){.mon-charts{grid-template-columns:1fr}}
+  .chart-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px 12px;display:flex;flex-direction:column;min-width:0}
+  .chart-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+  .chart-title{font-size:13.5px;font-weight:800;color:var(--ink)}
+  .chart-sub{font-size:11px;color:var(--inkSoft);margin-top:2px}
+  .chart-filters{display:flex;gap:8px;flex-wrap:wrap}
+  .chart-sel{padding:4px 9px}
+  .chart-sel select{font-size:12px;max-width:130px}
+  .chart-svg{width:100%;height:auto;display:block}
+  .chart-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
+  .chart-legend .cl-item{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--inkSoft);font-weight:600}
+  .chart-legend .cl-sw{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+
   /* ───── bulk select ───── */
   .dt th.c,.dt td.c{text-align:center;white-space:nowrap}
   .dt input[type=checkbox]{width:16px;height:16px;accent-color:var(--green);cursor:pointer;margin:0;vertical-align:middle}
@@ -1322,6 +1337,7 @@ let state={
   collapsed:false,
   statusSel:[],   // 選択中のステータス（複数可・空＝すべて）
   categoryFilter:"all", vehCategoryFilter:"all", vehTab:"monitor",
+  chartOffice:"all", chart2Cat:"燃料費", chart2Klass:"all",
   trash:false, docTrashAction:null,
   q:"",
   selected:new Set(), bulkMenu:false,
@@ -2941,6 +2957,76 @@ function visibleVehicles(){
   }
   return veh;
 }
+/* ───── コストモニター グラフ用 月次サンプル時系列（デモ用に決定的生成） ─────
+   実データは数ヶ月分しか無いため、12ヶ月＋昨年比のグラフを成立させる目的で
+   営業所 × コスト分類 × 車格 × 月（24ヶ月）の合成データを生成する。
+   乱数はシードから決定的に生成するため再レンダリングしても値は安定。React版(app/)と同一アルゴリズム。 */
+const SERIES_OFFICES=["名古屋営業所","岡崎営業所","一宮営業所","岐阜営業所","四日市営業所"];
+const SERIES_CATS=["燃料費","修繕・維持費","通行料","保険料","調達コスト","税金"];
+const SERIES_KLASSES=["小型","中型","大型","トレーラー"];
+const OFFICE_COLORS={"名古屋営業所":"#1E55C8","岡崎営業所":"#157F73","一宮営業所":"#B87514","岐阜営業所":"#6B4FA3","四日市営業所":"#C0392B"};
+const SERIES_MONTHS=(function(){ const out=[]; let y=2026,m=6-23; while(m<=0){m+=12;y-=1;} for(let i=0;i<24;i++){ out.push(y+"-"+String(m).padStart(2,"0")); m++; if(m>12){m=1;y++;} } return out; })();
+const PREV_YEAR_MONTHS=SERIES_MONTHS.slice(0,12);
+const THIS_YEAR_MONTHS=SERIES_MONTHS.slice(12);
+const _OFFICE_BASE={"名古屋営業所":3200000,"岡崎営業所":1800000,"一宮営業所":1500000,"岐阜営業所":1200000,"四日市営業所":2100000};
+const _CAT_SHARE={"燃料費":0.34,"修繕・維持費":0.24,"通行料":0.13,"保険料":0.10,"調達コスト":0.11,"税金":0.08};
+const _KLASS_SHARE={"小型":0.18,"中型":0.34,"大型":0.33,"トレーラー":0.15};
+function _hashSeed(s){ let h=2166136261>>>0; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0; }
+function _rand(seed){ let a=(seed+0x6D2B79F5)|0; let t=Math.imul(a^(a>>>15),1|a); t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; }
+const MONTHLY_SERIES=(function(){ const cells=[]; SERIES_MONTHS.forEach((ym,i)=>{ const moY=+ym.slice(5,7); const trend=1+0.005*i; SERIES_OFFICES.forEach(office=>{ SERIES_CATS.forEach((cat,ci)=>{ const phase=ci*1.0; const seasonal=1+0.12*Math.sin(2*Math.PI*(moY-1)/12+phase); SERIES_KLASSES.forEach(klass=>{ const noise=0.9+0.2*_rand(_hashSeed(ym+"|"+office+"|"+cat+"|"+klass)); const raw=_OFFICE_BASE[office]*_CAT_SHARE[cat]*_KLASS_SHARE[klass]*seasonal*trend*noise; cells.push({ym,office,cat,klass,amount:Math.round(raw/1000)*1000}); }); }); }); }); return cells; })();
+const monthShort=ym=>(+ym.slice(5,7))+"月";
+function stackByMonth(office){ return SERIES_MONTHS.map(ym=>{ const byCat={}; let gross=0; for(const c of MONTHLY_SERIES){ if(c.ym!==ym)continue; if(office!=="all"&&c.office!==office)continue; byCat[c.cat]=(byCat[c.cat]||0)+c.amount; gross+=c.amount; } return {ym,byCat,gross}; }); }
+function officeLines(cat,klass){ return SERIES_OFFICES.map(office=>({office,color:OFFICE_COLORS[office],points:THIS_YEAR_MONTHS.map(ym=>{ let amount=0; for(const c of MONTHLY_SERIES){ if(c.ym!==ym||c.office!==office||c.cat!==cat)continue; if(klass!=="all"&&c.klass!==klass)continue; amount+=c.amount; } return {ym,amount}; })})); }
+const _man=n=>Math.round(n/10000).toLocaleString()+"万";
+
+/* ① 原価（グロス＋分類構成比）推移：月次12ヶ月、昨年同月を並べて比較。営業所で絞り込み可能。 */
+function renderCostTrendBar(){
+  const W=600,H=320,ML=52,MR=12,MT=16,MB=42,PW=W-ML-MR,PH=H-MT-MB;
+  const office=state.chartOffice||"all";
+  const stacks=stackByMonth(office); const map={}; stacks.forEach(s=>{map[s.ym]=s;});
+  let yMax=Math.max(1,...stacks.map(s=>s.gross)); yMax=Math.ceil(yMax/500000)*500000;
+  const groupW=PW/12, barW=Math.min(15,groupW/2.6), gap=4;
+  const yOf=v=>MT+PH-(v/yMax)*PH;
+  const ticks=[0,.25,.5,.75,1].map(f=>f*yMax);
+  const stackBar=(x,byCat,gross,faded)=>{ let acc=0,seg=""; SERIES_CATS.forEach(c=>{ const v=byCat[c]||0; if(v<=0)return; const h=(v/yMax)*PH; const y=yOf(acc+v); acc+=v; const pct=gross>0?((v/gross)*100).toFixed(1):"0"; const s=CAT_STYLE[c]||CAT_STYLE["税金"]; seg+=`<rect x="${x}" y="${y}" width="${barW}" height="${h}" fill="${s.fg}"><title>${esc(c)}：${yen(v)}（${pct}%）</title></rect>`; }); return `<g opacity="${faded?0.4:1}">${seg}</g>`; };
+  let body="";
+  ticks.forEach(t=>{ body+=`<line x1="${ML}" y1="${yOf(t)}" x2="${W-MR}" y2="${yOf(t)}" stroke="var(--lineSoft)" stroke-width="1"/><text x="${ML-6}" y="${yOf(t)+3}" text-anchor="end" font-size="9" fill="var(--inkSoft)">${_man(t)}</text>`; });
+  THIS_YEAR_MONTHS.forEach((ym,j)=>{ const cur=map[ym], prev=map[PREV_YEAR_MONTHS[j]]; const gx=ML+j*groupW, cx=gx+groupW/2, xPrev=cx-barW-gap/2, xCur=cx+gap/2;
+    body+=stackBar(xPrev,prev.byCat,prev.gross,true)+stackBar(xCur,cur.byCat,cur.gross,false);
+    body+=`<text x="${xCur+barW/2}" y="${yOf(cur.gross)-4}" text-anchor="middle" font-size="8" fill="var(--ink)" font-weight="700">${_man(cur.gross)}</text>`;
+    body+=`<text x="${cx}" y="${H-MB+14}" text-anchor="middle" font-size="9.5" fill="var(--inkSoft)">${monthShort(ym)}</text>`; });
+  body+=`<line x1="${ML}" y1="${MT+PH}" x2="${W-MR}" y2="${MT+PH}" stroke="var(--line)" stroke-width="1"/>`;
+  const legend=SERIES_CATS.map(c=>{const s=CAT_STYLE[c]||CAT_STYLE["税金"];return `<span class="cl-item"><span class="cl-sw" style="background:${s.fg}"></span>${esc(c)}</span>`;}).join("");
+  const sel=`<div class="filter-sel chart-sel"><span class="fs-l">営業所</span><select onchange="setChartOffice(this.value)"><option value="all" ${office==="all"?"selected":""}>全社</option>${SERIES_OFFICES.map(o=>`<option value="${esc(o)}" ${office===o?"selected":""}>${esc(o)}</option>`).join("")}</select></div>`;
+  return `<div class="chart-card"><div class="chart-head"><div><div class="chart-title">原価推移（分類構成比）</div><div class="chart-sub">月次・直近12ヶ月／薄い棒＝昨年同月</div></div>${sel}</div>
+    <svg class="chart-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="原価推移グラフ">${body}</svg>
+    <div class="chart-legend">${legend}</div></div>`;
+}
+/* ② 営業所別のコスト分類推移：月次12ヶ月。コスト分類＆車格で絞り込み。 */
+function renderOfficeLineChart(){
+  const W=600,H=320,ML=52,MR=12,MT=16,MB=42,PW=W-ML-MR,PH=H-MT-MB;
+  const cat=state.chart2Cat||SERIES_CATS[0]; const klass=state.chart2Klass||"all";
+  const lines=officeLines(cat,klass);
+  let yMax=Math.max(1,...lines.flatMap(l=>l.points.map(p=>p.amount))); yMax=Math.ceil(yMax/100000)*100000;
+  const n=THIS_YEAR_MONTHS.length;
+  const xOf=i=>ML+(n===1?PW/2:(i/(n-1))*PW);
+  const yOf=v=>MT+PH-(v/yMax)*PH;
+  const ticks=[0,.25,.5,.75,1].map(f=>f*yMax);
+  let body="";
+  ticks.forEach(t=>{ body+=`<line x1="${ML}" y1="${yOf(t)}" x2="${W-MR}" y2="${yOf(t)}" stroke="var(--lineSoft)" stroke-width="1"/><text x="${ML-6}" y="${yOf(t)+3}" text-anchor="end" font-size="9" fill="var(--inkSoft)">${_man(t)}</text>`; });
+  THIS_YEAR_MONTHS.forEach((ym,i)=>{ body+=`<text x="${xOf(i)}" y="${H-MB+14}" text-anchor="middle" font-size="9.5" fill="var(--inkSoft)">${monthShort(ym)}</text>`; });
+  lines.forEach(l=>{ const pts=l.points.map((p,i)=>`${xOf(i)},${yOf(p.amount)}`).join(" "); body+=`<polyline fill="none" stroke="${l.color}" stroke-width="2" stroke-linejoin="round" points="${pts}"/>`; l.points.forEach((p,i)=>{ body+=`<circle cx="${xOf(i)}" cy="${yOf(p.amount)}" r="2.5" fill="${l.color}"><title>${esc(l.office)} ${monthShort(p.ym)}：${yen(p.amount)}</title></circle>`; }); });
+  body+=`<line x1="${ML}" y1="${MT+PH}" x2="${W-MR}" y2="${MT+PH}" stroke="var(--line)" stroke-width="1"/>`;
+  const legend=lines.map(l=>`<span class="cl-item"><span class="cl-sw" style="background:${l.color}"></span>${esc(l.office)}</span>`).join("");
+  const filters=`<div class="chart-filters"><div class="filter-sel chart-sel"><span class="fs-l">分類</span><select onchange="setChart2Cat(this.value)">${SERIES_CATS.map(c=>`<option value="${esc(c)}" ${cat===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div><div class="filter-sel chart-sel"><span class="fs-l">車格</span><select onchange="setChart2Klass(this.value)"><option value="all" ${klass==="all"?"selected":""}>全車格</option>${SERIES_KLASSES.map(k=>`<option value="${esc(k)}" ${klass===k?"selected":""}>${esc(k)}</option>`).join("")}</select></div></div>`;
+  return `<div class="chart-card"><div class="chart-head"><div><div class="chart-title">営業所別 コスト分類推移</div><div class="chart-sub">月次・直近12ヶ月</div></div>${filters}</div>
+    <svg class="chart-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="営業所別コスト分類推移グラフ">${body}</svg>
+    <div class="chart-legend">${legend}</div></div>`;
+}
+function setChartOffice(v){ state.chartOffice=v; render(); }
+function setChart2Cat(v){ state.chart2Cat=v; render(); }
+function setChart2Klass(v){ state.chart2Klass=v; render(); }
+
 function renderVehicles(){
   const tabs=`<div class="upl-tabs" style="margin-bottom:18px">
     <button class="upl-tab ${state.vehTab!=="individual"?"active":""}" onclick="setVehTab('monitor')">コストモニター</button>
@@ -3013,7 +3099,8 @@ function renderVehMonitor(){
     <div class="pk-card"><div class="pk-h">${I.truckN("#0E7A4B",15)} コスト上位車両</div><div class="pk-list">${topItems.join("")||emptyMsg}</div></div>
     <div class="pk-card"><div class="pk-h" title="先月（${moJP(lastYM)}）を、その前月（${moJP(prevYM)}）と比較した前月比の増加率です">${I.alert("#B87514",14)} コスト増加車両 <span class="pk-hsub">前月比（先月：${moJP(lastYM)}）</span></div><div class="pk-list">${incItems.join("")||emptyMsg}</div></div>
   </div>`}`;
-  return head+kpis+pickup;
+  const charts=`<div class="mon-charts">${renderCostTrendBar()}${renderOfficeLineChart()}</div>`;
+  return head+kpis+pickup+charts;
 }
 /* ───── 個別モニタータブ：車両（車番）ごとのコスト一覧。絞り込み・ゴミ箱・変更履歴を提供する。 ───── */
 function renderVehIndividual(){
