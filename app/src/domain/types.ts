@@ -38,6 +38,14 @@ export interface Line {
   fuso?: Fuso;
 }
 
+/**
+ * ストアに保持される明細の読み取り専用ビュー。
+ * 連携済み（凍結）に限らず、ストア内の明細は in-place 変更してはならず
+ * 必ず新しいオブジェクトへ差し替える。その不変条件を型レベルで強制する。
+ * 実体としての凍結は `freezeLine`（domain/freeze.ts）の Object.freeze が担う。
+ */
+export type FrozenLine = Readonly<Line>;
+
 export interface Document {
   id: string;
   no: number;

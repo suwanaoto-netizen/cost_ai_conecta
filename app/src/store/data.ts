@@ -4,6 +4,7 @@ import type {
   ChangelogEntry,
   DocType,
   Document,
+  FrozenLine,
   Line,
   ManualLine,
   Overridable,
@@ -14,6 +15,8 @@ import { buildPlateIndex } from "../domain/match";
 import { buildVehicles } from "../domain/vehicles";
 import { yen } from "../domain/format";
 import { resolveSubcat } from "../domain/repairSubcat";
+import { pruneAdjustments } from "../domain/adjustments";
+import { freezeLine } from "../domain/freeze";
 
 export const CURRENT_USER = "諏訪 尚杜";
 
@@ -48,21 +51,26 @@ export interface UploadEntry {
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 /** 指定docの明細を入れ替えた新しい lines 配列を返す（freeze 指定で凍結）。 */
-function replaceLines(all: Line[], docId: string, next: Line[], freeze: boolean): Line[] {
+function replaceLines(
+  all: readonly FrozenLine[],
+  docId: string,
+  next: readonly Line[],
+  freeze: boolean,
+): FrozenLine[] {
   const others = all.filter((l) => l.docId !== docId);
   const fresh = next.map((l) => {
     const c = clone(l);
     c.docId = docId;
     // 内訳（連携用）は cat+item から再判定して常に同期させる。
     c.subCat = resolveSubcat(c.cat, c.item) ?? null;
-    return freeze ? Object.freeze(c) : c;
+    return freeze ? freezeLine(c) : c;
   });
   return [...others, ...fresh];
 }
 
 interface DataStore {
   docs: Document[];
-  lines: Line[];
+  lines: readonly FrozenLine[];
   manualLines: ManualLine[];
   adjustments: Adjustment[];
   changelog: ChangelogEntry[];
@@ -75,8 +83,8 @@ interface DataStore {
   markChangelogSeen: () => void;
 
   // 書類一覧／詳細パネル
-  saveDocDraft: (id: string, patch: DocPatch, lines: Line[]) => void;
-  reflectDocDraft: (id: string, patch: DocPatch, lines: Line[]) => void;
+  saveDocDraft: (id: string, patch: DocPatch, lines: readonly Line[]) => void;
+  reflectDocDraft: (id: string, patch: DocPatch, lines: readonly Line[]) => void;
   markEntered: (ids: string[]) => void;
   reflectMany: (ids: string[]) => void;
   changeOffice: (ids: string[], office: string) => void;
@@ -174,6 +182,8 @@ export const useDataStore = create<DataStore>((set) => ({
         d.id === id ? { ...d, ...patch, status: d.status === "未入力" ? "入力済み" : d.status } : d,
       ),
       lines: replaceLines(s.lines, id, lines, false),
+      // 差し替えで消えた明細を参照する override 調整を GC（参照整合）。
+      adjustments: pruneAdjustments(s.adjustments, id, lines.map((l) => l.lid)),
     })),
 
   reflectDocDraft: (id, patch, lines) =>
@@ -182,6 +192,7 @@ export const useDataStore = create<DataStore>((set) => ({
         d.id === id ? { ...d, ...patch, status: "連携済み", reflectedAt: nowStamp() } : d,
       ),
       lines: replaceLines(s.lines, id, lines, true),
+      adjustments: pruneAdjustments(s.adjustments, id, lines.map((l) => l.lid)),
     })),
 
   markEntered: (ids) =>

@@ -1,4 +1,4 @@
-import type { Adjustment, Line, Overridable } from "./types";
+import type { Adjustment, FrozenLine, Line, Overridable } from "./types";
 import { resolveSubcat } from "./repairSubcat";
 
 /** 指定明細の override 調整を取得（なければ null）。 */
@@ -15,7 +15,7 @@ export function findOverride(
 }
 
 /** 凍結された元明細に override 調整を重ねた実効値を返す（元オブジェクトは変更しない）。 */
-export function effDocLine(line: Line, docId: string, adjustments: Adjustment[]): Line {
+export function effDocLine(line: FrozenLine, docId: string, adjustments: Adjustment[]): FrozenLine {
   const a = findOverride(adjustments, docId, line.lid);
   if (!a) return line;
   const eff = { ...line, ...a.patch };
@@ -67,4 +67,19 @@ export function applyOverride(
     user: meta.user,
   };
   return [...others, next];
+}
+
+/**
+ * 指定書類の現存明細（keepLids）に対応しない override 調整を取り除く。
+ * 明細の差し替え・削除で参照先を失った孤児調整が `adjustments` に残り続けるのを防ぐ
+ * （参照整合のための GC）。他書類の調整はそのまま保持する。
+ */
+export function pruneAdjustments(
+  adjustments: Adjustment[],
+  docId: string,
+  keepLids: Iterable<string | number>,
+): Adjustment[] {
+  const keep = new Set<string>();
+  for (const lid of keepLids) keep.add(String(lid));
+  return adjustments.filter((a) => a.docId !== docId || keep.has(a.lid));
 }

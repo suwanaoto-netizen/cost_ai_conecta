@@ -1,4 +1,4 @@
-import type { Adjustment, Document, Line, ManualLine, VehicleMaster } from "./types";
+import type { Adjustment, Document, FrozenLine, Line, ManualLine, VehicleMaster } from "./types";
 import { effDocLine } from "./adjustments";
 import { normPlate, resolveVehicleId, type PlateIndex } from "./match";
 
@@ -30,7 +30,7 @@ export interface Vehicle {
 
 export interface BuildVehiclesInput {
   docs: Document[];
-  lines: Line[];
+  lines: readonly FrozenLine[];
   manualLines: ManualLine[];
   adjustments: Adjustment[];
   masters: VehicleMaster[];
@@ -62,7 +62,7 @@ export function buildVehicles(input: BuildVehiclesInput): Vehicle[] {
       : () => true;
 
   const masterById = new Map(masters.map((m) => [m.id, m]));
-  const linesByDoc = new Map<string, Line[]>();
+  const linesByDoc = new Map<string, FrozenLine[]>();
   for (const l of lines) {
     if (!l.docId) continue;
     const arr = linesByDoc.get(l.docId) ?? [];
