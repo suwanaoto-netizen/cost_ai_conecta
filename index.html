@@ -1448,8 +1448,8 @@ function renderDocuments(){
   </div>`;
 
   const seg=state.trash?"":`<div class="statusfilter" role="group" aria-label="ステータスで絞り込み">
-    ${Object.keys(STATUS_META).map(s=>{const on=state.statusSel.includes(s);
-      return `<button type="button" class="stchip ${STATUS_META[s].cls} ${on?"on":""}" aria-pressed="${on}" aria-label="${s} ${counts[s]}件${on?"（絞り込み中）":""}" onclick="toggleStatus('${s}')"><span class="dot"></span>${s}<span class="n">${counts[s]}</span>${on?'<span class="ck" aria-hidden="true">✓</span>':""}</button>`;
+    ${Object.keys(STATUS_META).map(s=>{const on=state.statusSel.includes(s);const showCount=s!=="連携済み";
+      return `<button type="button" class="stchip ${STATUS_META[s].cls} ${on?"on":""}" aria-pressed="${on}" aria-label="${s}${showCount?` ${counts[s]}件`:""}${on?"（絞り込み中）":""}" onclick="toggleStatus('${s}')"><span class="dot"></span>${s}${showCount?`<span class="n">${counts[s]}</span>`:""}${on?'<span class="ck" aria-hidden="true">✓</span>':""}</button>`;
     }).join("")}
   </div>`;
   const catSel=`<div class="filter-sel"><span class="fs-l">${I.boxes("#5A6472",14)} 営業所</span>
