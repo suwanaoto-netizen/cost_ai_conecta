@@ -123,6 +123,22 @@
   .seg button.active{background:var(--greenSoft);color:var(--greenDark)}
   .seg button .n{font-size:10.5px;font-family:var(--mono);background:#EEF0EC;color:var(--inkSoft);border-radius:999px;padding:0 6px}
   .seg button.active .n{background:#fff;color:var(--greenDark)}
+  /* status filter chips (multi-select) */
+  .statusfilter{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .stchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;color:var(--inkSoft);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:700;cursor:pointer;user-select:none;transition:.12s}
+  .stchip:hover{border-color:var(--inkFaint)}
+  .stchip .dot{opacity:.55}
+  .stchip .n{font-size:10.5px;font-family:var(--mono);background:#EEF0EC;color:var(--inkSoft);border-radius:999px;padding:0 6px}
+  .stchip .ck{font-size:11px;font-weight:900;line-height:1}
+  .stchip.on{border-color:currentColor}
+  .stchip.on .dot{opacity:1}
+  .stchip.st-todo.on{background:#eaede8;color:#5a6472}
+  .stchip.st-done.on{background:var(--tealSoft);color:var(--teal)}
+  .stchip.st-reflected.on{background:var(--greenSoft);color:var(--greenDark)}
+  .stchip.on .n{background:rgba(255,255,255,.7);color:inherit}
+  .filter-summary{margin-left:10px;color:var(--inkSoft)}
+  .fs-clear{margin-left:8px;background:none;border:none;color:var(--inkSoft);font-weight:700;cursor:pointer;font-size:inherit;text-decoration:underline;padding:0}
+  .fs-clear:hover{color:var(--ink)}
   .srch{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:9px;padding:7px 11px;background:#fff;min-width:210px}
   .srch input{border:none;outline:none;font-size:13px;font-family:var(--sans);flex:1;background:none;color:var(--ink)}
   .tb-spacer{flex:1}
@@ -1304,7 +1320,7 @@ function statusHelp(){
 let state={
   view:"documents",
   collapsed:false,
-  filterStatus:"all",   // all|未入力|入力済み|連携済み
+  statusSel:[],   // 選択中のステータス（複数可・空＝すべて）
   categoryFilter:"all", vehCategoryFilter:"all",
   trash:false, docTrashAction:null,
   q:"",
@@ -1398,7 +1414,7 @@ function thDoc(key,label,cls){
 }
 function visibleDocs(){
   let list=docs.filter(d=>d.deleted===state.trash);
-  if(!state.trash && state.filterStatus!=="all") list=list.filter(d=>d.status===state.filterStatus);
+  if(!state.trash && state.statusSel.length) list=list.filter(d=>state.statusSel.includes(d.status));
   if(state.categoryFilter!=="all") list=list.filter(d=>(d.category||"")===state.categoryFilter);
   if(state.q.trim()){const q=state.q.trim().toLowerCase();
     list=list.filter(d=>(d.vendor+d.name+(d.category||"")).toLowerCase().includes(q));}
@@ -1406,8 +1422,8 @@ function visibleDocs(){
 }
 function setCategoryFilter(v){ state.categoryFilter=v; state.selected.clear(); state.bulkMenu=false; state.docPage=1; render(); }
 function renderDocuments(){
-  const counts={all:0,"未入力":0,"入力済み":0,"連携済み":0};
-  docs.filter(d=>!d.deleted).forEach(d=>{counts.all++;counts[d.status]++;});
+  const counts={"未入力":0,"入力済み":0,"連携済み":0};
+  docs.filter(d=>!d.deleted).forEach(d=>{counts[d.status]++;});
   const trashCount=docs.filter(d=>d.deleted).length;
 
   const head=`<div class="pagehead">
@@ -1415,8 +1431,10 @@ function renderDocuments(){
     <p class="page-desc">請求書をアップロード → 行をクリックして内容を確認・営業所を選択 → データ連携、の流れで進みます。複数選択でまとめて処理できます。</p>
   </div>`;
 
-  const seg=state.trash?"":`<div class="seg">
-    ${["all","未入力","入力済み","連携済み"].map(k=>`<button class="${state.filterStatus===k?"active":""}" onclick="setFilter('${k}')">${k==="all"?"すべて":k}<span class="n">${counts[k]}</span></button>`).join("")}
+  const seg=state.trash?"":`<div class="statusfilter" role="group" aria-label="ステータスで絞り込み">
+    ${Object.keys(STATUS_META).map(s=>{const on=state.statusSel.includes(s);
+      return `<button type="button" class="stchip ${STATUS_META[s].cls} ${on?"on":""}" aria-pressed="${on}" aria-label="${s} ${counts[s]}件${on?"（絞り込み中）":""}" onclick="toggleStatus('${s}')"><span class="dot"></span>${s}<span class="n">${counts[s]}</span>${on?'<span class="ck" aria-hidden="true">✓</span>':""}</button>`;
+    }).join("")}
   </div>`;
   const catSel=`<div class="filter-sel"><span class="fs-l">${I.boxes("#5A6472",14)} 営業所</span>
     <select onchange="setCategoryFilter(this.value)"><option value="all" ${state.categoryFilter==="all"?"selected":""}>すべて</option>
@@ -1489,7 +1507,8 @@ function renderDocBody(){
       </div></div>`;
   }else{
     const hint=(!state.trash&&sv.length===1)?`<span class="sel-hint">1件選択中（2件以上で一括処理が使えます）</span>`:"";
-    topbar=`<p class="count-line">${state.trash?"ゴミ箱":"表示中"} <b>${list.length}</b> 件${hint}</p>`;
+    const fsum=(!state.trash&&state.statusSel.length)?`<span class="filter-summary">絞り込み：${state.statusSel.join("・")}<button class="fs-clear" onclick="clearStatus()">クリア</button></span>`:"";
+    topbar=`<p class="count-line">${state.trash?"ゴミ箱":"表示中"} <b>${list.length}</b> 件${fsum}${hint}</p>`;
   }
 
   if(list.length===0){
@@ -1525,7 +1544,8 @@ function renderDocBody(){
     <tbody>${rows}</tbody></table></div>${pager("doc",info)}</div>`;
   return topbar+table;
 }
-function setFilter(k){state.filterStatus=k;state.selected.clear();state.bulkMenu=false;state.docPage=1;render();}
+function toggleStatus(s){const i=state.statusSel.indexOf(s);if(i>=0)state.statusSel.splice(i,1);else state.statusSel.push(s);state.selected.clear();state.bulkMenu=false;state.docPage=1;render();}
+function clearStatus(){state.statusSel=[];state.selected.clear();state.bulkMenu=false;state.docPage=1;render();}
 function setQuery(v){state.q=v;state.docPage=1; if(state.view==="documents") refreshDocBody();}
 function refreshDocBody(){const b=document.getElementById("doc-body"); if(!b){render();return;} b.innerHTML=renderDocBody(); setSelectAllState();}
 function setSelectAllState(){const cb=document.getElementById("cb-all"); if(!cb)return;
@@ -1608,7 +1628,7 @@ function bulkTrash(){ state.bulkMenu=false;
   const t=visibleDocs().filter(d=>state.selected.has(d.id));
   if(t.length===0){ render(); return; }
   state.docTrashAction={mode:"trash", ids:t.map(d=>d.id), label:t.length===1?t[0].name:""}; renderOverlay(); }
-function toggleTrash(){state.trash=!state.trash;state.filterStatus="all";state.selected.clear();state.bulkMenu=false;state.docPage=1;render();}
+function toggleTrash(){state.trash=!state.trash;state.statusSel=[];state.selected.clear();state.bulkMenu=false;state.docPage=1;render();}
 /* ───── 書類のゴミ箱（確認ステップ。コストモニターと同仕様） ───── */
 function trashDoc(id){const d=docs.find(x=>x.id===id);if(!d)return; state.docTrashAction={mode:"trash", ids:[id], label:d.name}; renderOverlay();}
 function restoreDoc(id){const d=docs.find(x=>x.id===id);if(!d)return; state.docTrashAction={mode:"restore", ids:[id], label:d.name}; renderOverlay();}
@@ -1763,7 +1783,7 @@ function finishUpload(){
   const added=u.files.length;
   state.upload={open:false,tab:"new",files:[],ocr:true,category:"",processing:{active:false,pct:0,label:""},_timer:null};
   state.splitUpload=freshSplitUpload();
-  state.trash=false; state.filterStatus="all"; state.categoryFilter="all"; state.view="documents"; state.docPage=1;
+  state.trash=false; state.statusSel=[]; state.categoryFilter="all"; state.view="documents"; state.docPage=1;
   state.justUploaded=new Set(newIds);
   render();
   toast(`${added}件の書類をデータ化しました（ステータス：未入力）`);
@@ -1941,7 +1961,7 @@ function finishSplitUpload(){
   const added=groups.length;
   state.upload={open:false,tab:"new",files:[],ocr:true,category:"",processing:{active:false,pct:0,label:""},_timer:null};
   state.splitUpload=freshSplitUpload();
-  state.trash=false; state.filterStatus="all"; state.categoryFilter="all"; state.view="documents"; state.docPage=1;
+  state.trash=false; state.statusSel=[]; state.categoryFilter="all"; state.view="documents"; state.docPage=1;
   state.justUploaded=new Set(newIds);
   render();
   toast(`${added}件の書類をデータ化しました（ステータス：未入力）`);
