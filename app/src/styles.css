@@ -126,6 +126,25 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .seg button .n { font-size: 10.5px; font-family: var(--mono); background: #eef0ec; color: var(--inkSoft); border-radius: 999px; padding: 0 6px; }
 .seg button.active .n { background: #fff; color: var(--greenDark); }
 
+/* status filter chips (multi-select) */
+.statusfilter { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stchip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: #fff; color: var(--inkSoft); border-radius: 999px; padding: 5px 11px; font-size: 12.5px; font-weight: 700; cursor: pointer; user-select: none; transition: 0.12s; }
+.stchip:hover { border-color: var(--inkFaint); }
+.stchip .dot { opacity: 0.55; }
+.stchip .n { font-size: 10.5px; font-family: var(--mono); background: #eef0ec; color: var(--inkSoft); border-radius: 999px; padding: 0 6px; }
+.stchip .ck { font-size: 11px; font-weight: 900; line-height: 1; }
+/* selected: take on the matching status color (mirrors StatusChip) */
+.stchip.on { border-color: currentColor; }
+.stchip.on .dot { opacity: 1; }
+.stchip.st-todo.on { background: #eaede8; color: #5a6472; }
+.stchip.st-done.on { background: var(--tealSoft); color: var(--teal); }
+.stchip.st-reflected.on { background: var(--greenSoft); color: var(--greenDark); }
+.stchip.on .n { background: rgba(255,255,255,0.7); color: inherit; }
+
+.filter-summary { margin-left: 10px; color: var(--inkSoft); }
+.fs-clear { margin-left: 8px; background: none; border: none; color: var(--inkSoft); font-weight: 700; cursor: pointer; font-size: inherit; text-decoration: underline; padding: 0; }
+.fs-clear:hover { color: var(--ink); }
+
 /* settings */
 .settings-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--space-rel); padding-bottom: 8px; }
 .set-savebar { position: sticky; bottom: 0; display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid var(--amber); border-radius: 12px; padding: 12px 16px; box-shadow: 0 -4px 16px rgba(15,20,28,0.1); margin-top: 2px; }
