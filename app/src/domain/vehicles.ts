@@ -1,6 +1,7 @@
 import type { Adjustment, Document, FrozenLine, Line, ManualLine, VehicleMaster } from "./types";
 import { effDocLine } from "./adjustments";
-import { normPlate, resolveVehicleId, type PlateIndex } from "./match";
+import { resolveVehicleId, type PlateIndex } from "./match";
+import { encodeVehKey, vehKeyOf, UNSET_KEY } from "./vehKey";
 
 export interface VehLine {
   /** doc 明細は Line.lid（Lid）、手動明細は ManualLine.id。いずれも string。 */
@@ -18,7 +19,7 @@ export interface VehLine {
 }
 
 export interface Vehicle {
-  key: string; // 車両ID または "U:正規化plate" / "未設定"
+  key: string; // encodeVehKey(VehKey)：車両ID / "U:正規化plate" / "未設定"
   kind: string;
   target: string; // 表示車番（マスタの正規plate）
   total: number;
@@ -97,8 +98,8 @@ export function buildVehicles(input: BuildVehiclesInput): Vehicle[] {
       if (!inR(eff.inspectedAt)) continue;
       const vid = l.vehicleId || resolveVehicleId(plateIndex, l.plate);
       const mv = vid ? masterById.get(vid) ?? null : null;
-      const target = mv ? mv.plate : l.plate || "未設定";
-      const key = vid || (normPlate(l.plate) ? "U:" + normPlate(l.plate) : "未設定");
+      const target = mv ? mv.plate : l.plate || UNSET_KEY;
+      const key = encodeVehKey(vehKeyOf(vid, l.plate));
       add(ensure(key, "単車", target), {
         lid: l.lid,
         src: "doc",

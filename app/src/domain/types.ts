@@ -83,7 +83,7 @@ export interface VehicleMaster {
 
 export interface ManualLine {
   id: string;
-  vkey: string; // 紐付く車両キー（車両ID または "U:正規化plate"）
+  vkey: string; // 紐付く車両キー（encodeVehKey: 車両ID / "U:正規化plate" / "未設定"）
   kind: string;
   target: string;
   item: string;
