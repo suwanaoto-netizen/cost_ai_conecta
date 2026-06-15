@@ -1614,7 +1614,8 @@ function bulkReflect(){ state.bulkMenu=false;
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="入力済み");
   if(t.length===0){ render(); toast("連携できる「入力済み」の書類が選択されていません"); return; }
   const warn=t.reduce((n,d)=>n+countUnresolved(docLines(d)),0);
-  state.reflectConfirm={kind:"bulk", count:t.length, label:"", warn}; renderOverlay(); }
+  const dups=findDuplicateDocs(t.map(d=>({id:d.id,lines:docLines(d)})), buildReflectedSignatures());
+  state.reflectConfirm={kind:"bulk", count:t.length, label:"", warn, dups, includeDups:false}; renderOverlay(); }
 function doBulkReflect(){
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="入力済み");
   if(t.length===0){ render(); return; }
@@ -2366,6 +2367,20 @@ function buildPlanFromLines(allLines){
 /* 連携前の要確認件数（suspect / existing-suspect の明細数） */
 function countUnresolved(allLines){ return (allLines||[]).filter(l=>{const s=matchOf(l);return s==="suspect"||s==="existing-suspect";}).length; }
 
+/* ───── 重複書類の検知（車番・金額・発生日が完全一致する明細を1件でも持つ書類） ───── */
+function dupSignature(l){ return normPlate(l.plate)+"|"+l.amount+"|"+l.inspectedAt; }
+/* 比較対象は連携済み（非ゴミ箱）の明細のみ。車番が空の明細はアンカーにしない。 */
+function buildReflectedSignatures(){
+  const sig=new Set();
+  docs.filter(d=>d.status==="連携済み"&&!d.deleted).forEach(d=>{
+    docLines(d).forEach(l=>{ if(normPlate(l.plate)) sig.add(dupSignature(l)); });
+  });
+  return sig;
+}
+function linesHaveDuplicate(lines, sig){ return (lines||[]).some(l=>normPlate(l.plate)&&sig.has(dupSignature(l))); }
+function findDuplicateDocs(cands, sig){ return cands.filter(c=>linesHaveDuplicate(c.lines, sig)).map(c=>c.id); }
+function toggleReflectIncludeDups(v){ if(state.reflectConfirm) state.reflectConfirm.includeDups=v; renderOverlay(); }
+
 /* 単一・一括 共通の連携ログ。units=[{name,lines}] */
 function runReflect(units, doneLabel, onFinish){
   const plan=[];
@@ -2413,8 +2428,10 @@ function closeReflect(){ const f=state._reflectFinish; state._reflectFinish=null
 
 function reflectPanel(){
   const d=docs.find(x=>x.id===state.panelId); if(!d||d.status!=="入力済み")return;
-  const warn=countUnresolved(state.draft?state.draft.lines:docLines(d));
-  state.reflectConfirm={kind:"panel", count:1, label:state.draft?state.draft.name:d.name, warn}; renderOverlay(); }
+  const cand=state.draft?state.draft.lines:docLines(d);
+  const warn=countUnresolved(cand);
+  const dups=linesHaveDuplicate(cand, buildReflectedSignatures())?[d.id]:[];
+  state.reflectConfirm={kind:"panel", count:1, label:state.draft?state.draft.name:d.name, warn, dups, includeDups:false}; renderOverlay(); }
 function doReflectPanel(){
   const d=docs.find(x=>x.id===state.panelId); if(!d||d.status!=="入力済み")return;
   runReflect([{name:state.draft.name,lines:state.draft.lines}], `${state.draft.name} をデータ連携しました`, ()=>{
@@ -2430,11 +2447,20 @@ function proceedReflect(){ const rc=state.reflectConfirm; state.reflectConfirm=n
 function renderReflectConfirm(){
   const rc=state.reflectConfirm; if(!rc) return "";
   const target = rc.kind==="bulk" ? `選択中の <b>${rc.count}</b> 件の書類` : `「${esc(rc.label)}」`;
+  const dupCount=(rc.dups&&rc.dups.length)||0;
+  const dupDisabled = dupCount>0 && !rc.includeDups;
+  const dupList = rc.kind==="bulk" ? `<ul style="margin:6px 0 8px;padding-left:18px;font-size:12.5px">${rc.dups.map(id=>`<li>${esc((docs.find(d=>d.id===id)||{}).name||id)}</li>`).join("")}</ul>` : "";
+  const dupBlock = dupCount?`<div class="ce-warn" style="background:var(--alertSoft);border-color:var(--alert)">${I.alert("#B23A2E",18)}<div>
+        <div class="ce-q" style="color:var(--alert)">${rc.kind==="bulk"?`重複の可能性がある書類が <b>${dupCount}</b> 件あります。`:`この書類は重複の可能性があります。`}</div>
+        <div class="ce-note">車番・金額・発生日が連携済みデータと完全一致する明細を含みます。</div>${dupList}
+        <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;cursor:pointer;margin-top:4px">
+          <input type="checkbox" ${rc.includeDups?"checked":""} onchange="toggleReflectIncludeDups(this.checked)"> 重複した書類も含めて連携する</label></div></div>`:"";
   return `<div class="ovl anim" style="z-index:70" onclick="if(event.target===this)closeReflectConfirm()"><div class="modal" style="width:min(480px,100%)">
     <div class="m-head"><span class="t">${I.send('#0E7A4B',18)} データ連携しますか？</span>
       <button class="x" onclick="closeReflectConfirm()">${I.x("#5A6472",18)}</button></div>
     <div class="m-body">
       <p style="margin:0 0 13px;font-size:13.5px;color:var(--ink)">${target}を車両コストへデータ連携します。</p>
+      ${dupBlock}
       ${rc.warn?`<div class="ce-warn" style="background:var(--alertSoft);border-color:var(--alert)">${I.alert("#B23A2E",18)}<div>
         <div class="ce-q" style="color:var(--alert)">読み取り信頼度が低い明細が <b>${rc.warn}</b> 件あります。</div>
         <div class="ce-note">車番が特定できない明細は連携されず、低信頼度で既存車両に一致した明細は<b>要確認</b>のまま追記されます。先に明細を確認することを推奨します。</div></div></div>`:""}
@@ -2444,7 +2470,7 @@ function renderReflectConfirm(){
     </div>
     <div class="m-foot">
       <button class="btn-cancel" onclick="closeReflectConfirm()">キャンセル</button>
-      <button class="btn-green" onclick="proceedReflect()">${I.send('#fff',14)} データ連携する</button>
+      <button class="btn-green" ${dupDisabled?"disabled":""} title="${dupDisabled?"重複書類が含まれています。チェックを入れると連携できます":""}" onclick="proceedReflect()">${I.send('#fff',14)} データ連携する</button>
     </div>
   </div></div>`;
 }
