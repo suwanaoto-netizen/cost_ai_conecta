@@ -3,10 +3,11 @@ import { useDataStore } from "../../store/data";
 import { useDocs, useLines, usePlateIndex } from "../../store/selectors";
 import { useSettingsStore } from "../../store/settings";
 import { useStore } from "../../store";
-import type { Line } from "../../domain/types";
+import type { Line, DocStatus } from "../../domain/types";
 import { countUnresolved } from "../../domain/match";
 import { docDate, docTotal } from "../../domain/documents";
 import { yen } from "../../domain/format";
+import { STATUS_CLASS } from "../../domain/catStyle";
 import { StatusChip } from "../common/StatusChip";
 import { Pager } from "../common/Pager";
 import { Button } from "../common/Button";
@@ -15,7 +16,7 @@ import { DocumentPanel } from "../documents/DocumentPanel";
 import { UploadModal } from "../documents/UploadModal";
 import { ReflectLog } from "../documents/ReflectLog";
 
-type StatusFilter = "all" | "未入力" | "入力済み" | "連携済み";
+const STATUS_OPTIONS: DocStatus[] = ["未入力", "入力済み", "連携済み"];
 
 export function DocumentsView() {
   const docs = useDocs();
@@ -30,7 +31,7 @@ export function DocumentsView() {
   const defaultPageSize = useSettingsStore((s) => s.live.settings.defaultPageSize);
   const showToast = useStore((s) => s.showToast);
 
-  const [filterStatus, setFilterStatus] = useState<StatusFilter>("all");
+  const [statusSel, setStatusSel] = useState<Set<DocStatus>>(new Set());
   const [office, setOffice] = useState("all");
   const [q, setQ] = useState("");
   const [trash, setTrash] = useState(false);
@@ -48,20 +49,20 @@ export function DocumentsView() {
 
   const linesOf = (id: string): Line[] => lines.filter((l) => l.docId === id);
 
-  const counts = { all: 0, 未入力: 0, 入力済み: 0, 連携済み: 0 } as Record<string, number>;
-  docs.filter((d) => !d.deleted).forEach((d) => { counts.all++; counts[d.status]++; });
+  const counts = { 未入力: 0, 入力済み: 0, 連携済み: 0 } as Record<DocStatus, number>;
+  docs.filter((d) => !d.deleted).forEach((d) => { counts[d.status]++; });
   const trashCount = docs.filter((d) => d.deleted).length;
 
   const visible = useMemo(() => {
     let list = docs.filter((d) => d.deleted === trash);
-    if (!trash && filterStatus !== "all") list = list.filter((d) => d.status === filterStatus);
+    if (!trash && statusSel.size > 0) list = list.filter((d) => statusSel.has(d.status));
     if (office !== "all") list = list.filter((d) => (d.category || "") === office);
     if (q.trim()) {
       const ql = q.trim().toLowerCase();
       list = list.filter((d) => (d.vendor + d.name + (d.category || "")).toLowerCase().includes(ql));
     }
     return list.slice().sort((a, b) => b.no - a.no);
-  }, [docs, trash, filterStatus, office, q]);
+  }, [docs, trash, statusSel, office, q]);
 
   const start = (page - 1) * perPage;
   const slice = visible.slice(start, start + perPage);
@@ -69,6 +70,9 @@ export function DocumentsView() {
 
   const resetSelection = () => { setSelected(new Set()); setBulkMenu(false); };
   const onFilterChange = (fn: () => void) => { fn(); resetSelection(); setPage(1); };
+  const toggleStatus = (s: DocStatus) =>
+    onFilterChange(() => setStatusSel((prev) => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n; }));
+  const clearStatus = () => onFilterChange(() => setStatusSel(new Set()));
   const toggleSelect = (id: string) =>
     setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleSelectAll = () => {
@@ -93,13 +97,25 @@ export function DocumentsView() {
 
       <div className="toolbar">
         {!trash && (
-          <div className="seg">
-            {(["all", "未入力", "入力済み", "連携済み"] as StatusFilter[]).map((k) => (
-              <button key={k} className={filterStatus === k ? "active" : ""} onClick={() => onFilterChange(() => setFilterStatus(k))}>
-                {k === "all" ? "すべて" : k}
-                <span className="n">{counts[k]}</span>
-              </button>
-            ))}
+          <div className="statusfilter" role="group" aria-label="ステータスで絞り込み">
+            {STATUS_OPTIONS.map((s) => {
+              const on = statusSel.has(s);
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  className={`stchip ${STATUS_CLASS[s]} ${on ? "on" : ""}`}
+                  aria-pressed={on}
+                  aria-label={`${s} ${counts[s]}件${on ? "（絞り込み中）" : ""}`}
+                  onClick={() => toggleStatus(s)}
+                >
+                  <span className="dot" />
+                  {s}
+                  <span className="n">{counts[s]}</span>
+                  {on && <span className="ck" aria-hidden>✓</span>}
+                </button>
+              );
+            })}
           </div>
         )}
         <div className="filter-sel">
@@ -115,7 +131,7 @@ export function DocumentsView() {
           <input placeholder="取引先・書類名で検索" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
         </div>
         <div className="tb-spacer" />
-        <button className={`trash-toggle ${trash ? "on" : ""}`} onClick={() => onFilterChange(() => { setTrash((t) => !t); setFilterStatus("all"); })}>
+        <button className={`trash-toggle ${trash ? "on" : ""}`} onClick={() => onFilterChange(() => { setTrash((t) => !t); setStatusSel(new Set()); })}>
           ゴミ箱<span style={{ fontFamily: "var(--mono)", fontSize: 10, background: "rgba(0,0,0,.06)", padding: "0 6px", borderRadius: 999 }}>{trashCount}</span>
         </button>
       </div>
@@ -154,6 +170,12 @@ export function DocumentsView() {
       ) : (
         <p className="count-line">
           {trash ? "ゴミ箱" : "表示中"} <b>{visible.length}</b> 件
+          {!trash && statusSel.size > 0 && (
+            <span className="filter-summary">
+              絞り込み：{STATUS_OPTIONS.filter((s) => statusSel.has(s)).join("・")}
+              <button className="fs-clear" onClick={clearStatus}>クリア</button>
+            </span>
+          )}
           {!trash && sel.length === 1 && <span className="sel-hint">1件選択中（2件以上で一括処理）</span>}
         </p>
       )}
@@ -246,7 +268,7 @@ export function DocumentsView() {
       {uploadOpen && (
         <UploadModal
           onClose={() => setUploadOpen(false)}
-          onDone={(count) => { setUploadOpen(false); onFilterChange(() => { setTrash(false); setFilterStatus("all"); setOffice("all"); }); showToast(`${count}件の書類をデータ化しました（ステータス：未入力）`); }}
+          onDone={(count) => { setUploadOpen(false); onFilterChange(() => { setTrash(false); setStatusSel(new Set()); setOffice("all"); }); showToast(`${count}件の書類をデータ化しました（ステータス：未入力）`); }}
         />
       )}
 
