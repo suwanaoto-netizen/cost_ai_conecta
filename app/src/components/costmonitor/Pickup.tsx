@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type { Vehicle } from "../../domain/vehicles";
 import { yen } from "../../domain/format";
 import { IconTruck, IconAlert, IconChevron } from "../common/Icon";
@@ -8,9 +7,7 @@ const moJP = (ym: string) => (ym ? `${+ym.slice(5, 7)}月` : "—");
 
 /** ピックアップ（要確認車両／コスト上位／コスト増加）。クリックで車両カルテを開く。 */
 export function Pickup({ vehicles, onOpen }: { vehicles: Vehicle[]; onOpen: (v: Vehicle) => void }) {
-  const [collapsed, setCollapsed] = useState(false);
-
-  const moList = [...new Set(vehicles.flatMap((v) => v.lines).map((l) => ymOf(l.date)).filter(Boolean))].sort();
+  const moList =[...new Set(vehicles.flatMap((v) => v.lines).map((l) => ymOf(l.date)).filter(Boolean))].sort();
   const lastYM = moList[moList.length - 1] || "";
   const prevYM = moList[moList.length - 2] || "";
   const vSum = (v: Vehicle, ym: string) => (ym ? v.lines.reduce((a, l) => a + (ymOf(l.date) === ym ? +l.amount || 0 : 0), 0) : 0);
@@ -40,28 +37,21 @@ export function Pickup({ vehicles, onOpen }: { vehicles: Vehicle[]; onOpen: (v: 
   if (maintRank[0]) att.push(<div key="a2">{item(maintRank[0].v, <><span className="pk-rank">3</span><div className="pk-main"><div className="pk-plate">{maintRank[0].v.target}</div><div className="pk-metric">整備費比率 {Math.round(maintRank[0].r * 100)}%</div></div></>)}</div>);
 
   return (
-    <>
-      <button className={`pickup-toggle ${collapsed ? "collapsed" : ""}`} onClick={() => setCollapsed((c) => !c)} aria-expanded={!collapsed}>
-        <IconChevron /><span>ピックアップ</span>
-      </button>
-      {!collapsed && (
-        <div className="pickup">
-          <div className="pk-card pk-card-alert">
-            <div className="pk-h"><IconAlert color="#B23A2E" size={14} /> 要確認車両</div>
-            <div className="pk-list">{att.length ? att : empty}</div>
-          </div>
-          <div className="pk-card">
-            <div className="pk-h"><IconTruck color="#0E7A4B" size={15} /> コスト上位車両</div>
-            <div className="pk-list">{topCost.length ? topCost.map((v, i) => <div key={v.key}>{item(v, <><span className="pk-rank wide">{i + 1}位</span><div className="pk-main"><div className="pk-plate">{v.target}</div></div><span className="pk-amt">{yen(v.total)}</span></>)}</div>) : empty}</div>
-          </div>
-          <div className="pk-card">
-            <div className="pk-h" title={`先月（${moJP(lastYM)}）を、その前月（${moJP(prevYM)}）と比較した前月比の増加率です`}>
-              <IconAlert color="#B87514" size={14} /> コスト増加車両 <span className="pk-hsub">前月比（先月：{moJP(lastYM)}）</span>
-            </div>
-            <div className="pk-list">{incRank.length ? incRank.slice(0, 3).map((x) => <div key={x.v.key}>{item(x.v, <><span className="pk-pct">+{Math.round(x.p)}%</span><div className="pk-main"><div className="pk-plate">{x.v.target}</div></div></>)}</div>) : empty}</div>
-          </div>
+    <div className="pickup">
+      <div className="pk-card pk-card-alert">
+        <div className="pk-h"><IconAlert color="#B23A2E" size={14} /> 要確認車両</div>
+        <div className="pk-list">{att.length ? att : empty}</div>
+      </div>
+      <div className="pk-card">
+        <div className="pk-h"><IconTruck color="#0E7A4B" size={15} /> コスト上位車両</div>
+        <div className="pk-list">{topCost.length ? topCost.map((v, i) => <div key={v.key}>{item(v, <><span className="pk-rank wide">{i + 1}位</span><div className="pk-main"><div className="pk-plate">{v.target}</div></div><span className="pk-amt">{yen(v.total)}</span></>)}</div>) : empty}</div>
+      </div>
+      <div className="pk-card">
+        <div className="pk-h" title={`先月（${moJP(lastYM)}）を、その前月（${moJP(prevYM)}）と比較した前月比の増加率です`}>
+          <IconAlert color="#B87514" size={14} /> コスト増加車両 <span className="pk-hsub">前月比（先月：{moJP(lastYM)}）</span>
         </div>
-      )}
-    </>
+        <div className="pk-list">{incRank.length ? incRank.slice(0, 3).map((x) => <div key={x.v.key}>{item(x.v, <><span className="pk-pct">+{Math.round(x.p)}%</span><div className="pk-main"><div className="pk-plate">{x.v.target}</div></div></>)}</div>) : empty}</div>
+      </div>
+    </div>
   );
 }
