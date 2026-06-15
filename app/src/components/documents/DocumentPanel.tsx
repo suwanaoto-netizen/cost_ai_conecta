@@ -3,8 +3,10 @@ import { useDataStore } from "../../store/data";
 import { useMasterStore } from "../../store/master";
 import { useSettingsStore } from "../../store/settings";
 import { useStore } from "../../store";
-import type { DocType, Document, Line } from "../../domain/types";
-import { buildPlateIndex, matchOf, resolveVehicleId } from "../../domain/match";
+import type { DocType, Document, Lid, Line } from "../../domain/types";
+import { mintLid } from "../../domain/ids";
+import { usePlateIndex } from "../../store/selectors";
+import { matchOf, resolveVehicleId } from "../../domain/match";
 import { docTotal, expectedDocTypes, ocrAmountCandidates, plateSuggestions } from "../../domain/documents";
 import { DOC_TYPES } from "../../domain/settings";
 import { resolveSubcat, subcatLabel, FUEL_CAT } from "../../domain/repairSubcat";
@@ -18,8 +20,6 @@ import { InvoicePreview } from "./InvoicePreview";
 
 type DraftLine = Pick<Line, "lid" | "item" | "plate" | "kind" | "cat" | "inspectedAt" | "amount" | "confidence" | "vehicleId" | "liters" | "unitPrice">;
 
-// 手動追加した明細用の lid。既存（正の整数）と衝突しないよう負の値を降順で採番する。
-let _newLid = -1;
 interface Draft {
   id: string;
   no: number;
@@ -55,7 +55,7 @@ export function DocumentPanel({
   const showToast = useStore((s) => s.showToast);
   const setView = useStore((s) => s.setView);
 
-  const plateIndex = useMemo(() => buildPlateIndex(masters), [masters]);
+  const plateIndex = usePlateIndex();
   const masterPlates = useMemo(() => masters.map((m) => m.plate), [masters]);
   const threshold = settings.matchThreshold;
 
@@ -65,7 +65,7 @@ export function DocumentPanel({
   const [zoom, setZoom] = useState(100);
   const [reflecting, setReflecting] = useState(false);
   const [confirmReflect, setConfirmReflect] = useState(false);
-  const [deleteLid, setDeleteLid] = useState<number | null>(null);
+  const [deleteLid, setDeleteLid] = useState<Lid | null>(null);
 
   useEffect(() => {
     const d = docs.find((x) => x.id === docId);
@@ -87,9 +87,9 @@ export function DocumentPanel({
   const ocrCand = ocrAmountCandidates(draft.lines as Line[]);
   const exp = expectedDocTypes(draft.lines as Line[], catDocTypes);
 
-  const patchLine = (lid: number, patch: Partial<DraftLine>) =>
+  const patchLine = (lid: Lid, patch: Partial<DraftLine>) =>
     setDraft((d) => (d ? { ...d, lines: d.lines.map((l) => (l.lid === lid ? { ...l, ...patch } : l)) } : d));
-  const setPlate = (lid: number, plate: string) =>
+  const setPlate = (lid: Lid, plate: string) =>
     patchLine(lid, { plate, confidence: 0.99, vehicleId: resolveVehicleId(plateIndex, plate) });
   const addLine = () =>
     setDraft((d) =>
@@ -98,7 +98,7 @@ export function DocumentPanel({
             ...d,
             lines: [
               ...d.lines,
-              { lid: _newLid--, item: "", plate: "", kind: "単車", cat: cats[0] ?? "", inspectedAt: "", amount: 0, confidence: 0.99, vehicleId: null },
+              { lid: mintLid(), item: "", plate: "", kind: "単車", cat: cats[0] ?? "", inspectedAt: "", amount: 0, confidence: 0.99, vehicleId: null },
             ],
           }
         : d

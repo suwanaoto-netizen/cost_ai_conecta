@@ -1,9 +1,11 @@
-import type { Adjustment, Document, Line, ManualLine, VehicleMaster } from "./types";
+import type { Adjustment, Document, FrozenLine, Line, ManualLine, VehicleMaster } from "./types";
 import { effDocLine } from "./adjustments";
-import { normPlate, resolveVehicleId, type PlateIndex } from "./match";
+import { resolveVehicleId, type PlateIndex } from "./match";
+import { encodeVehKey, vehKeyOf, UNSET_KEY } from "./vehKey";
 
 export interface VehLine {
-  lid: string | number;
+  /** doc 明細は Line.lid（Lid）、手動明細は ManualLine.id。いずれも string。 */
+  lid: string;
   src: "doc" | "manual";
   docId?: string;
   item: string;
@@ -17,7 +19,7 @@ export interface VehLine {
 }
 
 export interface Vehicle {
-  key: string; // 車両ID または "U:正規化plate" / "未設定"
+  key: string; // encodeVehKey(VehKey)：車両ID / "U:正規化plate" / "未設定"
   kind: string;
   target: string; // 表示車番（マスタの正規plate）
   total: number;
@@ -30,7 +32,7 @@ export interface Vehicle {
 
 export interface BuildVehiclesInput {
   docs: Document[];
-  lines: Line[];
+  lines: readonly FrozenLine[];
   manualLines: ManualLine[];
   adjustments: Adjustment[];
   masters: VehicleMaster[];
@@ -62,7 +64,7 @@ export function buildVehicles(input: BuildVehiclesInput): Vehicle[] {
       : () => true;
 
   const masterById = new Map(masters.map((m) => [m.id, m]));
-  const linesByDoc = new Map<string, Line[]>();
+  const linesByDoc = new Map<string, FrozenLine[]>();
   for (const l of lines) {
     if (!l.docId) continue;
     const arr = linesByDoc.get(l.docId) ?? [];
@@ -96,8 +98,8 @@ export function buildVehicles(input: BuildVehiclesInput): Vehicle[] {
       if (!inR(eff.inspectedAt)) continue;
       const vid = l.vehicleId || resolveVehicleId(plateIndex, l.plate);
       const mv = vid ? masterById.get(vid) ?? null : null;
-      const target = mv ? mv.plate : l.plate || "未設定";
-      const key = vid || (normPlate(l.plate) ? "U:" + normPlate(l.plate) : "未設定");
+      const target = mv ? mv.plate : l.plate || UNSET_KEY;
+      const key = encodeVehKey(vehKeyOf(vid, l.plate));
       add(ensure(key, "単車", target), {
         lid: l.lid,
         src: "doc",
@@ -131,4 +133,31 @@ export function buildVehicles(input: BuildVehiclesInput): Vehicle[] {
   }
 
   return [...map.values()].sort((a, b) => b.total - a.total);
+}
+
+/**
+ * 指定車両ID に集計される明細（連携済み書類の明細＋手動明細）の件数を数える。
+ * マスタ削除時の依存チェックに使う（>0 なら削除でコスト集計が孤児化する）。
+ */
+export function countVehicleCostLines(
+  vehicleId: string,
+  input: {
+    docs: Document[];
+    lines: readonly FrozenLine[];
+    manualLines: ManualLine[];
+    plateIndex: PlateIndex;
+  },
+): number {
+  const { docs, lines, manualLines, plateIndex } = input;
+  const reflected = new Set(
+    docs.filter((d) => d.status === "連携済み" && !d.deleted).map((d) => d.id),
+  );
+  let n = 0;
+  for (const l of lines) {
+    if (!l.docId || !reflected.has(l.docId)) continue;
+    const vid = l.vehicleId || resolveVehicleId(plateIndex, l.plate);
+    if (vid === vehicleId) n++;
+  }
+  for (const m of manualLines) if (m.vkey === vehicleId) n++;
+  return n;
 }

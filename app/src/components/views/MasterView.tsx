@@ -59,7 +59,7 @@ export function MasterView() {
   });
 
   const cell = (v: string) => (v ? v : <Dash />);
-  const kg = (n: number | "") => (fmtKg(n) ? fmtKg(n) : <Dash />);
+  const kg = (n: number | null) => (fmtKg(n) ? fmtKg(n) : <Dash />);
 
   return (
     <>

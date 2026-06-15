@@ -18,8 +18,8 @@ const master = (id: string, plate: string): VehicleMaster => ({
   name: "",
   note: "",
   office: "",
-  maxLoad: "",
-  grossWeight: "",
+  maxLoad: null,
+  grossWeight: null,
   size: "",
   klass: "",
 });

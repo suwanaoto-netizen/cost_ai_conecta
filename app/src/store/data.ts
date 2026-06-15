@@ -4,6 +4,8 @@ import type {
   ChangelogEntry,
   DocType,
   Document,
+  FrozenLine,
+  Lid,
   Line,
   ManualLine,
   Overridable,
@@ -14,13 +16,15 @@ import { buildPlateIndex } from "../domain/match";
 import { buildVehicles } from "../domain/vehicles";
 import { yen } from "../domain/format";
 import { resolveSubcat } from "../domain/repairSubcat";
+import { pruneAdjustments } from "../domain/adjustments";
+import { freezeLine } from "../domain/freeze";
 
 export const CURRENT_USER = "諏訪 尚杜";
 
 /** 編集確定時に modal から渡される、明細1行ぶんの編集後の値。 */
 export interface DocLineEdit {
   docId: string;
-  lid: string | number;
+  lid: Lid;
   item: string;
   cat: string;
   inspectedAt: string;
@@ -48,25 +52,31 @@ export interface UploadEntry {
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 /** 指定docの明細を入れ替えた新しい lines 配列を返す（freeze 指定で凍結）。 */
-function replaceLines(all: Line[], docId: string, next: Line[], freeze: boolean): Line[] {
+function replaceLines(
+  all: readonly FrozenLine[],
+  docId: string,
+  next: readonly Line[],
+  freeze: boolean,
+): FrozenLine[] {
   const others = all.filter((l) => l.docId !== docId);
   const fresh = next.map((l) => {
     const c = clone(l);
     c.docId = docId;
     // 内訳（連携用）は cat+item から再判定して常に同期させる。
     c.subCat = resolveSubcat(c.cat, c.item) ?? null;
-    return freeze ? Object.freeze(c) : c;
+    return freeze ? freezeLine(c) : c;
   });
   return [...others, ...fresh];
 }
 
 interface DataStore {
   docs: Document[];
-  lines: Line[];
+  lines: readonly FrozenLine[];
   manualLines: ManualLine[];
   adjustments: Adjustment[];
   changelog: ChangelogEntry[];
-  vehTrash: Set<string>;
+  /** ゴミ箱入り車両キー（encodeVehKey の文字列）。JSON 永続化可能な集合表現。 */
+  vehTrash: Record<string, true>;
   changelogSeenCount: number;
 
   commitVehicleEdit: (c: VehEditCommit) => void;
@@ -75,8 +85,8 @@ interface DataStore {
   markChangelogSeen: () => void;
 
   // 書類一覧／詳細パネル
-  saveDocDraft: (id: string, patch: DocPatch, lines: Line[]) => void;
-  reflectDocDraft: (id: string, patch: DocPatch, lines: Line[]) => void;
+  saveDocDraft: (id: string, patch: DocPatch, lines: readonly Line[]) => void;
+  reflectDocDraft: (id: string, patch: DocPatch, lines: readonly Line[]) => void;
   markEntered: (ids: string[]) => void;
   reflectMany: (ids: string[]) => void;
   changeOffice: (ids: string[], office: string) => void;
@@ -122,7 +132,7 @@ export const useDataStore = create<DataStore>((set) => ({
   manualLines: [],
   adjustments: [],
   changelog: initialChangelog,
-  vehTrash: new Set(),
+  vehTrash: {},
   changelogSeenCount: initialChangelog.length,
 
   commitVehicleEdit: ({ vkey, docEdits, manualLines, changelog }) =>
@@ -142,7 +152,7 @@ export const useDataStore = create<DataStore>((set) => ({
         if (String(orig.inspectedAt ?? "") !== String(e.inspectedAt)) patch.inspectedAt = e.inspectedAt;
         if (+orig.amount !== +e.amount) patch.amount = +e.amount;
         if (Object.keys(patch).length) {
-          adjustments.push({ id: "adj" + (adjustments.length + 1) + "_" + e.lid, docId: e.docId, lid: String(e.lid), type: "override", patch, ts: nowStamp(), user: CURRENT_USER });
+          adjustments.push({ id: "adj" + (adjustments.length + 1) + "_" + e.lid, docId: e.docId, lid: e.lid, type: "override", patch, ts: nowStamp(), user: CURRENT_USER });
         }
       });
       // 手動明細：この車両ぶんを差し替え
@@ -155,16 +165,14 @@ export const useDataStore = create<DataStore>((set) => ({
     }),
 
   trashVehicle: (entry) =>
-    set((s) => {
-      const t = new Set(s.vehTrash);
-      t.add(entry.vehKey);
-      return { vehTrash: t, changelog: [...s.changelog, entry] };
-    }),
+    set((s) => ({
+      vehTrash: { ...s.vehTrash, [entry.vehKey]: true },
+      changelog: [...s.changelog, entry],
+    })),
   restoreVehicle: (entry) =>
     set((s) => {
-      const t = new Set(s.vehTrash);
-      t.delete(entry.vehKey);
-      return { vehTrash: t, changelog: [...s.changelog, entry] };
+      const { [entry.vehKey]: _omit, ...vehTrash } = s.vehTrash;
+      return { vehTrash, changelog: [...s.changelog, entry] };
     }),
   markChangelogSeen: () => set((s) => ({ changelogSeenCount: s.changelog.length })),
 
@@ -174,6 +182,8 @@ export const useDataStore = create<DataStore>((set) => ({
         d.id === id ? { ...d, ...patch, status: d.status === "未入力" ? "入力済み" : d.status } : d,
       ),
       lines: replaceLines(s.lines, id, lines, false),
+      // 差し替えで消えた明細を参照する override 調整を GC（参照整合）。
+      adjustments: pruneAdjustments(s.adjustments, id, lines.map((l) => l.lid)),
     })),
 
   reflectDocDraft: (id, patch, lines) =>
@@ -182,6 +192,7 @@ export const useDataStore = create<DataStore>((set) => ({
         d.id === id ? { ...d, ...patch, status: "連携済み", reflectedAt: nowStamp() } : d,
       ),
       lines: replaceLines(s.lines, id, lines, true),
+      adjustments: pruneAdjustments(s.adjustments, id, lines.map((l) => l.lid)),
     })),
 
   markEntered: (ids) =>

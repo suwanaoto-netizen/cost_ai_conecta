@@ -66,7 +66,7 @@ export function officeFromPlate(plate: string, categories: string[]): string {
 }
 
 /** kg 表示の整形。 */
-export function fmtKg(n: number | "" | null | undefined): string {
-  if (n === "" || n == null || isNaN(+n)) return "";
+export function fmtKg(n: number | null | undefined): string {
+  if (n == null || isNaN(+n)) return "";
   return Number(n).toLocaleString("ja-JP") + " kg";
 }

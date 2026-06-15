@@ -11,8 +11,8 @@ export interface MasterForm {
   name: string;
   note: string;
   office: string;
-  maxLoad: number | "";
-  grossWeight: number | "";
+  maxLoad: number | null;
+  grossWeight: number | null;
   size: string;
   klass: string;
 }

@@ -1,7 +1,9 @@
-import type { Document, Line, DocStatus, Fuso } from "./types";
+import type { Document, FrozenLine, Line, DocStatus, Fuso } from "./types";
 import { FLEET } from "./masterSeed";
 import { DEFAULT_CATEGORIES } from "./settings";
 import { resolveSubcat } from "./repairSubcat";
+import { freezeLine } from "./freeze";
+import { mintLid } from "./ids";
 
 /**
  * 書類・明細のデモデータ生成（プロトタイプの決定論ジェネレータを移植）。
@@ -25,9 +27,8 @@ const sample = <T>(arr: T[], k: number): T[] => {
   return a.slice(0, k);
 };
 
-let _uid = 300;
 const L = (item: string, plate: string, cat: string, date: string, amount: number, conf = 0.97, fuso?: Fuso): Line => ({
-  lid: _uid++,
+  lid: mintLid(),
   item,
   plate: plate || "",
   kind: "単車",
@@ -198,14 +199,14 @@ const maxLineDate = (lines: Line[]) => lines.map((l) => l.inspectedAt).sort().sl
 
 export interface SeededData {
   docs: Document[];
-  lines: Line[];
+  lines: FrozenLine[];
 }
 
 /** 全シードを組み立てて返す。連携済み明細は凍結済み。 */
 export function seedDocuments(): SeededData {
   const seeds = [...baselineDocs(), ...genDocs(34), ...genMultiDocs(14), ...curatedSeed()];
   const docs: Document[] = [];
-  const lines: Line[] = [];
+  const lines: FrozenLine[] = [];
   let no = 1101;
   seeds.forEach((s) => {
     const id = "d" + (docs.length + 1);
@@ -214,8 +215,8 @@ export function seedDocuments(): SeededData {
     docs.push({ id, no: no++, name: s.name, vendor: s.vendor, cat: "請求書", status: s.status, category, reflectedAt, deleted: false });
     s.lines.forEach((l) => {
       l.docId = id;
-      if (s.status === "連携済み") Object.freeze(l); // 連携済み明細は不変
-      lines.push(l);
+      // 連携済み明細は不変（凍結）。それ以外もストア内では読み取り専用として扱う。
+      lines.push(s.status === "連携済み" ? freezeLine(l) : l);
     });
   });
   return { docs, lines };
