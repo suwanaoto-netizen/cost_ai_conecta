@@ -9,6 +9,8 @@ import { catStyleOf } from "../../domain/catStyle";
 import { yen } from "../../domain/format";
 import type { ChangelogEntry } from "../../domain/types";
 import { KpiCards } from "../costmonitor/KpiCards";
+import { CostTrendBarChart } from "../costmonitor/CostTrendBarChart";
+import { OfficeCategoryLineChart } from "../costmonitor/OfficeCategoryLineChart";
 import { PeriodCalendar, type DateRange } from "../costmonitor/PeriodCalendar";
 import { VehEditModal } from "../costmonitor/VehEditModal";
 import { ChangelogPanel } from "../costmonitor/ChangelogPanel";
@@ -142,7 +144,13 @@ export function CostMonitorView() {
           </div>
 
           {monitorVisible.length > 0 ? (
-            <KpiCards vehicles={monitorVisible} />
+            <>
+              <KpiCards vehicles={monitorVisible} />
+              <div className="mon-charts">
+                <CostTrendBarChart />
+                <OfficeCategoryLineChart />
+              </div>
+            </>
           ) : (
             <div className="veh-card">
               <div className="empty">
