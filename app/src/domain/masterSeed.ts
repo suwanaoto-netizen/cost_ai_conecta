@@ -38,6 +38,7 @@ export function seedVehicleMasters(): VehicleMaster[] {
       grossWeight: spec ? spec.gross : null,
       size: spec ? spec.size : "",
       klass: spec ? spec.klass : "",
+      subClass: spec ? spec.subClass : "",
     });
   });
   return out;

@@ -65,6 +65,7 @@ export interface MasterForm {
   grossWeight: number | null;
   size: string;
   klass: string;
+  subClass: string;
 }
 
 /** 車両マスタ削除の結果。ok=false のとき連携済み明細に阻まれている。 */
@@ -358,6 +359,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         grossWeight: form.grossWeight,
         size: form.size,
         klass: form.klass,
+        subClass: form.subClass,
       };
       if (form.no == null) {
         const v: VehicleMaster = { no: nextNo(s.vehiclesById), id: nextVehicleId(), ...fields };

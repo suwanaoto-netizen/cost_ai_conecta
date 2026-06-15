@@ -4,7 +4,7 @@ import { useVehicleMasters } from "../../store/selectors";
 import { nextOverlayId, useStore } from "../../store";
 import { useSettingsStore } from "../../store/settings";
 import type { VehicleMaster } from "../../domain/types";
-import { fmtKg } from "../../domain/jikenkyo";
+import { fmtKg, klassLabel } from "../../domain/jikenkyo";
 import { MasterEditModal } from "./MasterEditModal";
 import { Button } from "../common/Button";
 import { Pager } from "../common/Pager";
@@ -13,12 +13,12 @@ import { IconDocs } from "../common/Icon";
 const Dash = () => <span style={{ color: "var(--inkFaint)" }}>—</span>;
 
 function downloadCsv(vehicles: VehicleMaster[]) {
-  const cols = ["No", "車両番号", "車台番号", "車両コード", "社内名称", "営業所", "備考", "最大積載量(kg)", "車両総重量(kg)", "サイズ", "車格"];
+  const cols = ["No", "車両番号", "車台番号", "車格", "細分類", "車両コード", "社内名称", "営業所", "備考", "最大積載量(kg)", "車両総重量(kg)", "サイズ"];
   const q = (s: unknown) => `"${String(s == null ? "" : s).replace(/"/g, '""')}"`;
   const body = vehicles
     .slice()
     .sort((a, b) => a.no - b.no)
-    .map((v) => [v.no, v.plate, v.chassis, v.code, v.name, v.office, v.note, v.maxLoad, v.grossWeight, v.size, v.klass].map(q).join(","));
+    .map((v) => [v.no, v.plate, v.chassis, v.klass, v.subClass, v.code, v.name, v.office, v.note, v.maxLoad, v.grossWeight, v.size].map(q).join(","));
   const csv = "﻿" + cols.map(q).join(",") + "\r\n" + body.join("\r\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -56,7 +56,7 @@ export function VehicleMasterPanel() {
 
   const toForm = (v: VehicleMaster): MasterForm => ({
     no: v.no, plate: v.plate, chassis: v.chassis, code: v.code, name: v.name,
-    note: v.note, office: v.office, maxLoad: v.maxLoad, grossWeight: v.grossWeight, size: v.size, klass: v.klass,
+    note: v.note, office: v.office, maxLoad: v.maxLoad, grossWeight: v.grossWeight, size: v.size, klass: v.klass, subClass: v.subClass,
   });
 
   const cell = (v: string) => (v ? v : <Dash />);
@@ -121,7 +121,7 @@ export function VehicleMasterPanel() {
                       <span className="plate">{v.plate}</span>
                     </td>
                     <td style={{ fontFamily: "var(--mono)", fontSize: 11.5, color: "var(--inkSoft)" }}>{cell(v.chassis)}</td>
-                    <td>{cell(v.klass)}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>{cell(klassLabel(v.klass, v.subClass))}</td>
                     <td>{cell(v.code)}</td>
                     <td>{cell(v.name)}</td>
                     <td>{cell(v.office)}</td>

@@ -22,6 +22,7 @@ const master = (id: string, plate: string): VehicleMaster => ({
   grossWeight: null,
   size: "",
   klass: "",
+  subClass: "",
 });
 
 const idx = buildPlateIndex([master("veh_0001", "名古屋100あ1234")]);
