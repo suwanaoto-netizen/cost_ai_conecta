@@ -125,9 +125,7 @@ interface AppStore {
   upsert: (form: MasterForm) => void;
   remove: (no: number) => VehicleRemoveResult;
 
-  // コスト分類マスタ
-  addCostCat: (name: string) => boolean; // false=重複
-  removeCostCat: (name: string) => void;
+  // コスト分類マスタ（分類は固定。想定書類タイプのみ編集可）
   toggleCatDocType: (cat: string, dtype: string) => void;
 }
 
@@ -393,17 +391,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ vehiclesById, vehicleOrder: s.vehicleOrder.filter((id) => id !== target.id), manualLinesById });
     return { ok: true, removedManual };
   },
-
-  addCostCat: (name) => {
-    const t = name.trim();
-    if (!t) return false;
-    if (get().costCats.some((c) => c.name === t)) return false;
-    set((s) => ({ costCats: [...s.costCats, { name: t, docTypes: ["請求書"] }] }));
-    return true;
-  },
-
-  removeCostCat: (name) =>
-    set((s) => ({ costCats: s.costCats.filter((c) => c.name !== name) })),
 
   toggleCatDocType: (cat, dtype) =>
     set((s) => ({
