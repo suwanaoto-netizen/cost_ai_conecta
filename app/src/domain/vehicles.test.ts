@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { buildVehicles } from "./vehicles";
+import { buildVehicles, countVehicleCostLines } from "./vehicles";
 import { buildPlateIndex } from "./match";
 import { applyOverride } from "./adjustments";
-import type { Adjustment, Document, Line, VehicleMaster } from "./types";
+import type { Adjustment, Document, Line, ManualLine, VehicleMaster } from "./types";
 
 const master = (id: string, plate: string): VehicleMaster => ({
   no: 1, id, plate, chassis: "", code: "", name: "", note: "", office: "",
@@ -70,5 +70,31 @@ describe("buildVehicles", () => {
     const vs = buildVehicles({ docs, lines: [orig], manualLines: [], adjustments: adjs, masters, plateIndex: idx, range });
     expect(vs).toHaveLength(1);
     expect(vs[0].total).toBe(50000);
+  });
+});
+
+describe("countVehicleCostLines（マスタ削除の依存チェック）", () => {
+  const manual = (vkey: string): ManualLine => ({
+    id: "m1", vkey, kind: "単車", target: "名古屋100あ1234", item: "手動", cat: "燃料費",
+    date: "2026-04-30", amount: 1000, vendor: "", office: "",
+  });
+
+  it("連携済み明細（plate解決・vehicleId焼付け）と手動明細を数える", () => {
+    const docs = [reflectedDoc("d1")];
+    const lines = [
+      line(1, "d1", "名古屋100あ1234", 30000), // plate→veh_0001
+      line(2, "d1", "名古屋100あ1234", 20000, { vehicleId: "veh_0001" }), // 焼付け
+    ];
+    const n = countVehicleCostLines("veh_0001", {
+      docs, lines, manualLines: [manual("veh_0001")], plateIndex: idx,
+    });
+    expect(n).toBe(3);
+  });
+
+  it("連携前（入力済み）の明細や別車両は数えない", () => {
+    const docs = [{ ...reflectedDoc("d1"), status: "入力済み" as const }];
+    const lines = [line(1, "d1", "名古屋100あ1234", 30000)];
+    const n = countVehicleCostLines("veh_0001", { docs, lines, manualLines: [], plateIndex: idx });
+    expect(n).toBe(0);
   });
 });

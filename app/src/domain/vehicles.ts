@@ -132,3 +132,30 @@ export function buildVehicles(input: BuildVehiclesInput): Vehicle[] {
 
   return [...map.values()].sort((a, b) => b.total - a.total);
 }
+
+/**
+ * 指定車両ID に集計される明細（連携済み書類の明細＋手動明細）の件数を数える。
+ * マスタ削除時の依存チェックに使う（>0 なら削除でコスト集計が孤児化する）。
+ */
+export function countVehicleCostLines(
+  vehicleId: string,
+  input: {
+    docs: Document[];
+    lines: readonly FrozenLine[];
+    manualLines: ManualLine[];
+    plateIndex: PlateIndex;
+  },
+): number {
+  const { docs, lines, manualLines, plateIndex } = input;
+  const reflected = new Set(
+    docs.filter((d) => d.status === "連携済み" && !d.deleted).map((d) => d.id),
+  );
+  let n = 0;
+  for (const l of lines) {
+    if (!l.docId || !reflected.has(l.docId)) continue;
+    const vid = l.vehicleId || resolveVehicleId(plateIndex, l.plate);
+    if (vid === vehicleId) n++;
+  }
+  for (const m of manualLines) if (m.vkey === vehicleId) n++;
+  return n;
+}
