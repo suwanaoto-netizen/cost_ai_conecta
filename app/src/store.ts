@@ -47,7 +47,7 @@ export const nextOverlayId = () => "ov_" + ++_ovSeq;
 
 export const useStore = create<AppState>((set) => ({
   view: "documents",
-  sidebarCollapsed: false,
+  sidebarCollapsed: true,
   overlays: [],
   toast: null,
   todoCount: 0,

@@ -53,6 +53,7 @@ export function Sidebar() {
               aria-current={active ? "page" : undefined}
               onClick={() => navigateGuarded(it.view)}
               title={it.label}
+              data-label={it.label}
             >
               <span className="nic">
                 <Icon color={active ? "#0E7A4B" : "#D6EFE1"} size={18} />
