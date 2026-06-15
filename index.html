@@ -2981,7 +2981,7 @@ const _man=n=>Math.round(n/10000).toLocaleString()+"万";
 
 /* ① 原価（グロス＋分類構成比）推移：月次12ヶ月、昨年同月を並べて比較。営業所で絞り込み可能。 */
 function renderCostTrendBar(){
-  const W=600,H=300,ML=52,MR=12,MT=14,MB=40,PW=W-ML-MR,PH=H-MT-MB;
+  const W=600,H=230,ML=52,MR=12,MT=12,MB=34,PW=W-ML-MR,PH=H-MT-MB;
   const office=state.chartOffice||"all";
   const stacks=stackByMonth(office); const map={}; stacks.forEach(s=>{map[s.ym]=s;});
   let yMax=Math.max(1,...stacks.map(s=>s.gross)); yMax=Math.ceil(yMax/500000)*500000;
@@ -3004,7 +3004,7 @@ function renderCostTrendBar(){
 }
 /* ② 営業所別のコスト分類推移：月次12ヶ月。コスト分類＆車格で絞り込み。 */
 function renderOfficeLineChart(){
-  const W=600,H=300,ML=52,MR=12,MT=14,MB=40,PW=W-ML-MR,PH=H-MT-MB;
+  const W=600,H=230,ML=52,MR=12,MT=12,MB=34,PW=W-ML-MR,PH=H-MT-MB;
   const cat=state.chart2Cat||SERIES_CATS[0]; const klass=state.chart2Klass||"all";
   const lines=officeLines(cat,klass);
   let yMax=Math.max(1,...lines.flatMap(l=>l.points.map(p=>p.amount))); yMax=Math.ceil(yMax/100000)*100000;
@@ -3079,8 +3079,28 @@ function renderVehMonitor(){
       <span class="mk-note">入力データが少ない車両 <span class="help" tabindex="0">?<span class="help-pop pop-right"><b>データ収集中の車両</b><br>連携済みの明細が2件以下で、コスト傾向の分析にはまだデータが不足している車両です。書類を追加で連携すると精度が上がります。</span></span></span></div>
   </div>`;
 
+  /* ───── ピックアップ（登録データから自動抽出。クリックで車両カルテを表示） ───── */
+  const topCost=vehicles.slice(0,3);
+  const incRank=vehicles.map(v=>({v,p:pct(vSum(v,lastYM),vSum(v,prevYM))}))
+    .filter(x=>vSum(x.v,prevYM)>0 && x.p>0).sort((a,b)=>b.p-a.p);
+  const maintRank=vehicles.map(v=>({v,r:v.total>0?(v.byCat["修繕・維持費"]||0)/v.total:0}))
+    .filter(x=>x.r>0).sort((a,b)=>b.r-a.r);
+  const pkItem=(v,inner)=>`<div class="pk-item" onclick="openVehPanel('${v.key}','${v.kind}','${esc(v.target)}')">${inner}<span class="pk-detail">詳細${I.chev("#0E7A4B",13)}</span></div>`;
+  const att=[];
+  if(topCost[0]) att.push(pkItem(topCost[0],`<span class="pk-rank">1</span><div class="pk-main"><div class="pk-plate">${esc(topCost[0].target)}</div><div class="pk-metric">累計コスト ${yen(topCost[0].total)}・全車両中 1位</div></div>`));
+  if(incRank[0]) att.push(pkItem(incRank[0].v,`<span class="pk-rank">2</span><div class="pk-main"><div class="pk-plate">${esc(incRank[0].v.target)}</div><div class="pk-metric">前月比 +${Math.round(incRank[0].p)}%</div></div>`));
+  if(maintRank[0]) att.push(pkItem(maintRank[0].v,`<span class="pk-rank">3</span><div class="pk-main"><div class="pk-plate">${esc(maintRank[0].v.target)}</div><div class="pk-metric">整備費比率 ${Math.round(maintRank[0].r*100)}%</div></div>`));
+  const topItems=topCost.map((v,i)=>pkItem(v,`<span class="pk-rank wide">${i+1}位</span><div class="pk-main"><div class="pk-plate">${esc(v.target)}</div></div><span class="pk-amt">${yen(v.total)}</span>`));
+  const incItems=incRank.slice(0,3).map(x=>pkItem(x.v,`<span class="pk-pct">+${Math.round(x.p)}%</span><div class="pk-main"><div class="pk-plate">${esc(x.v.target)}</div></div>`));
+  const emptyMsg=`<div class="pk-empty">該当する車両はありません</div>`;
+  const pkCol=state.vehPickupCollapsed;
+  const pickup=`<button class="pickup-toggle ${pkCol?"collapsed":""}" onclick="toggleVehPickup()" aria-expanded="${!pkCol}">${I.chev("#5A6472",13)}<span>ピックアップ</span></button>${pkCol?"":`<div class="pickup">
+    <div class="pk-card pk-card-alert"><div class="pk-h">${I.alert("#B23A2E",14)} 要確認車両</div><div class="pk-list">${att.join("")||emptyMsg}</div></div>
+    <div class="pk-card"><div class="pk-h">${I.truckN("#0E7A4B",15)} コスト上位車両</div><div class="pk-list">${topItems.join("")||emptyMsg}</div></div>
+    <div class="pk-card"><div class="pk-h" title="先月（${moJP(lastYM)}）を、その前月（${moJP(prevYM)}）と比較した前月比の増加率です">${I.alert("#B87514",14)} コスト増加車両 <span class="pk-hsub">前月比（先月：${moJP(lastYM)}）</span></div><div class="pk-list">${incItems.join("")||emptyMsg}</div></div>
+  </div>`}`;
   const charts=`<div class="mon-charts">${renderCostTrendBar()}${renderOfficeLineChart()}</div>`;
-  return head+kpis+charts;
+  return head+kpis+pickup+charts;
 }
 /* ───── 個別モニタータブ：車両（車番）ごとのコスト一覧。絞り込み・ゴミ箱・変更履歴を提供する。 ───── */
 function renderVehIndividual(){

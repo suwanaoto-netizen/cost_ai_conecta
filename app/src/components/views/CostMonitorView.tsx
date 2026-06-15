@@ -11,6 +11,8 @@ import type { ChangelogEntry } from "../../domain/types";
 import { KpiCards } from "../costmonitor/KpiCards";
 import { CostTrendBarChart } from "../costmonitor/CostTrendBarChart";
 import { OfficeCategoryLineChart } from "../costmonitor/OfficeCategoryLineChart";
+import { Pickup } from "../costmonitor/Pickup";
+import { VehKarteModal } from "../costmonitor/VehKarteModal";
 import { PeriodCalendar, type DateRange } from "../costmonitor/PeriodCalendar";
 import { VehEditModal } from "../costmonitor/VehEditModal";
 import { ChangelogPanel } from "../costmonitor/ChangelogPanel";
@@ -61,6 +63,17 @@ export function CostMonitorView() {
       width: 720,
       render: (close) => (
         <VehEditModal vkey={v.key} kind={v.kind} target={v.target} office={office === "all" ? "" : office} onClose={close} />
+      ),
+    });
+  };
+
+  const openKarte = (v: Vehicle) => {
+    pushOverlay({
+      id: nextOverlayId(),
+      title: "車両カルテ",
+      width: 680,
+      render: (close) => (
+        <VehKarteModal vehicle={v} isMaster={plateRegistered(plateIndex, v.target)} onClose={close} />
       ),
     });
   };
@@ -146,6 +159,7 @@ export function CostMonitorView() {
           {monitorVisible.length > 0 ? (
             <>
               <KpiCards vehicles={monitorVisible} />
+              <Pickup vehicles={monitorVisible} onOpen={openKarte} />
               <div className="mon-charts">
                 <CostTrendBarChart />
                 <OfficeCategoryLineChart />
