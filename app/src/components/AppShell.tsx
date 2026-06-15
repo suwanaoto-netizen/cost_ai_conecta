@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useStore } from "../store";
-import { useDataStore } from "../store/data";
+import { useDocs } from "../store/selectors";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { OverlayHost } from "./common/OverlayHost";
@@ -20,7 +20,7 @@ function ViewArea() {
 
 export function AppShell() {
   const setTodoCount = useStore((s) => s.setTodoCount);
-  const docs = useDataStore((s) => s.docs);
+  const docs = useDocs();
   useEffect(() => {
     setTodoCount(docs.filter((d) => !d.deleted && d.status === "未入力").length);
   }, [docs, setTodoCount]);

@@ -1,11 +1,8 @@
 import { useState } from "react";
 import { useMasterStore, type MasterForm } from "../../store/master";
-import { useDataStore } from "../../store/data";
 import { useSettingsStore, currentSnapshot } from "../../store/settings";
 import { useStore } from "../../store";
 import { fmtKg, lookupJikenkyo } from "../../domain/jikenkyo";
-import { buildPlateIndex } from "../../domain/match";
-import { countVehicleCostLines } from "../../domain/vehicles";
 import { Button } from "../common/Button";
 import { IconCheck, IconAlert } from "../common/Icon";
 
@@ -36,10 +33,6 @@ export function MasterEditModal({ initial, onClose }: { initial?: MasterForm; on
   const upsert = useMasterStore((s) => s.upsert);
   const remove = useMasterStore((s) => s.remove);
   const isPlateTaken = useMasterStore((s) => s.isPlateTaken);
-  const vehicles = useMasterStore((s) => s.vehicles);
-  const docs = useDataStore((s) => s.docs);
-  const lines = useDataStore((s) => s.lines);
-  const manualLines = useDataStore((s) => s.manualLines);
   const categories = useSettingsStore((s) => currentSnapshot(s).categories);
   const showToast = useStore((s) => s.showToast);
 
@@ -72,21 +65,18 @@ export function MasterEditModal({ initial, onClose }: { initial?: MasterForm; on
 
   const del = () => {
     if (form.no == null) return;
-    // 依存チェック：この車両に集計されているコスト明細があれば削除をブロックする
-    // （削除すると連携済み・手動明細の参照先が孤児化し、集計が壊れるため）。
-    const target = vehicles.find((v) => v.no === form.no);
-    if (target) {
-      const plateIndex = buildPlateIndex(vehicles);
-      const deps = countVehicleCostLines(target.id, { docs, lines, manualLines, plateIndex });
-      if (deps > 0) {
-        return showToast(
-          `この車両にはコスト明細が ${deps} 件紐づいているため削除できません`,
-        );
-      }
+    // FK 整合はストア層が保証する：連携済み（不変）明細が紐づく車両は削除拒否、
+    // 手動明細だけならカスケード削除して整合を保つ。
+    const res = remove(form.no);
+    if (!res.ok) {
+      return showToast(
+        `この車両には連携済みのコスト明細が ${res.blockedByReflected ?? 0} 件あるため削除できません`,
+      );
     }
-    remove(form.no);
     onClose();
-    showToast("車両を削除しました");
+    showToast(
+      res.removedManual ? `車両を削除しました（手動明細 ${res.removedManual} 件も削除）` : "車両を削除しました",
+    );
   };
 
   return (

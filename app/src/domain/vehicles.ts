@@ -136,7 +136,28 @@ export function buildVehicles(input: BuildVehiclesInput): Vehicle[] {
 }
 
 /**
- * 指定車両ID に集計される明細（連携済み書類の明細＋手動明細）の件数を数える。
+ * 指定車両ID に集計される「連携済み書類の明細」の件数を数える。
+ * これらは不変（凍結）で付け替え不可なので、車両マスタ削除を拒否する根拠になる。
+ */
+export function countReflectedVehicleDocLines(
+  vehicleId: string,
+  input: { docs: Document[]; lines: readonly FrozenLine[]; plateIndex: PlateIndex },
+): number {
+  const { docs, lines, plateIndex } = input;
+  const reflected = new Set(
+    docs.filter((d) => d.status === "連携済み" && !d.deleted).map((d) => d.id),
+  );
+  let n = 0;
+  for (const l of lines) {
+    if (!l.docId || !reflected.has(l.docId)) continue;
+    const vid = l.vehicleId || resolveVehicleId(plateIndex, l.plate);
+    if (vid === vehicleId) n++;
+  }
+  return n;
+}
+
+/**
+ * 指定車両ID に集計される明細（連携済み書類の明細＋手動明細）の総件数。
  * マスタ削除時の依存チェックに使う（>0 なら削除でコスト集計が孤児化する）。
  */
 export function countVehicleCostLines(
@@ -148,16 +169,8 @@ export function countVehicleCostLines(
     plateIndex: PlateIndex;
   },
 ): number {
-  const { docs, lines, manualLines, plateIndex } = input;
-  const reflected = new Set(
-    docs.filter((d) => d.status === "連携済み" && !d.deleted).map((d) => d.id),
-  );
-  let n = 0;
-  for (const l of lines) {
-    if (!l.docId || !reflected.has(l.docId)) continue;
-    const vid = l.vehicleId || resolveVehicleId(plateIndex, l.plate);
-    if (vid === vehicleId) n++;
-  }
+  const { manualLines } = input;
+  let n = countReflectedVehicleDocLines(vehicleId, input);
   for (const m of manualLines) if (m.vkey === vehicleId) n++;
   return n;
 }
