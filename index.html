@@ -51,7 +51,7 @@
 
   /* ───── shell ───── */
   .shell{display:flex;height:100vh}
-  .side{width:214px;flex-shrink:0;background:linear-gradient(180deg,#11875A 0%,#0C6A43 100%);color:#E6F4EC;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;transition:width .18s ease}
+  .side{width:214px;flex-shrink:0;background:linear-gradient(180deg,#11875A 0%,#0C6A43 100%);color:#E6F4EC;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;z-index:50;transition:width .18s ease}
   .side.collapsed{width:66px}
   .brand{display:flex;align-items:center;gap:10px;padding:18px 16px 12px}
   .brand .mark{width:34px;height:34px;border-radius:9px;background:#fff;display:grid;place-items:center;flex-shrink:0}
@@ -86,7 +86,7 @@
   .side.collapsed .side-foot{display:none}
   /* collapsed: ホバーで名称ツールチップ */
   .navbtn{position:relative}
-  .side.collapsed .navbtn::after{content:attr(data-l);position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);background:#0C3D27;color:#fff;padding:6px 10px;border-radius:7px;font-size:12px;font-weight:700;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;z-index:60;box-shadow:0 6px 18px rgba(0,0,0,.28);transition:opacity .12s ease}
+  .side.collapsed .navbtn::after{content:attr(data-l);position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);background:#fff;color:var(--greenDark);border:1.5px solid var(--green);padding:6px 10px;border-radius:7px;font-size:12px;font-weight:700;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;z-index:9999;box-shadow:0 6px 18px rgba(0,0,0,.28);transition:opacity .12s ease}
   .side.collapsed .navbtn:hover::after{opacity:1;visibility:visible}
 
   /* ───── main ───── */
