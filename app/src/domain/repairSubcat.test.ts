@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   REPAIR_CAT,
   FUEL_CAT,
+  INSURANCE_CAT,
   REPAIR_SUBCATS,
   FUEL_SUBCATS,
   SUBCATS_BY_CAT,
@@ -44,6 +45,24 @@ describe("subcat（燃料費）", () => {
 
   it("未該当は軽油にフォールバックする", () => {
     expect(inferSubcat(FUEL_CAT, "給油")).toBe("diesel");
+  });
+});
+
+describe("subcat（保険料）", () => {
+  it("「自賠責」「自動車損害賠償責任保険」は自賠責保険に判定する", () => {
+    expect(inferSubcat(INSURANCE_CAT, "自賠責保険料")).toBe("jibaiseki");
+    expect(inferSubcat(INSURANCE_CAT, "自動車損害賠償責任保険")).toBe("jibaiseki");
+  });
+
+  it("それ以外の保険関連は任意保険にフォールバックする", () => {
+    expect(inferSubcat(INSURANCE_CAT, "任意保険料（自動車保険）")).toBe("voluntary");
+    expect(inferSubcat(INSURANCE_CAT, "対物・対人賠償保険")).toBe("voluntary");
+    expect(resolveSubcat(INSURANCE_CAT, "任意保険料（自動車保険）")).toBe("voluntary");
+  });
+
+  it("内訳ラベルに変換できる", () => {
+    expect(subcatLabel("jibaiseki")).toBe("自賠責保険");
+    expect(subcatLabel("voluntary")).toBe("任意保険");
   });
 });
 

@@ -912,6 +912,10 @@ const SUBCATS_BY_CAT={
     {code:"onboard",label:"車載用品"},
     {code:"consumable",label:"ドライバー利用消耗品"},
   ],
+  "保険料":[
+    {code:"jibaiseki",label:"自賠責保険"},
+    {code:"voluntary",label:"任意保険"},
+  ],
 };
 const REPAIR_SUBCATS=SUBCATS_BY_CAT[REPAIR_CAT], FUEL_SUBCATS=SUBCATS_BY_CAT[FUEL_CAT];
 const _SUBCAT_LABEL={}; Object.values(SUBCATS_BY_CAT).forEach(arr=>arr.forEach(s=>_SUBCAT_LABEL[s.code]=s.label));
@@ -933,9 +937,13 @@ const SUBCAT_KEYWORDS_BY_CAT={
     {code:"onboard",keywords:["電球","ヒューズ","ワイパー","発煙筒","軍手","荷締"]},
     {code:"repair",keywords:["修理","交換","板金","塗装","バンパー","パネル","ベルト","ガス補充","整備"]},
   ],
+  "保険料":[
+    // 「自賠責」「自動車損害賠償責任保険」→ 自賠責保険。それ以外の保険関連はフォールバックの任意保険。
+    {code:"jibaiseki",keywords:["自賠責","自動車損害賠償責任保険"]},
+  ],
 };
 /* いずれのキーワードにも当たらない場合のフォールバック内訳 */
-const SUBCAT_FALLBACK={"燃料費":"diesel","修繕・維持費":"consumable"};
+const SUBCAT_FALLBACK={"燃料費":"diesel","修繕・維持費":"consumable","保険料":"voluntary"};
 function hasSubcat(cat){ return !!SUBCAT_KEYWORDS_BY_CAT[cat]; }
 function inferSubcat(cat,item){ const rules=SUBCAT_KEYWORDS_BY_CAT[cat]; if(!rules) return null; const it=item||""; const r=rules.find(r=>r.keywords.some(k=>it.includes(k))); return r?r.code:(SUBCAT_FALLBACK[cat]||null); }
 function subcatLabel(code){ return code?(_SUBCAT_LABEL[code]||code):""; }
