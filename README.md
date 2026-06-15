@@ -8,6 +8,7 @@
 |---|---|---|
 | `app/` | **React + TypeScript 版（現行・アクティブ）** | 開発はここ。`npm run dev` / `build` / `test` |
 | `docs/PRD.md` | プロダクト要求仕様書 | 仕様の正 |
+| `docs/PRD-print.html` | PRD の印刷／PDF配布版（`PRD.md` から生成。ブラウザで開き「印刷→PDFに保存」） | 配布用 |
 | `legacy-prototype.html` | 旧 Vanilla JS 単一HTMLプロトタイプ | **参照専用・非推奨（メンテナンス対象外）** |
 
 ## 現行アプリ（`app/`）

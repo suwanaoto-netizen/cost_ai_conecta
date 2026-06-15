@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>AI Fleet Pilot — PRD（印刷版）</title>
+<style>
+:root{--ink:#1B2330;--inkSoft:#5A6472;--line:#D9DED5;--lineSoft:#E7EAE3;--green:#16A571;--greenDark:#0E7A4B;--greenSoft:#E4F4EC;--code:#0E5A3A;--codeBg:#F2F5F0;}
+*{box-sizing:border-box;}
+html{font-size:13px;}
+body{margin:0;color:var(--ink);background:#EEF0EC;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP","Meiryo",Inter,system-ui,sans-serif;font-feature-settings:"palt";line-height:1.7;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.page{max-width:820px;margin:0 auto;background:#fff;padding:26mm 22mm;box-shadow:0 1px 8px rgba(0,0,0,.08);}
+h1{font-size:22px;margin:0 0 2px;letter-spacing:.02em;}
+h2{font-size:17px;margin:26px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--green);color:var(--greenDark);}
+h3{font-size:14.5px;margin:18px 0 6px;color:var(--ink);}
+h4{font-size:13px;margin:12px 0 4px;color:var(--inkSoft);}
+p{margin:6px 0;}
+a{color:var(--greenDark);}
+strong{font-weight:700;}
+code{font-family:"SFMono-Regular",Consolas,"Noto Sans Mono CJK JP",monospace;font-size:.86em;background:var(--codeBg);color:var(--code);padding:1px 5px;border-radius:4px;}
+pre{background:var(--codeBg);border:1px solid var(--lineSoft);border-radius:8px;padding:12px 14px;overflow:auto;margin:10px 0;}
+pre code{background:none;color:var(--ink);padding:0;font-size:11px;line-height:1.55;}
+blockquote{margin:10px 0;padding:8px 14px;background:var(--greenSoft);border-left:4px solid var(--green);border-radius:0 6px 6px 0;color:#11402c;}
+ul,ol{margin:6px 0;padding-left:22px;}
+li{margin:3px 0;}
+li>ul,li>ol{margin:2px 0;}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:11.5px;}
+th,td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top;}
+th{background:#F4F7F2;color:var(--greenDark);font-weight:700;}
+tr:nth-child(even) td{background:#FBFCFA;}
+hr{border:none;border-top:1px solid var(--line);margin:22px 0;}
+.cover{padding:60mm 22mm 40mm;background:#fff;max-width:820px;margin:0 auto 16px;box-shadow:0 1px 8px rgba(0,0,0,.08);}
+.cover .kicker{font-size:11px;letter-spacing:.35em;color:var(--green);font-weight:700;}
+.cover .ttl{font-size:42px;font-weight:800;line-height:1.05;margin:14px 0 6px;letter-spacing:.01em;}
+.cover .sub{font-size:15px;color:var(--inkSoft);margin:0 0 26px;}
+.cover .lead{font-size:13px;color:var(--ink);max-width:46em;border-top:1px solid var(--line);padding-top:18px;}
+.cover .meta{margin-top:30px;font-size:12px;color:var(--inkSoft);}
+.cover .meta b{color:var(--ink);}
+.conf{margin-top:42px;font-size:10px;letter-spacing:.3em;color:#9AA3AD;}
+.tip{max-width:820px;margin:14px auto;font-size:12px;color:#5A6472;background:#fff;border:1px dashed #C8D2C5;border-radius:8px;padding:10px 14px;}
+@page{size:A4;margin:16mm 14mm;}
+@media print{
+ body{background:#fff;}
+ .page,.cover{box-shadow:none;margin:0 auto;max-width:none;padding:0;}
+ .cover{page-break-after:always;padding:40mm 0 0;}
+ h2{page-break-after:avoid;break-after:avoid;}
+ h3,h4{page-break-after:avoid;}
+ table,pre,blockquote{page-break-inside:avoid;break-inside:avoid;}
+ tr{page-break-inside:avoid;}
+ a{color:var(--ink);text-decoration:none;}
+ .tip{display:none;}
+}</style></head>
+<body>
+<div class="tip">📄 このファイルはブラウザの「印刷」→「PDFに保存」で高品質なPDFになります（用紙A4・余白「既定」・背景グラフィックON 推奨）。</div>
+<section class="cover">
+ <div class="kicker">PRODUCT REQUIREMENTS · 物流DX</div>
+ <div class="ttl">AI Fleet Pilot</div>
+ <div class="sub">プロダクト要求仕様書 — PRD / フロントエンド設計向け</div>
+ <p class="lead">請求書のデータ化（AI-OCR）と、車両（車番）単位のコスト自動集計・データ連携を行う、物流事業者向け Web アプリケーション。本書はフロントエンドを実装するための仕様書であり、画面・コンポーネント・状態・ドメインモデル・業務ルールを定義する。</p>
+ <div class="meta">
+  対象読者：<b>FEエンジニア / デザイナー / PdM</b><br/>
+  現状：<b>React 版（app/）が現行</b>／ legacy-prototype.html は参照専用<br/>
+  最終更新：<b>2026-06-15（rev.）</b>
+ </div>
+ <div class="conf">CONFIDENTIAL</div>
+</section>
+<main class="page">
+<h1>AI Fleet Pilot — プロダクト要求仕様書（PRD / フロントエンド設計向け）</h1>
+<blockquote>請求書のデータ化（AI-OCR）と、車両（車番）単位のコスト自動集計・データ連携を行う、物流事業者向け Web アプリケーション。 本書はフロントエンドを実装するための仕様書であり、画面・コンポーネント・状態・ドメインモデル・業務ルールを定義する。</blockquote>
+<ul><li>対象読者: フロントエンドエンジニア / デザイナー / PdM</li></ul><ul><li>現状: 現行実装は <strong>React + TypeScript 版（<code>app/</code>）</strong>。本書（<code>docs/PRD.md</code>）が仕様の正であり、<code>legacy-prototype.html</code>（旧 <code>index.html</code>）は参照専用（非推奨・メンテナンス対象外）。</li></ul><ul><li>最終更新: 2026-06-15（rev.）</li></ul>
+<hr/>
+<h2>改訂メモ — rev. 2026-06-15（直近PRを統合）</h2>
+<ul><li><strong>コストモニターを2タブ化</strong>：「コストモニター」（登録車両全体のサマリー＝KPI＋ピックアップ＋推移グラフ）と「個別モニター」（車両ごとの集計テーブル）に分割。</li></ul><ul><li><strong>推移グラフを追加</strong>：①「車両維持コスト推移（分類構成比）」＝月次12ヶ月の積み上げ棒＋昨年同月比較・営業所絞り込み。②「営業所別 コスト分類推移」＝折れ線・コスト分類／車格で絞り込み。いずれもデモ用の決定的な月次合成データ（<code>monthlySeries</code>）で描画。</li></ul><ul><li><strong>ピックアップを追加</strong>：要確認車両／コスト上位車両／コスト増加車両（前月比）。クリックで<strong>車両カルテ</strong>（読み取り専用の詳細・明細タイムライン）を開く。</li></ul><ul><li>KPI・グラフの説明に「<strong>※給与・運賃・間接費は含まれていません</strong>」を明示（コスト分類が車両維持コストに限られることの注記）。</li></ul><ul><li><strong>車両ID（不変キー）による安定リンク</strong>：突合は正規化車番→車両ID（<code>PlateIndex</code>）で行い、確定時に明細へ <code>vehicleId</code> を焼き付ける。OCRの全角/半角・空白ゆらぎを <code>normPlate</code> で吸収。</li></ul><ul><li><strong>突合状態に <code>existing-suspect</code> を追加</strong>：既存マスタに一致するが信頼度がしきい値未満のケース（誤紐付け防止のため要確認に倒す）。</li></ul><ul><li><strong>車両マスタに営業所・車格細分類（<code>subClass</code>：1t/2t/3t/4t/増トン/10t 等）を追加</strong>。営業所の初期値はナンバーの地名から推定し、コスト内訳編集と双方向連動。</li></ul><ul><li>連携済み明細を <code>Object.freeze</code> で凍結。編集は追記専用の調整（override）でコスト集計のみに反映（原本不変・実効値集計・undo）。<code>Lid</code> をブランド型化し ID 生成を <code>mintLid</code> に一元化。</li></ul><ul><li>設定の「ロジポケ連携」を「データ連携」に再編（ロジポケ／モビポケ／外部サービスのタブ）。コスト分類・想定書類タイプの管理はマスタデータ（コスト分類タブ）へ移管。</li></ul><ul><li>修繕・維持費／燃料費に外部連携用の内訳（<code>subCat</code>）を内部保持。「分類＋品名」から自動判定（<code>KEYWORDS_BY_CAT</code> 部分一致・コード安定、未該当はフォールバック）。燃料費は給油量（L）・単価（円/L）手入力欄を持ち、連携タグに併記。</li></ul>
+<hr/>
+<h2>1. プロダクト概要</h2>
+<h3>1.1 背景・課題</h3>
+<p>物流事業者は、燃料・整備・通行料・保険・税金など、車両ごとに多種多様な請求書を受け取る。これらを手作業で会計・車両コスト管理システムに転記する負荷が高く、入力ミス・集計漏れ・車両単位の原価可視化の遅れが発生している。</p>
+<h3>1.2 解決策</h3>
+<ol><li>請求書（PDF/画像/CSV）をアップロードすると <strong>AI-OCR</strong> が明細を自動データ化する。</li></ol><ol><li>明細の <strong>車番（ナンバープレート）を車両マスタと自動突合</strong>し、既存車両への紐付け／新規車両作成を判定する。</li></ol><ol><li>担当者が内容を確認・修正して「入力済み」にし、連携先（ロジポケ／モビポケ／外部サービス）へ <strong>データ連携</strong> する。</li></ol><ol><li>連携済みデータから <strong>車両（車番）単位のコストを自動集計</strong>し、コストモニターで可視化する。</li></ol>
+<h3>1.3 コアバリュー</h3>
+<ul><li><strong>転記レス</strong>: OCR＋突合で入力を自動化。手作業の転記をなくす。</li></ul><ul><li><strong>車両原価の可視化</strong>: 1車番＝1レコードで常に最新の積み上げを表示。全社サマリー（KPI・推移グラフ）と個別車両の両面で把握。</li></ul><ul><li><strong>監査性</strong>: 請求書原本は不変。連携済みコストの編集は調整レイヤ＋変更履歴（いつ・誰が・何を・どう変えたか）に記録。</li></ul>
+<blockquote>注意: 集計対象は車両ごとの維持コスト（燃料・整備・通行料・保険・調達・税金等）であり、<strong>給与・運賃・間接費は含まない</strong>。</blockquote>
+<h3>1.4 想定ユーザー</h3>
+<ul><li>物流事業者の経理・総務・配車担当者（PC利用が主、デスクトップ幅前提）。</li></ul><ul><li>複数営業所をまたいで書類・コストを管理する。</li></ul>
+<hr/>
+<h2>2. 用語・ドメインモデル</h2>
+<table><thead><tr><th>用語</th><th>説明</th></tr></thead><tbody><tr><td>書類 (Document)</td><td>アップロードした請求書1枚＝1レコード。複数の明細を内包する（永続層では明細を別テーブルとし <code>docId</code> で参照）。</td></tr><tr><td>明細 (Line)</td><td>書類内の1行。項目・対象車両（車番）・コスト分類・発生日・金額・読み取り信頼度を持つ。確定時に車両ID（<code>vehicleId</code>）を焼き付ける。</td></tr><tr><td>コスト分類 (Category / cat)</td><td>費用の会計区分。<code>燃料費 / 修繕・維持費 / 通行料 / 保険料 / 調達コスト / 税金</code>（<strong>マスタデータ＞コスト分類タブ</strong>で追加・削除可）。連携用の内訳コード（subCat）を派生で持つ。</td></tr><tr><td>内訳 (subCat / Sub-category)</td><td>コスト分類の外部連携用の細分類で、「分類＋品名」から導く従属値（分類横断）。連携キーは安定 <code>code</code>、表示は <code>label</code>。対象分類：修繕・維持費（車検／法定点検／修理／タイヤ／オイル／バッテリー／洗車・美装関連／車載用品／ドライバー利用消耗品、未該当→<code>consumable</code>）・燃料費（軽油 <code>diesel</code>／尿素水 <code>adblue</code>／ガソリン <code>gasoline</code>／添加剤 <code>additive</code>、未該当→<code>diesel</code>）。</td></tr><tr><td>書類タイプ (DocType)</td><td><code>請求書 / 見積書 / 領収書 / 納品書 / 明細書 / 保険証券 / 納付書</code>。コスト分類ごとに想定タイプを設定可能（マスタで管理）。</td></tr><tr><td>営業所 (Office / CATEGORIES)</td><td>書類に紐付く拠点。書類一覧・コストモニターの絞り込み軸。設定で管理。</td></tr><tr><td>車両マスタ (Vehicle Master)</td><td>車番・車台番号・車両コード・営業所・諸元（最大積載量・総重量・サイズ・車格・車格細分類）を持つ登録車両。突合の真実源。営業所の初期値はナンバーの地名から推定。</td></tr><tr><td>突合 (Match)</td><td>明細の車番を車両マスタと照合し、状態（既存／既存・要確認／新規／要確認／未選択）を判定すること。正規化車番→車両IDの <code>PlateIndex</code> で解決。</td></tr><tr><td>車両ID (vehicleId)</td><td>車番に依存しない不変の内部キー。突合・集計の安定キーで、確定時に明細へ焼き付ける。</td></tr><tr><td>自検協データ</td><td>車台番号から車格・諸元を引く外部参照（プロトタイプではローカル擬似DB <code>lookupJikenkyo</code>）。</td></tr><tr><td>ロジポケ (Logipoke)</td><td>データ連携先の車両コスト管理システム。設定の「データ連携」カードで接続設定（エンドポイント＋APIキー）。モビポケ・外部サービスと並ぶ連携先のひとつ。</td></tr><tr><td>モビポケ / 外部サービス</td><td>ロジポケ以外のデータ連携先。設定の「データ連携」カードのタブごとに接続設定・接続テスト・差分表示を行う。</td></tr><tr><td>データ連携 (Reflect)</td><td>入力済み書類のコストを連携先（ロジポケ／モビポケ／外部サービス）＝コストモニターへ確定計上すること（旧称「ロジポケに反映」）。</td></tr><tr><td>調整 (Adjustment / override)</td><td>連携済み明細に対する追記専用の上書き。元データは変更せず、コスト集計にのみ適用。<code>ADJUSTMENTS</code> に蓄積（<code>setOverride</code> / <code>findOverride</code>）。</td></tr><tr><td>凍結 (Freeze)</td><td>連携済み書類の明細を <code>Object.freeze</code> で不変化。請求書原本は以後変更不可。</td></tr><tr><td>実効値 (Effective value)</td><td>原値に調整（override）を重ねた値。<code>effDocLine</code> が算出し、コスト集計・日付フィルタ・変更履歴の基準となる。</td></tr><tr><td>変更履歴 (Changelog)</td><td>連携済みコストへの編集差分・ゴミ箱/復元の監査ログ。</td></tr><tr><td>車両カルテ (Karte)</td><td>1車両の読み取り専用ビュー。コスト内訳と発生明細のタイムラインを表示。</td></tr></tbody></table>
+<h3>2.1 ステータス（書類）</h3>
+<p>書類は次の順に進む。<strong>前進のみで逆行はしない。</strong></p>
+<pre><code>未入力 → 入力済み → 連携済み</code></pre>
+<table><thead><tr><th>ステータス</th><th>意味</th><th>UI</th></tr></thead><tbody><tr><td>未入力 (st-todo)</td><td>取込直後。取引先・車番・金額などの確認・修正が必要。</td><td>ドット付きチップ</td></tr><tr><td>入力済み (st-done)</td><td>内容を確認・確定済み。データ連携が可能。</td><td>ドット付きチップ</td></tr><tr><td>連携済み (st-reflected)</td><td>連携システムと車両コストへデータ連携済み。書類一覧では<strong>編集不可（🔒）</strong>。修正はコストモニターから。</td><td>鍵アイコン付きチップ</td></tr></tbody></table>
+<h3>2.2 突合状態（明細）</h3>
+<p><code>matchOf(line, plateIndex, threshold)</code> が信頼度しきい値（既定85%、設定可）と車両マスタ由来の <code>PlateIndex</code>（正規化車番→車両ID）を用いて判定する。車番は <code>normPlate</code>（全角→半角・空白除去）で正規化。</p>
+<table><thead><tr><th>状態</th><th>条件</th><th>バッジ表記</th><th>色</th></tr></thead><tbody><tr><td>existing</td><td>車番がマスタに存在 かつ 信頼度 ≥ しきい値</td><td>既存車両に紐付け</td><td>teal</td></tr><tr><td>existing-suspect</td><td>車番がマスタに存在 だが 信頼度 &lt; しきい値</td><td>既存一致・要確認</td><td>alert(赤)</td></tr><tr><td>new</td><td>車番が未登録 かつ 信頼度 ≥ しきい値</td><td>新規車両を作成</td><td>amber</td></tr><tr><td>suspect</td><td>車番が未登録 かつ 信頼度 &lt; しきい値</td><td>要確認：読み取り疑い</td><td>alert(赤)</td></tr><tr><td>missing</td><td>車番が空</td><td>対象車両が未選択</td><td>gray</td></tr></tbody></table>
+<p>要確認件数（連携前のブロッカー判定）は <code>suspect</code> ＋ <code>existing-suspect</code> の合計（<code>countUnresolved</code>）。例：<code>三河800さ901O</code>（誤読・信頼度0.73）。</p>
+<h3>2.3 データモデル（型定義の指針）</h3>
+<pre><code>// 書類明細の一意識別子（ブランド型）。生成は mintLid に一元化。
+type Lid = string &amp; { readonly __brand: "Lid" };
+
+type DocStatus = "未入力" | "入力済み" | "連携済み";
+type DocType = "請求書" | "見積書" | "領収書" | "納品書" | "明細書" | "保険証券" | "納付書";
+type MatchState = "existing" | "existing-suspect" | "new" | "suspect" | "missing";
+
+interface Document {
+  id: string;            // "d12"
+  no: number;            // 表示用通番（新しいほど大）
+  name: string;          // ファイル名
+  vendor: string;        // 取引先
+  cat: DocType;          // 書類タイプ（既定: "請求書"）
+  status: DocStatus;
+  category: string;      // 営業所（空文字＝未選択）
+  reflectedAt: string | null; // "YYYY-MM-DD HH:mm:ss"
+  deleted: boolean;      // ゴミ箱フラグ
+}
+
+interface Line {
+  lid: Lid;              // 明細ID（ブランド型）
+  item: string;          // 項目名
+  plate: string;         // 車番（ナンバープレート）
+  kind: string;          // 車両種別 "単車"（拡張余地）
+  cat: string;           // コスト分類
+  subCat?: string | null;   // 内訳コード（修繕・維持費／燃料費。cat+itemから自動判定）
+  liters?: number | null;   // 給油量(L)（燃料費のみ・手入力）
+  unitPrice?: number | null;// 単価(円/L)（燃料費のみ・手入力）
+  inspectedAt: string;   // 発生日 "YYYY-MM-DD"
+  amount: number;        // 金額（税抜 or 明細額）
+  confidence: number;    // OCR信頼度 0..1
+  vehicleId?: string | null;// 確定時に焼き付ける安定リンク（車両ID）
+  docId?: string;        // 親書類への外部キー
+  fuso?: {               // 車両諸元の付帯情報（任意）
+    body: string; reefer: string; digitacho: boolean; drarecorder: boolean;
+  };
+}
+
+// ストア内の明細は in-place 変更禁止（必ず新オブジェクトへ差し替え）。連携済みは Object.freeze で凍結。
+type FrozenLine = Readonly&lt;Line&gt;;
+
+// 連携済み明細への追記専用 override（元データは不変、コスト集計のみに反映）
+type Overridable = "item" | "cat" | "subCat" | "inspectedAt" | "amount";
+interface Adjustment {
+  id: string;
+  docId: string;
+  lid: Lid;
+  type: "override";
+  patch: Partial&lt;Pick&lt;Line, Overridable&gt;&gt;;
+  ts: string; user: string;
+}
+
+// 手動明細（コストモニターで追記する証憑なしの明細）
+interface ManualLine {
+  id: string;
+  vkey: string;          // 紐付く車両キー（車両ID / "U:正規化plate" / "未設定"）
+  kind: string; target: string;
+  item: string; cat: string; subCat?: string | null;
+  date: string; amount: number;
+  vendor: string; office: string;
+}
+
+interface VehicleMaster {
+  no: number;
+  id: string;            // 不変の内部車両ID（突合・集計の安定キー）
+  plate: string; chassis: string; code: string;
+  name: string; note: string;
+  office: string;        // 営業所（初期値はナンバー地名から推定／内訳編集と双方向連動）
+  maxLoad: number | null;     // 最大積載量(kg)
+  grossWeight: number | null; // 車両総重量(kg)
+  size: string;          // 寸法
+  klass: string;         // 車格
+  subClass: string;      // 車格の細分類（1t/2t/3t/4t/増トン/10t。トレーラー・未突合は空）
+}
+
+// コストモニターの集計レコード（連携済み＋手動から動的生成）
+interface Vehicle {
+  key: string;           // encodeVehKey: 車両ID / "U:正規化plate" / "未設定"
+  kind: string;
+  target: string;        // 表示車番（マスタの正規plate）
+  total: number;         // 期間内コスト合計
+  byCat: Record&lt;string, number&gt;; // コスト分類別合計
+  count: number;         // 明細件数
+  last: string;          // 最終発生日
+  lines: VehLine[];      // 集約された明細（src: "doc" | "manual"）
+  fuso: Line["fuso"] | null;
+}
+
+interface ChangelogEntry {
+  ts: string; user: string;
+  action: "変更" | "追加" | "削除" | "ゴミ箱" | "復元";
+  vehKey: string; vehTarget: string; kind: string;
+  item?: string; cat?: string;
+  lid?: string;          // doc明細はLid、手動明細はManualLine.id（いずれもstring）
+  docId?: string; vehTrash?: boolean;
+  detail: string;        // 人間可読の差分文
+}</code></pre>
+<hr/>
+<h2>3. 全体構成・デザインシステム</h2>
+<h3>3.1 画面マップ</h3>
+<p>アプリは固定サイドナビ＋メインの <strong>SPA</strong>。主要ビューは4つ。</p>
+<pre><code>AppShell
+├─ Sidebar（ナビ・折りたたみ可）
+│   ├─ 書類一覧 (documents)      ← 「未入力」件数バッジ
+│   ├─ コストモニター (vehicles)  ← [コストモニター | 個別モニター] タブ
+│   ├─ マスタデータ (master)      ← [車両マスタ | コスト分類] タブ
+│   └─ 設定 (settings)
+├─ Topbar（パンくず / 会社名 / ユーザー）
+└─ Main（選択中ビュー）
+└─ Overlay層（モーダル・確認ダイアログ・トースト・右スライドパネル）</code></pre>
+<h3>3.2 レイアウト原則</h3>
+<ul><li>デスクトップ前提。<code>body{overflow:hidden}</code> で全画面シェル、メイン領域内でスクロール。</li></ul><ul><li>サイドバー幅: 展開 <code>214px</code> / 折りたたみ <code>66px</code>（<code>.side.collapsed</code>）。</li></ul><ul><li><strong>情報階層の余白・文字スケール</strong>（全画面共通の CSS 変数）:</li><ul><li><code>--space-key:28px</code>（重要: セクション境界）/ <code>--space-rel:16px</code>（関連: 見出し・カード）/ <code>--space-det:8px</code>（詳細: 行・明細）</li></ul><ul><li><code>--fs-key:22px</code>（見出し・主要数値）/ <code>--fs-rel:14px</code>（セクション見出し）/ <code>--fs-det:12.5px</code>（行・補足）</li></ul><ul><li>原則: <strong>重要ほど広く、詳細ほど詰める。</strong></li></ul></ul>
+<h3>3.3 デザイントークン（カラー）</h3>
+<pre><code>--bg:#EEF0EC  --panel:#FAFBF9  --card:#fff
+--ink:#1B2330 --inkSoft:#5A6472 --inkFaint:#9AA3AD
+--line:#D9DED5 --lineSoft:#E7EAE3
+--green:#16A571 --greenDark:#0E7A4B --greenSoft:#E4F4EC --greenLine:#A9DDC5  // 主アクション・ブランド
+--teal:#157F73 --tealSoft:#DCEFEC      // 既存突合
+--blue:#2563EB --blueSoft:#E5EDFB      // 金額・燃料費
+--amber:#B87514 --amberSoft:#FBEFD8    // 新規・注意
+--alert:#B23A2E --alertSoft:#F7E2DF    // 要確認・削除
+--slate:#1F2A37 --slateHi:#2C3A4B</code></pre>
+<ul><li>コスト分類カラー（<code>CAT_STYLE</code> / <code>catStyleOf</code>）: 燃料費=青 / 修繕・維持費=teal / 通行料=amber / 保険料=紫 / 調達コスト=藍 / 税金=グレー。</li></ul><ul><li>グラフの営業所別折れ線色（<code>OFFICE_COLORS</code>）: 名古屋=青 / 岡崎=teal / 一宮=amber / 岐阜=紫 / 四日市=赤。</li></ul><ul><li>フォント: <code>Inter</code> + <code>Noto Sans JP</code>、数値・コードは monospace（<code>--mono</code>）。<code>font-feature-settings:"palt"</code>。</li></ul>
+<h3>3.4 共通UIコンポーネント</h3>
+<ul><li>ボタン: <code>btn-green</code>（主アクション）/ <code>btn-ghost</code>（副）/ <code>btn-cancel</code> / <code>icon-btn</code>。</li></ul><ul><li>チップ: <code>catpill</code>（分類）/ <code>office-chip</code>（営業所）/ <code>st</code>（ステータス）/ <code>badge</code>（突合）/ <code>mtag</code>（マスタ既存/新規）。</li></ul><ul><li>フォーム: <code>.in</code>（input/select共通）、トグル <code>.switch/.knob</code>、レンジスライダー。</li></ul><ul><li>ヘルプ: <code>?</code> ホバーでポップオーバー（<code>catHelp</code> / <code>statusHelp</code>）。</li></ul><ul><li>ページャー: 件数選択（20/50/100）＋前後ナビ（<code>Pager</code>）。</li></ul><ul><li>トースト: <code>showToast(msg, {label, fn})</code> — アクション付き通知（例: データ連携後に「コストモニターを見る」）。</li></ul><ul><li>グラフ: 純 SVG で描画（外部チャートライブラリ非依存）。積み上げ棒（<code>CostTrendBarChart</code>）・折れ線（<code>OfficeCategoryLineChart</code>）。</li></ul><ul><li>アイコン: SVGファクトリ <code>Icon</code>（<code>IconTruck/IconCheck/IconAlert/IconChevron/...</code>）。色・サイズ引数を取る。</li></ul>
+<h3>3.5 ナビゲーション挙動</h3>
+<ul><li>ビュー切替時、<strong>設定ページに未保存変更がある状態で離脱しようとすると確認ダイアログ</strong>を挟む（<code>settingsDirty()</code> → 離脱確認）。</li></ul><ul><li>サイドの「書類一覧」には未入力件数バッジ（0件は非表示）。</li></ul><ul><li>サイドバーの折りたたみトグル。</li></ul>
+<hr/>
+<h2>4. 画面仕様</h2>
+<h3>4.1 書類一覧 (documents)</h3>
+<p><strong>目的</strong>: 取り込んだ書類を一覧し、確認・編集・ステータス進行・データ連携・営業所変更・削除を行う。</p>
+<p><strong>構成</strong>:</p>
+<ul><li>ページヘッダ（タイトル＋アップロードボタン）。</li></ul><ul><li>ツールバー:</li><ul><li>ステータスフィルタ（all / 未入力 / 入力済み / 連携済み）＋ステータスヘルプ。</li></ul><ul><li>営業所フィルタ（<code>categoryFilter</code>）。</li></ul><ul><li>検索ボックス（<code>q</code>: 書類名・取引先・車番・項目を対象）。</li></ul><ul><li>ゴミ箱トグル（<code>trash</code>、削除済み件数表示）。</li></ul></ul><ul><li>テーブル（<code>doc-body</code>）:</li><ul><li>列: チェックボックス / No / 書類名 / 取引先 / 営業所 / 書類タイプ（想定） / 明細件数 / 合計金額 / 発生日 / ステータス。</li></ul><ul><li>ヘッダクリックでソート（<code>docSort{key,dir}</code>）。</li></ul><ul><li>行クリックで<strong>右スライドの書類詳細パネル</strong>を開く。</li></ul></ul><ul><li>ページャー（既定20件、設定で変更可）。</li></ul>
+<p><strong>選択・一括操作</strong>（行チェック → ツールバーに一括メニュー <code>bulkMenu</code>）:</p>
+<table><thead><tr><th>操作</th><th>対象条件</th><th>挙動</th></tr></thead><tbody><tr><td>入力済みにする</td><td>選択中の「未入力」</td><td>確認ダイアログ（件数）→ 一括で入力済みへ</td></tr><tr><td>データ連携する</td><td>選択中の「入力済み」</td><td>確認ダイアログ → 連携済みへ＋トースト（コストモニター導線）</td></tr><tr><td>営業所を変更</td><td>「連携済み」以外</td><td>営業所選択ダイアログ → 一括変更</td></tr><tr><td>ゴミ箱へ移動</td><td>任意</td><td>確認ダイアログ → <code>deleted=true</code></td></tr></tbody></table>
+<p><strong>ルール</strong>:</p>
+<ul><li>連携済みは営業所変更・編集不可（鍵）。</li></ul><ul><li>全選択は「現在ページ」の表示行が対象（<code>cb-all</code> の indeterminate 対応）。</li></ul><ul><li>フィルタ・検索・ページ変更時は選択をクリア。</li></ul>
+<h3>4.2 書類詳細パネル（右スライド）</h3>
+<p><strong>目的</strong>: 1書類の内容確認・OCR結果の修正・ステータス進行。</p>
+<p><strong>構成</strong>:</p>
+<ul><li>ヘッダ: No / ステータスチップ / 前後ナビ（<code>panelNav</code>、一覧の並び順で <code>n / N</code> 表示） / アクション。</li></ul><ul><li><strong>ステッパー</strong>（3段）: ①取込・データ化（常にdone）→ ②入力済みにする → ③データ連携する。現ステータスで <code>current/done/todo</code> を切替。</li></ul><ul><li>アクションボタン:</li><ul><li>「入力済み」（<code>savePanel</code>）— 未入力時に有効、連携済みでは非表示。</li></ul><ul><li>「データ連携する」（<code>reflectPanel</code>）— <strong>入力済みのときのみ活性</strong>（未入力時は『入力済みにすると連携ボタンが押下できます』とヒント表示）。連携済みは「連携済み（日時）」バッジ。</li></ul></ul><ul><li>書類情報フォーム: 書類名（読取専用）/ 営業所（select）/ 取引先（input）/ 書類タイプ（select、明細の分類から<strong>想定タイプをヒント表示</strong>）/ 書類合計。</li></ul><ul><li><strong>明細テーブル</strong> + 凡例（項目=緑 / 対象車両=赤 / 金額=青 でプレビュー対応）:</li><ul><li>各明細: 項目 / 車番 / コスト分類 / 発生日 / 金額 / 突合バッジ。信頼度が低い明細は要確認表示。明細の追加・削除（<code>pnDeleteLid</code> で削除確認）。</li></ul><ul><li><strong>内訳（連携用）</strong>: 修繕・維持費／燃料費の明細には「コスト分類／発生日」直下に<strong>読み取り専用</strong>の内訳を表示。項目名・分類を編集するとその場で再判定・DOM更新（保存値と常に一致、直接編集不可）。ツールチップに連携コードを表示。</li></ul><ul><li><strong>給油量・単価</strong>: 燃料費の明細のみ、給油量（L）・単価（円/L）を手入力欄として表示（<code>liters</code> / <code>unitPrice</code>）。連携タグに併記。</li></ul></ul><ul><li>右側に<strong>請求書プレビュー＝原本</strong>（請求書の画像そのもの）。パネルを開いた時点のスナップショット（取引先・明細）から描画し、左パネルの編集（項目／車番／金額／取引先）では変化しない。OCR読取箇所のハイライト・ズーム（<code>pvZoom</code>）。</li></ul><ul><li><strong>連携済み</strong>は全フィールド readonly/disabled。明細は <code>Object.freeze</code> で凍結され、請求書原本は原値のまま不変。修正はコストモニターの調整レイヤ経由でコスト集計にのみ反映される（§4.4）。</li></ul><ul><li><strong>データ連携ログ</strong>（<code>ReflectLog</code>）: 連携プラン（<code>buildReflectPlan</code>）を段階表示。新規マスタ作成は high-confidence の <code>new</code> のみ、<code>suspect</code> はスキップ、<code>existing-suspect</code> は要確認付きで追記。明細には内訳タグ＋燃料情報を併記（例 <code>[内訳: diesel/軽油 | 120L | 155円/L]</code>）。</li></ul>
+<h3>4.3 アップロード（モーダル）</h3>
+<p>2タブ構成。<code>UploadModal</code>。</p>
+<p><strong>A. 新規アップロード (<code>tab:new</code>)</strong></p>
+<ul><li>ドラッグ&amp;ドロップ or ファイル選択（<code>.pdf,.png,.jpg,.jpeg,.csv,.xlsx,.xls</code>、1ファイル50MBまで、最大100件）。</li></ul><ul><li>選択済みファイルはチップ表示（明細件数つき）、個別削除可。</li></ul><ul><li>「サンプル請求書を読み込む」導線。</li></ul><ul><li>営業所選択行。</li></ul><ul><li><strong>AI-OCR トグル</strong>（<code>ocr</code>、設定の既定値 <code>defaultOcr</code> で初期化）。</li></ul><ul><li>取込実行 → <strong>処理プログレス</strong>（<code>processing{active,pct,label}</code>、アニメーション）→ 一覧へ追加（新規分は <code>justUploaded</code> でハイライト）。</li></ul>
+<p><strong>B. PDF分割アップロード (<code>tab:split</code>)</strong></p>
+<ul><li>複数請求書が1PDFに連結されている場合に、ページ単位で分割して取り込む。</li></ul><ul><li>状態 <code>splitUpload{method,file,split,ocr,category,settingsOpen,pages,bulkMenu,zoom,guide}</code>。</li></ul><ul><li>分割設定モーダル（<code>SplitSettingsModal</code>）、ページズームプレビュー（<code>SplitThumbnail</code>）、分割ガイド。</li></ul>
+<h3>4.4 コストモニター (vehicles)</h3>
+<p>画面上部のタブで <strong>「コストモニター」</strong> と <strong>「個別モニター」</strong> を切り替える。</p>
+<blockquote>共通注記: 集計対象は連携済み書類のコストで、<strong>※給与・運賃・間接費は含まれていません</strong>。</blockquote>
+<h4>4.4.1 コストモニタータブ（全社サマリー）</h4>
+<p><strong>目的</strong>: 連携済みの書類から、登録車両全体のコスト動向を集計・俯瞰する。<strong>絞り込みの影響を受けず常に全車両を対象</strong>にする。</p>
+<ul><li><strong>サマリーKPI</strong>（<code>KpiCards</code>、登録データから自動算出）:</li><ul><li>登録車両数 / 先月のコスト合計（前月比トレンド↑↓） / 平均コスト（1台あたり、前月比） / コスト増加車両（前月比 台数） / データ収集中の車両（連携明細が2件以下）。</li></ul><ul><li>「先月」は直近データ月、前月比はその前月。トレンドは上昇/下降/横ばいを矢印＋色で表示。</li></ul></ul><ul><li><strong>ピックアップ</strong>（<code>Pickup</code>、折りたたみ可）:</li><ul><li>要確認車両（コスト上位・前月比増加・整備費比率の代表をまとめて提示）/ コスト上位車両（Top3）/ コスト増加車両（前月比、先月vs前月）。</li></ul><ul><li>各項目クリックで<strong>車両カルテ</strong>（<code>VehKarteModal</code>）を開く。</li></ul></ul><ul><li><strong>推移グラフ</strong>（<code>mon-charts</code>、純SVG）:</li><ul><li>①<strong>車両維持コスト推移（分類構成比）</strong>（<code>CostTrendBarChart</code>）: 月次・直近12ヶ月の積み上げ棒。<strong>薄い棒＝昨年同月</strong>で前年比較。営業所（全社/各営業所）で絞り込み。バーにコスト分類別の金額・構成比をツールチップ表示。</li></ul><ul><li>②<strong>営業所別 コスト分類推移</strong>（<code>OfficeCategoryLineChart</code>）: 月次・直近12ヶ月の折れ線。コスト分類・車格（小型/中型/大型/トレーラー）で絞り込み。営業所ごとに色分け。</li></ul><ul><li>グラフのサンプル時系列はデモ用の<strong>決定的合成データ</strong>（<code>monthlySeries</code>：営業所×分類×車格×24ヶ月、シードから安定生成）。本番は集計APIに置換。</li></ul></ul>
+<h4>4.4.2 個別モニタータブ（車両ごとの集計）</h4>
+<p><strong>目的</strong>: 連携済み書類から車両（車番）単位でコストを自動集計・可視化。1車番＝1レコード、常に最新の積み上げ。</p>
+<p><strong>構成</strong>:</p>
+<ul><li>ページヘッダ＋説明、ゴミ箱トグル（集計から除外）、<strong>変更履歴</strong>ボタン（未読件数バッジ）。</li></ul><ul><li>絞り込みバー: 営業所セレクト＋<strong>発生期間カレンダー</strong>（<code>PeriodCalendar</code>、<code>range{start,end}</code>）。</li></ul><ul><li>車両テーブル（<code>vt</code>）: 列＝車番 / マスタ（既存マスタ＝teal／新規作成＝amber の <code>mtag</code>）/ コスト内訳（分類別の構成比バー＋金額凡例）/ 最終発生・明細数 / 累計コスト / 操作（編集 / ゴミ箱 or 復元）。<code>total</code> 降順。</li></ul><ul><li>「編集」→ <strong>コスト内訳編集モーダル</strong>（<code>VehEditModal</code>）。車番クリック相当の導線から<strong>車両カルテ</strong>（<code>VehKarteModal</code>）も開ける。</li></ul><ul><li>期間/営業所/ゴミ箱で該当0件のときは個別の空状態メッセージ。ページャー（<code>page/perPage</code>）。</li></ul>
+<p><strong>集計ロジック</strong>（<code>buildVehicles</code>）:</p>
+<ul><li>母数は<strong>連携済み・未削除</strong>の書類明細（override 調整適用済みの<strong>実効値</strong> <code>effDocLine</code>）＋手動明細（<code>ManualLine</code>）。</li></ul><ul><li>車両ID（<code>vehicleId</code> ／未確定は <code>resolveVehicleId(plateIndex, plate)</code>）をキーに積み上げ、表示車番はマスタの正規 plate（OCRゆらぎ吸収）。未登録は <code>U:正規化plate</code> で暫定集計、車番空は「未設定」。</li></ul><ul><li>期間フィルタは実効値の発生日基準。</li></ul>
+<p><strong>編集と監査（原本不変・調整レイヤ）</strong>:</p>
+<ul><li>連携済み明細の編集は元データを書き換えず、追記専用の調整（override）として <code>ADJUSTMENTS</code> に記録（<code>vehEditDocLine</code> → <code>setOverride</code>）。請求書原本（書類詳細）は不変で、修正はコスト集計にのみ反映される。</li></ul><ul><li>実効値の適用: <code>buildVehicles</code> が原値に override を重ねた実効値（<code>effDocLine</code>）で集計。金額・分類・項目・発生日のほか、日付フィルタも実効値基準。</li></ul><ul><li>内訳の再判定: <code>cat</code>/<code>item</code> を override すると対象分類（修繕・維持費／燃料費）の内訳（subCat）を <code>resolveSubcat</code> で再判定。保存・連携時も同期。</li></ul><ul><li><strong>undo</strong>: フィールドを元の値に戻すと該当 override が消え、全フィールドを原状回復すると調整自体が消滅する。</li></ul><ul><li>営業所の初期値: コスト内訳編集モーダルの営業所初期値は車両マスタと連動。マスタ未設定時は明細で最多の営業所をフォールバック。編集で営業所を変更すると<strong>車両マスタにも双方向反映</strong>。</li></ul><ul><li>手動明細の追加（<code>vehAddManualLine</code>）・削除（証憑なし、<code>src:"manual"</code>）。</li></ul><ul><li>確定（<code>commitVehEdit</code>）時に実効値差分を <code>CHANGELOG</code> へ記録（追加/変更/削除、フィールド単位で旧→新）。ゴミ箱/復元も記録。</li></ul><ul><li>変更履歴パネル（<code>ChangelogPanel</code>）: 時系列降順、各項目クリックで該当車両・該当明細へジャンプしてハイライト。</li></ul>
+<p><strong>車両カルテ（<code>VehKarteModal</code>）</strong>: 読み取り専用。車番＋マスタ区分、累計コスト/明細数/最終発生、コスト内訳（構成比バー＋凡例）、発生明細のタイムライン（日付降順、<code>請求書より自動記録</code>／<code>手動追加</code> を区別、取引先表示）。</p>
+<h3>4.5 マスタデータ (master)</h3>
+<p><strong>目的</strong>: 突合・集計・連携の真実源となるマスタデータの管理。<strong>タブ構成（車両マスタ / コスト分類）</strong>。</p>
+<p><strong>車両マスタ タブ</strong>（<code>VehicleMasterPanel</code>）:</p>
+<ul><li>ページヘッダ（CSVダウンロード / 新規登録）。</li></ul><ul><li>テーブル列: No / 車両番号 / 車台番号 / 車両コード / 社内名称 / 営業所 / 最大積載量 / 車両総重量 / サイズ / 操作（編集）。No降順。</li></ul><ul><li>行クリックまたは編集ボタンで<strong>編集モーダル</strong>（<code>MasterEditModal</code>）。</li></ul><ul><li><strong>営業所</strong>フィールド（一覧・編集モーダル・CSVで設定／表示）。初期値はナンバー（車番）の地名から推定。</li></ul><ul><li><strong>車台番号入力 → 自検協データ突合</strong>（<code>lookupJikenkyo</code>）で車格・車格細分類（<code>subClass</code>）・最大積載量・車両総重量・サイズを自動反映（フォーカス維持のため該当セルのみDOM更新）。</li></ul><ul><li>保存時に <code>syncMaster()</code> 相当で突合用の <code>PlateIndex</code>（正規化車番→車両ID）を同期。</li></ul><ul><li>ページャー（<code>masterPage/masterPerPage</code>）。</li></ul>
+<p><strong>コスト分類 タブ</strong>（<code>CostCatPanel</code>。コスト構造のマスタ）:</p>
+<ul><li>分類ごとに行表示: コスト分類ピル（色は <code>catStyleOf</code>）/ <strong>想定書類タイプ</strong>（チップトグル、書類タイプのヒント・コストモニター内訳集計に使用）/ <strong>連携用内訳コード</strong>（<code>subcatsOf</code> から派生、参照のみ）。</li></ul><ul><li>分類の追加（ヘッダの入力＋ボタン）・削除（行末×、削除確認モーダルで連携済みデータへの影響を警告）。即時反映。</li></ul><ul><li>内訳コード（subCat）と自動判定ルールは外部連携の契約キーのため <code>domain/repairSubcat.ts</code>（<code>SUBCATS_BY_CAT</code> / <code>KEYWORDS_BY_CAT</code>）が真実源（UIからは変更不可）。</li></ul>
+<p><strong>連動</strong>: 車両マスタの営業所はコストモニターのコスト内訳編集と双方向連動（マスタ未設定時は明細で最多の営業所をフォールバック）。</p>
+<h3>4.6 設定 (settings)</h3>
+<p><strong>目的</strong>: データ化・突合・データ連携・表示・マスタ周辺の設定。<strong>保存するまで反映されない</strong>ドラフト方式。</p>
+<p><strong>カード構成</strong>:</p>
+<ol><li>会社情報: 自社名（プレビュー宛名・右上表示）。</li></ol><ol><li>AI-OCR・突合: 既定OCR ON/OFF、<strong>突合の信頼度しきい値</strong>（50〜99%スライダー、<code>matchThreshold</code>）。</li></ol><ol><li>表示: 既定表示件数（20/50/100）。</li></ol><ol><li>営業所の管理: チップで追加・削除（<code>CATEGORIES</code>）。</li></ol><ol><li>コスト分類: マスタデータ（コスト分類タブ）への導線のみ。分類・想定書類タイプの管理はマスタへ移管。</li></ol><ol><li>データ連携: タブ切替で <strong>ロジポケ連携 / モビポケ連携 / 外部サービス連携</strong> を設定（<code>DataLinkCard</code>）。</li><ul><li>ロジポケ連携: 有効トグル / エンドポイントURL / APIキー / 自動データ連携トグル / 接続テスト（<code>testLogipoke</code>）。</li></ul><ul><li>モビポケ連携: 有効トグル / エンドポイントURL / APIキー / 自動データ連携トグル / 接続テスト（<code>testMobipoke</code>）。</li></ul><ul><li>外部サービス連携: 有効トグル / サービス名 / エンドポイントURL（Webhook）/ APIキー / 送信フォーマット（JSON/CSV/XML）/ 接続テスト（<code>testExternal</code>）。</li></ul></ol><ol><li>車両マスタ: マスタデータページへの導線。</li></ol>
+<p><strong>ドラフト・保存挙動</strong>:</p>
+<ul><li>編集は <code>settingsDraft</code> に蓄積。差分があると<strong>下部に保存バー</strong>（変更件数）。</li></ul><ul><li>「保存」→ 確認（保存確認ダイアログ）→ 確定。「変更を破棄」で破棄。</li></ul><ul><li>未保存で他ビューへ移動しようとすると離脱確認。</li></ul>
+<hr/>
+<h2>5. 業務ルール（ステート遷移・整合性）</h2>
+<ol><li><strong>ステータス前進のみ</strong>: 未入力→入力済み→連携済み。連携済みは書類一覧で不可逆・編集不可。修正はコストモニター（変更履歴に記録）。</li></ol><ol><li><strong>連携済み明細の不変化</strong>: 連携済み書類の明細は <code>Object.freeze</code> で凍結。請求書原本は不変で、コストモニターでの修正は追記専用の調整（override）として記録し、<code>buildVehicles</code> が実効値として集計に適用する（元の値に戻すと調整は消える）。</li></ol><ol><li><strong>データ連携の前提</strong>: データ連携できるのは「入力済み」のみ。未入力からは直接データ連携できない。連携プランでは <code>new</code>（high-confidence）のみ新規マスタ作成、<code>suspect</code> はスキップ、<code>existing-suspect</code> は要確認付きで追記。</li></ol><ol><li><strong>コストモニターの母数</strong>: 連携済み・未削除の書類明細（実効値）＋手動明細のみが集計対象。ゴミ箱（車両）に入れた車両は集計から除外。コストモニタータブのサマリーは絞り込みの影響を受けず全車両対象。</li></ol><ol><li><strong>突合の真実源</strong>: 車両マスタ由来の <code>PlateIndex</code>（正規化車番→車両ID）。マスタ編集後は必ず同期。しきい値変更は突合状態（suspect/existing-suspect 判定）に即時影響。車番は <code>normPlate</code> で正規化（全角/半角・空白ゆらぎ吸収）。</li></ol><ol><li><strong>車両ID リンク</strong>: 確定時に明細へ不変の <code>vehicleId</code> を焼き付け、車番変更に依存しない安定集計を行う。</li></ol><ol><li><strong>金額・合計</strong>: 書類合計＝明細金額の総和。発生日＝明細最小日。</li></ol><ol><li><strong>営業所</strong>: 連携済みは変更不可。未設定は「未分類」。車両マスタに保持し初期値はナンバー地名から推定。コスト内訳編集の初期値はマスタと連動し、マスタ未設定時は明細で最多の営業所をフォールバック。内訳編集での営業所変更はマスタにも双方向反映。</li></ol><ol><li><strong>内訳（subCat）の自動同期</strong>: 修繕・維持費・燃料費の内訳は「分類＋品名」から導く従属値（<code>KEYWORDS_BY_CAT</code> 部分一致・配列順が優先、表示順と独立）。読み取り専用で直接編集不可——品名を正すことで正しい内訳へ誘導。保存・連携・override 時に再判定して永続値と一致。連携キーは表記ゆれに強い <code>code</code>、表示は <code>label</code>。未該当は分類ごとにフォールバック（修繕・維持費→<code>consumable</code>、燃料費→<code>diesel</code>）。</li></ol><ol><li><strong>監査</strong>: コストモニターでの追加・変更・削除・ゴミ箱・復元は必ず <code>CHANGELOG</code> に <code>ts/user/action/detail</code> 付きで記録。</li></ol><ol><li><strong>マスタ削除の保護</strong>: 連携済み明細（凍結・付け替え不可）や手動明細が紐付く車両マスタは削除を拒否（<code>countReflectedVehicleDocLines</code> / <code>countVehicleCostLines</code> で依存チェック）。</li></ol>
+<hr/>
+<h2>6. 状態管理・コンポーネント設計の指針</h2>
+<p>旧プロトタイプ（<code>legacy-prototype.html</code>）は単一の <code>state</code> オブジェクト＋全描画 <code>render()</code>（<code>innerHTML</code> 差し替え）に依存していた。現行の React 版では以下に分割し、全消し再描画ハック（<code>render</code> / <code>innerHTML</code> 差し替え・<code>_captureScroll</code> 等）は撤去済み。ストアは Zustand（<code>store/</code>）、ドメインロジックは純関数（<code>domain/</code>）として単体テストで固定。</p>
+<p><strong>グローバル状態（ストア）</strong></p>
+<ul><li><code>view</code>, <code>collapsed</code>（ナビ）</li></ul><ul><li><code>settings</code>（永続設定）/ <code>settingsDraft</code>（編集中）。<code>live</code> スナップショット参照（<code>currentSnapshot</code>）。</li></ul><ul><li>ドメインデータ: <code>docs</code>, <code>lines</code>（FrozenLine）, <code>manualLines</code>, <code>adjustments(ADJUSTMENTS：override調整・追記専用)</code>, <code>vehicleMaster</code>, <code>changelog</code>, <code>categories(営業所)</code>, <code>costCats(コスト分類マスタ：分類名＋想定書類タイプ)</code>, <code>vehTrash</code></li></ul><ul><li>オーバーレイ: <code>pushOverlay</code>（排他に1モーダル）、トースト（<code>showToast</code>）</li></ul>
+<p><strong>ビューローカル状態</strong></p>
+<ul><li>書類一覧: <code>filterStatus, categoryFilter, q, trash, selected:Set, bulkMenu, docPage, docPerPage, docSort</code></li></ul><ul><li>書類詳細: <code>panelId, draft, pvZoom, pnDeleteLid</code></li></ul><ul><li>アップロード: <code>upload{...}</code>, <code>splitUpload{...}</code></li></ul><ul><li>コストモニター: <code>tab(monitor/individual), office, range, trashView, page, perPage, clogOpen</code>、編集系（<code>vehEdit*</code>）</li></ul><ul><li>マスタ: <code>tab(vehicles/costCats), masterEdit, masterPage, masterPerPage</code></li></ul>
+<p><strong>派生（セレクタ・純関数）</strong>: <code>visibleDocs()</code>, <code>docPageInfo()</code>, <code>useVehicles()/buildVehicles(input)</code>, <code>usePlateIndex()/buildPlateIndex()</code>, <code>matchOf(line, idx, threshold)</code>, <code>countUnresolved()</code>, <code>effDocLine(line, docId, adjustments)</code>, <code>resolveSubcat(cat, item)/subcatLabel(code)/hasSubcat(cat)</code>, <code>buildReflectPlan()</code>, <code>stackByMonth()/officeLines()</code>（グラフ用）。いずれも副作用なし。<code>buildVehicles</code> は override を実効値として適用し、営業所初期値の解決（マスタ連動＋最多フォールバック）も純関数。</p>
+<p><strong>コンポーネント分割</strong></p>
+<pre><code>AppShell / Sidebar / Topbar / OverlayHost
+Documents/   (DocumentsView, DocumentPanel[Stepper,InfoForm,LineTable,InvoicePreview], ReflectLog,
+              UploadModal[NewTab,SplitTab,Progress], SplitSettingsModal, SplitThumbnail)
+CostMonitor/ (CostMonitorView[monitor|individual], KpiCards, Pickup, CostTrendBarChart,
+              OfficeCategoryLineChart, VehKarteModal, VehEditModal, PeriodCalendar, ChangelogPanel)
+Master/      (MasterView[vehicles|costCats], VehicleMasterPanel, CostCatPanel, MasterEditModal[ChassisLookup])
+Settings/    (SettingsView, SettingCard, DataLinkCard, confirms)
+common/      (Button, CatPill, StatusChip, MatchBadge, Switch, Pager, Toast, Modal, OverlayHost, Icon)</code></pre>
+<p><strong>オーバーレイ管理</strong>: <code>OverlayHost</code> を1つのレイヤとし、排他に1モーダルを表示。確認ダイアログ群（enter/reflect/office/trash/settingsSave/settingsLeave/vehEdit/master）は共通 <code>Modal</code> で実装。</p>
+<hr/>
+<h2>7. 非機能・実装メモ</h2>
+<ul><li><strong>対応環境</strong>: モダンブラウザ（Chromium/Firefox/Safari 最新）、デスクトップ幅。レスポンシブは現状非対応（将来課題）。</li></ul><ul><li><strong>i18n</strong>: UI文言は日本語固定。金額は <code>¥</code> + <code>toLocaleString("ja-JP")</code>（グラフ軸は「万」表記）、日付は <code>YYYY-MM-DD</code>。</li></ul><ul><li><strong>アクセシビリティ</strong>: ヘルプは <code>tabindex</code> 対応。ボタンに <code>title</code>。色のみに依存しない（バッジにアイコン併記）。グラフは <code>role="img"</code> ＋ <code>aria-label</code>、要素に <code>&lt;title&gt;</code> ツールチップ。</li></ul><ul><li><strong>パフォーマンス</strong>: 一覧はページング前提。React 版はセレクタ購読＋差分描画でフォーカス維持（旧版のセル単位 DOM 更新ハックは不要）。グラフは純 SVG（外部依存なし）で、合成データは <code>useMemo</code> でメモ化。</li></ul><ul><li><strong>リポジトリ構成</strong>: 現行実装は React 版（<code>app/</code>：Vite + React + TypeScript + Zustand + Vitest）。<code>docs/PRD.md</code> ＝仕様（本書）、<code>legacy-prototype.html</code>（旧 <code>index.html</code>）＝参照専用（非推奨バナー付き・メンテナンス対象外）。ルート <code>README.md</code> に構成を明示。</li></ul><ul><li><strong>プロトタイプの割り切り</strong>（実装時に要バックエンド化）:</li><ul><li>OCR・自検協突合・データ連携（ロジポケ／モビポケ／外部サービス）・接続テストはローカル擬似実装。本番はAPI化。</li></ul><ul><li>データは curated SEED を <code>domain/docSeed.ts</code> / <code>domain/masterSeed.ts</code> に定義（連携済みは凍結＝書き換え不可）。既知のOCR誤読デモ（<code>三河800さ901O</code>・信頼度0.73→suspect）や <code>fuso</code> 付き明細を含む。修繕・維持費・燃料費の明細には内訳（subCat）（燃料費は給油量・単価も）を付与。グラフは <code>domain/monthlySeries.ts</code> の決定的合成データ。永続化なし。</li></ul><ul><li>APIキー等の秘匿情報はマスク表示。実装ではサーバ側保持。</li></ul></ul>
+<hr/>
+<h2>8. API連携（将来）想定エンドポイント</h2>
+<p>プロトタイプは未接続。バックエンド実装時の想定。</p>
+<table><thead><tr><th>機能</th><th>メソッド/想定</th></tr></thead><tbody><tr><td>書類アップロード＋OCR</td><td><code>POST /documents</code>（multipart）→ ジョブ→ 明細抽出</td></tr><tr><td>書類一覧/取得/更新</td><td><code>GET/PATCH /documents</code></td></tr><tr><td>ステータス更新（データ連携）</td><td><code>POST /documents/{id}/reflect</code></td></tr><tr><td>コスト連携（POST）</td><td><code>POST /costs</code>（<code>buildReflectPlan</code> の連携プラン。明細に内訳タグ＋給油量・単価を併記、例 `[内訳: diesel/軽油</td><td>120L</td><td>155円/L]`）</td></tr><tr><td>車両マスタ CRUD</td><td><code>GET/POST/PATCH /vehicles</code>（<code>office</code>＝営業所、<code>subClass</code>＝車格細分類を含む）</td></tr><tr><td>自検協突合</td><td><code>GET /chassis/{no}/spec</code></td></tr><tr><td>データ連携・接続テスト</td><td>各タブの エンドポイントURL + APIキー、<code>POST /integrations/{provider}/test</code>（<code>logipoke</code> / <code>mobipoke</code> / 外部サービス）</td></tr><tr><td>コスト調整（override）</td><td><code>GET/POST /adjustments</code>（追記専用。連携済み明細の実効値上書き）</td></tr><tr><td>コスト集計・時系列</td><td><code>GET /costs/summary</code>（KPI）/ <code>GET /costs/series</code>（推移グラフ：月次×営業所×分類×車格）</td></tr><tr><td>変更履歴</td><td><code>GET /changelog</code></td></tr></tbody></table>
+<hr/>
+<h2>付録A: 画面別アクション一覧（主要関数 ↔ UI）</h2>
+<p>旧プロトタイプ（<code>legacy-prototype.html</code>）の関数名を、React 版のイベント名の参考に併記する。</p>
+<ul><li>書類一覧: <code>setView, setFilter, setCategoryFilter, setQuery, setDocSort, toggleTrash, toggleSelect(All), toggleBulkMenu, bulkMarkEntered, bulkReflect, bulkChangeOffice, bulkTrash, trashDoc, restoreDoc, setDocPage/PerPage</code></li></ul><ul><li>詳細パネル: <code>openPanel, closePanel, panelNav, savePanel, reflectPanel, pnDoc, pnVendor, add/deleteLine</code></li></ul><ul><li>アップロード: <code>openUpload, switchUploadTab, pickFiles, handleUploadFiles, toggleOcr, setUploadCategory, useSampleFiles, runUpload</code>（分割系: <code>splitUpload*</code>）</li></ul><ul><li>コストモニター: <code>setTab(monitor/individual), setVehCategoryFilter, setRange/clearRange, toggleVehTrash, openKarte, openVehEdit/commitVehEdit/closeVehEdit, vehAddManualLine/vehDeleteManualLine/vehEdit*Line, vehViewDoc, openChangelog/gotoChange</code>、グラフ絞り込み（<code>office/cat/klass</code>）</li></ul><ul><li>マスタ: <code>setMasterTab(vehicles/costCats), openMasterNew/openMasterEdit/closeMasterEdit, masterEditField, masterEditChassis(→lookupJikenkyo), saveMaster, downloadMasterCsv</code>、コスト分類（<code>addCat/removeCat/toggleCatDocType</code>）</li></ul><ul><li>設定: <code>setSetting, toggleSetting, setMatchThreshold, setDefaultPageSize, addCategory/removeCategory, askSaveSettings/discardSettingsEdits, testLogipoke/testMobipoke/testExternal</code></li></ul>
+<hr/>
+<p>AI Fleet Pilot — プロダクト要求仕様書（PRD / フロントエンド設計向け）　|　最終更新 2026-06-15（rev.）　|　現行は React 版（<code>app/</code>）。本書（<code>docs/PRD.md</code>）が仕様の正、<code>legacy-prototype.html</code> は参照専用。</p>
+</main>
+</body></html>
