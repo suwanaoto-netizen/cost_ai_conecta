@@ -16,6 +16,8 @@ import { Pager } from "../common/Pager";
 import { Button } from "../common/Button";
 import { IconCheck, IconTruck, IconAlert } from "../common/Icon";
 
+type MonitorTab = "monitor" | "individual";
+
 export function CostMonitorView() {
   const vehTrash = useDataStore((s) => s.vehTrash);
   const changelog = useDataStore((s) => s.changelog);
@@ -28,6 +30,7 @@ export function CostMonitorView() {
   const pushOverlay = useStore((s) => s.pushOverlay);
   const showToast = useStore((s) => s.showToast);
 
+  const [tab, setTab] = useState<MonitorTab>("monitor");
   const [office, setOffice] = useState("all");
   const [range, setRange] = useState<DateRange>({ start: null, end: null });
   const [trashView, setTrashView] = useState(false);
@@ -37,7 +40,10 @@ export function CostMonitorView() {
 
   const plateIndex = usePlateIndex();
   const allVeh = useVehicles(office, range.start && range.end ? { start: range.start, end: range.end } : null);
+  // コストモニタータブの集計は絞り込みの影響を受けず、常に全車両を対象にする。
+  const monitorVeh = useVehicles("all", null);
 
+  const monitorVisible = monitorVeh.filter((v) => !vehTrash[v.key]);
   const trashCount = allVeh.filter((v) => vehTrash[v.key]).length;
   const visible = allVeh.filter((v) => (trashView ? vehTrash[v.key] : !vehTrash[v.key]));
   const unread = changelog.length - changelogSeenCount;
@@ -116,6 +122,48 @@ export function CostMonitorView() {
 
   return (
     <>
+      <div className="upl-tabs" style={{ marginBottom: 18 }}>
+        <button className={`upl-tab ${tab === "monitor" ? "active" : ""}`} onClick={() => setTab("monitor")}>
+          コストモニター
+        </button>
+        <button className={`upl-tab ${tab === "individual" ? "active" : ""}`} onClick={() => setTab("individual")}>
+          個別モニター
+        </button>
+      </div>
+
+      {tab === "monitor" ? (
+        <>
+          <div className="pagehead pagehead-veh">
+            <div>
+              <p style={{ margin: 0, fontSize: 12.5, color: "var(--inkSoft)" }}>
+                連携済みの書類から、登録車両全体のコスト動向を集計します。前月比やデータ収集状況を一目で把握できます。
+              </p>
+            </div>
+          </div>
+
+          {monitorVisible.length > 0 ? (
+            <KpiCards vehicles={monitorVisible} />
+          ) : (
+            <div className="veh-card">
+              <div className="empty">
+                <IconTruck color="#9AA3AD" size={40} />
+                <div className="et">まだ連携された車両がありません</div>
+                <div className="es">書類一覧で「データ連携する」と、ここに車両ごとのコストが積み上がります。</div>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        renderIndividualTab()
+      )}
+
+      {clogOpen && <ChangelogPanel onClose={() => setClogOpen(false)} />}
+    </>
+  );
+
+  function renderIndividualTab() {
+    return (
+    <>
       <div className="pagehead pagehead-veh">
         <div>
           <p style={{ margin: 0, fontSize: 12.5, color: "var(--inkSoft)" }}>
@@ -152,8 +200,6 @@ export function CostMonitorView() {
         </div>
         <PeriodCalendar range={range} onChange={(r) => { setRange(r); setPage(1); }} />
       </div>
-
-      {!trashView && visible.length > 0 && <KpiCards vehicles={visible} />}
 
       {visible.length === 0 ? (
         <div className="veh-card">
@@ -252,10 +298,9 @@ export function CostMonitorView() {
           <Pager total={visible.length} page={page} perPage={perPage} onPage={setPage} onPerPage={(n) => { setPerPage(n); setPage(1); }} />
         </div>
       )}
-
-      {clogOpen && <ChangelogPanel onClose={() => setClogOpen(false)} />}
     </>
-  );
+    );
+  }
 }
 
 function nowLocal(): string {
