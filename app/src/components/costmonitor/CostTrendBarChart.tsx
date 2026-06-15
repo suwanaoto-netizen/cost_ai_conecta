@@ -10,8 +10,8 @@ import {
   monthShort,
 } from "../../domain/monthlySeries";
 
-const W = 600, H = 320;
-const ML = 52, MR = 12, MT = 16, MB = 42;
+const W = 600, H = 300;
+const ML = 52, MR = 12, MT = 14, MB = 40;
 const PW = W - ML - MR;
 const PH = H - MT - MB;
 
