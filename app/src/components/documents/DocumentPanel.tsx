@@ -5,7 +5,8 @@ import { useSettingsStore } from "../../store/settings";
 import { useStore } from "../../store";
 import type { DocType, Document, Lid, Line } from "../../domain/types";
 import { mintLid } from "../../domain/ids";
-import { buildPlateIndex, matchOf, resolveVehicleId } from "../../domain/match";
+import { usePlateIndex } from "../../store/selectors";
+import { matchOf, resolveVehicleId } from "../../domain/match";
 import { docTotal, expectedDocTypes, ocrAmountCandidates, plateSuggestions } from "../../domain/documents";
 import { DOC_TYPES } from "../../domain/settings";
 import { resolveSubcat, subcatLabel, FUEL_CAT } from "../../domain/repairSubcat";
@@ -54,7 +55,7 @@ export function DocumentPanel({
   const showToast = useStore((s) => s.showToast);
   const setView = useStore((s) => s.setView);
 
-  const plateIndex = useMemo(() => buildPlateIndex(masters), [masters]);
+  const plateIndex = usePlateIndex();
   const masterPlates = useMemo(() => masters.map((m) => m.plate), [masters]);
   const threshold = settings.matchThreshold;
 
