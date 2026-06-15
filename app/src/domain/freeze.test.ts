@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { freezeLine, isLineFrozen } from "./freeze";
+import { asLid } from "./ids";
 import type { Line } from "./types";
 
 const mk = (): Line => ({
-  lid: 1, item: "軽油 給油", plate: "名古屋100あ1234", kind: "単車",
+  lid: asLid(1), item: "軽油 給油", plate: "名古屋100あ1234", kind: "単車",
   cat: "燃料費", inspectedAt: "2026-04-30", amount: 50000, confidence: 0.96, docId: "d1",
 });
 

@@ -5,6 +5,7 @@ import { useStore } from "../../store";
 import { buildPlateIndex } from "../../domain/match";
 import { buildVehicles } from "../../domain/vehicles";
 import { yen } from "../../domain/format";
+import { asLid } from "../../domain/ids";
 import type { ChangelogEntry, ManualLine } from "../../domain/types";
 import { Button } from "../common/Button";
 
@@ -12,7 +13,7 @@ interface Row {
   key: string; // 一意行キー（doc: docId|lid / manual: id）
   src: "doc" | "manual";
   docId?: string;
-  lid: string | number;
+  lid: string; // doc は Lid、manual は ManualLine.id（いずれも string）
   item: string;
   cat: string;
   date: string;
@@ -101,7 +102,7 @@ export function VehEditModal({
 
     const docEdits: DocLineEdit[] = rows
       .filter((r) => r.src === "doc" && r.docId)
-      .map((r) => ({ docId: r.docId!, lid: r.lid, item: r.item, cat: r.cat, inspectedAt: r.date, amount: +r.amount || 0 }));
+      .map((r) => ({ docId: r.docId!, lid: asLid(r.lid), item: r.item, cat: r.cat, inspectedAt: r.date, amount: +r.amount || 0 }));
 
     const manual: ManualLine[] = rows
       .filter((r) => r.src === "manual")

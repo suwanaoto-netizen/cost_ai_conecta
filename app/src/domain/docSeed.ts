@@ -3,6 +3,7 @@ import { FLEET } from "./masterSeed";
 import { DEFAULT_CATEGORIES } from "./settings";
 import { resolveSubcat } from "./repairSubcat";
 import { freezeLine } from "./freeze";
+import { mintLid } from "./ids";
 
 /**
  * 書類・明細のデモデータ生成（プロトタイプの決定論ジェネレータを移植）。
@@ -26,9 +27,8 @@ const sample = <T>(arr: T[], k: number): T[] => {
   return a.slice(0, k);
 };
 
-let _uid = 300;
 const L = (item: string, plate: string, cat: string, date: string, amount: number, conf = 0.97, fuso?: Fuso): Line => ({
-  lid: _uid++,
+  lid: mintLid(),
   item,
   plate: plate || "",
   kind: "単車",

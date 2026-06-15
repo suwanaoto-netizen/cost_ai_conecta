@@ -1,15 +1,15 @@
-import type { Adjustment, FrozenLine, Line, Overridable } from "./types";
+import type { Adjustment, FrozenLine, Lid, Line, Overridable } from "./types";
 import { resolveSubcat } from "./repairSubcat";
 
 /** 指定明細の override 調整を取得（なければ null）。 */
 export function findOverride(
   adjustments: Adjustment[],
   docId: string,
-  lid: string | number,
+  lid: Lid,
 ): Adjustment | null {
   return (
     adjustments.find(
-      (a) => a.type === "override" && a.docId === docId && a.lid === String(lid),
+      (a) => a.type === "override" && a.docId === docId && a.lid === lid,
     ) ?? null
   );
 }
@@ -40,7 +40,7 @@ export function applyOverride(
   value: string | number,
   meta: { ts: string; user: string; newId: string },
 ): Adjustment[] {
-  const lid = String(origLine.lid);
+  const lid = origLine.lid;
   const same =
     field === "amount"
       ? +origLine[field] === +value

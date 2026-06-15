@@ -10,6 +10,13 @@ export type DocType =
 /** 突合状態。existing-suspect = 既存一致だが低信頼度（要確認）。 */
 export type MatchState = "existing" | "existing-suspect" | "new" | "suspect" | "missing";
 
+/**
+ * 書類明細の一意識別子（ブランド型）。
+ * 生成は domain/ids.ts の mintLid に一元化し（生成元レンジの暗黙の住み分けを廃止）、
+ * number/string の混在を型レベルで排除する。既存値の受け入れは asLid で行う。
+ */
+export type Lid = string & { readonly __brand: "Lid" };
+
 export interface Fuso {
   body: string;
   reefer: string;
@@ -18,7 +25,7 @@ export interface Fuso {
 }
 
 export interface Line {
-  lid: number;
+  lid: Lid;
   item: string;
   plate: string;
   kind: string; // "単車"
@@ -95,7 +102,7 @@ export type Overridable = "item" | "cat" | "subCat" | "inspectedAt" | "amount";
 export interface Adjustment {
   id: string;
   docId: string;
-  lid: string;
+  lid: Lid;
   type: "override";
   patch: Partial<Pick<Line, Overridable>>;
   ts: string;
@@ -113,7 +120,8 @@ export interface ChangelogEntry {
   vehTarget: string;
   item?: string;
   cat?: string;
-  lid?: string | number;
+  /** 表示用の行ID（doc 明細は Lid、手動明細は ManualLine.id）。いずれも string。 */
+  lid?: string;
   docId?: string;
   vehTrash?: boolean;
   detail: string;

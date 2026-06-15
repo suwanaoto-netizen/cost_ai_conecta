@@ -5,6 +5,7 @@ import type {
   DocType,
   Document,
   FrozenLine,
+  Lid,
   Line,
   ManualLine,
   Overridable,
@@ -23,7 +24,7 @@ export const CURRENT_USER = "諏訪 尚杜";
 /** 編集確定時に modal から渡される、明細1行ぶんの編集後の値。 */
 export interface DocLineEdit {
   docId: string;
-  lid: string | number;
+  lid: Lid;
   item: string;
   cat: string;
   inspectedAt: string;
@@ -150,7 +151,7 @@ export const useDataStore = create<DataStore>((set) => ({
         if (String(orig.inspectedAt ?? "") !== String(e.inspectedAt)) patch.inspectedAt = e.inspectedAt;
         if (+orig.amount !== +e.amount) patch.amount = +e.amount;
         if (Object.keys(patch).length) {
-          adjustments.push({ id: "adj" + (adjustments.length + 1) + "_" + e.lid, docId: e.docId, lid: String(e.lid), type: "override", patch, ts: nowStamp(), user: CURRENT_USER });
+          adjustments.push({ id: "adj" + (adjustments.length + 1) + "_" + e.lid, docId: e.docId, lid: e.lid, type: "override", patch, ts: nowStamp(), user: CURRENT_USER });
         }
       });
       // 手動明細：この車両ぶんを差し替え

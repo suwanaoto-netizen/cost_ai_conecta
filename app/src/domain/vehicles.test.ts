@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { buildVehicles, countVehicleCostLines } from "./vehicles";
 import { buildPlateIndex } from "./match";
 import { applyOverride } from "./adjustments";
+import { asLid } from "./ids";
 import type { Adjustment, Document, Line, ManualLine, VehicleMaster } from "./types";
 
 const master = (id: string, plate: string): VehicleMaster => ({
@@ -10,7 +11,7 @@ const master = (id: string, plate: string): VehicleMaster => ({
 });
 
 const line = (lid: number, docId: string, plate: string, amount: number, extra: Partial<Line> = {}): Line => ({
-  lid, item: "軽油 給油", plate, kind: "単車", cat: "燃料費",
+  lid: asLid(lid), item: "軽油 給油", plate, kind: "単車", cat: "燃料費",
   inspectedAt: "2026-04-30", amount, confidence: 0.96, docId, ...extra,
 });
 

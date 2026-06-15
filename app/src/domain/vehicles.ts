@@ -3,7 +3,8 @@ import { effDocLine } from "./adjustments";
 import { normPlate, resolveVehicleId, type PlateIndex } from "./match";
 
 export interface VehLine {
-  lid: string | number;
+  /** doc 明細は Line.lid（Lid）、手動明細は ManualLine.id。いずれも string。 */
+  lid: string;
   src: "doc" | "manual";
   docId?: string;
   item: string;

@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { applyOverride, effDocLine, findOverride, pruneAdjustments } from "./adjustments";
+import { asLid } from "./ids";
 import type { Adjustment, Line } from "./types";
 
 const origLine: Line = Object.freeze({
-  lid: 5,
+  lid: asLid(5),
   item: "軽油 給油",
   plate: "名古屋100あ1234",
   kind: "単車",
@@ -36,7 +37,7 @@ describe("連携済み明細の不変化と override 調整", () => {
     adjs = applyOverride(adjs, origLine, "d1", "amount", 62000, meta("adj1"));
     adjs = applyOverride(adjs, origLine, "d1", "cat", "修繕・維持費", meta("adj1"));
     expect(adjs).toHaveLength(1);
-    expect(Object.keys(findOverride(adjs, "d1", 5)!.patch).sort()).toEqual(["amount", "cat"]);
+    expect(Object.keys(findOverride(adjs, "d1", asLid(5))!.patch).sort()).toEqual(["amount", "cat"]);
     const eff = effDocLine(origLine, "d1", adjs);
     expect(eff.cat).toBe("修繕・維持費");
     expect(eff.amount).toBe(62000);
@@ -47,7 +48,7 @@ describe("連携済み明細の不変化と override 調整", () => {
     adjs = applyOverride(adjs, origLine, "d1", "amount", 62000, meta("adj1"));
     adjs = applyOverride(adjs, origLine, "d1", "cat", "修繕・維持費", meta("adj1"));
     adjs = applyOverride(adjs, origLine, "d1", "amount", 50000, meta("adj1"));
-    const ov = findOverride(adjs, "d1", 5)!;
+    const ov = findOverride(adjs, "d1", asLid(5))!;
     expect(ov.patch.amount).toBeUndefined();
     expect(ov.patch.cat).toBe("修繕・維持費");
   });
@@ -67,7 +68,7 @@ describe("連携済み明細の不変化と override 調整", () => {
 
 describe("pruneAdjustments（孤児調整の GC）", () => {
   const adj = (docId: string, lid: string): Adjustment => ({
-    id: "adj_" + docId + "_" + lid, docId, lid, type: "override",
+    id: "adj_" + docId + "_" + lid, docId, lid: asLid(lid), type: "override",
     patch: { amount: 1 }, ts: "t", user: "u",
   });
 

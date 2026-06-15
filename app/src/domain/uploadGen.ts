@@ -2,6 +2,7 @@ import type { Line } from "./types";
 import type { UploadEntry } from "../store/data";
 import { FLEET } from "./masterSeed";
 import { resolveSubcat } from "./repairSubcat";
+import { mintLid } from "./ids";
 
 const VENDORS = [
   { n: "中部マツダ整備", cat: "修繕・維持費" },
@@ -18,7 +19,6 @@ const ITEMS: Record<string, string[]> = {
   調達コスト: ["車両リース料（月次）"],
 };
 
-let _uid = 90000;
 const pick = <T>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 const ri = (a: number, b: number) => a + Math.floor(Math.random() * (b - a + 1));
 
@@ -32,7 +32,7 @@ export function makeUploadEntry(name?: string): UploadEntry {
     const item = pick(ITEMS[v.cat]);
     const subCat = resolveSubcat(v.cat, item);
     return {
-      lid: _uid++,
+      lid: mintLid(),
       item,
       plate: p,
       kind: "単車",
