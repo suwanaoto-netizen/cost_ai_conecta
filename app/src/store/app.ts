@@ -14,7 +14,9 @@ import type {
 import { seedDocuments } from "../domain/docSeed";
 import { seedVehicleMasters } from "../domain/masterSeed";
 import { buildPlateIndex } from "../domain/match";
-import { buildVehicles, countReflectedVehicleDocLines } from "../domain/vehicles";
+import { buildVehicles, countReflectedVehicleDocLines, type Vehicle } from "../domain/vehicles";
+import { pickupSnapshot, EMPTY_PICKUP, type PickupSnapshot } from "../domain/pickup";
+import { ALERT_CFG, buildCostMap, diffAlerts, mapsEqual, type Alert, type CostMap } from "../domain/alerts";
 import { yen } from "../domain/format";
 import { resolveSubcat } from "../domain/repairSubcat";
 import { pruneAdjustments } from "../domain/adjustments";
@@ -105,6 +107,15 @@ interface AppStore {
   changelog: ChangelogEntry[];
   vehTrash: Record<string, true>;
   changelogSeenCount: number;
+  // 連携アラート
+  alerts: Alert[];
+  seenAlertIds: Record<string, true>;
+  prevCostMap: CostMap | null;
+  prevPickup: PickupSnapshot | null;
+
+  // 連携アラート
+  recomputeAlerts: () => void;
+  markAlertsSeen: () => void;
 
   // コストモニター
   commitVehicleEdit: (c: VehEditCommit) => void;
@@ -179,6 +190,52 @@ function seedChangelog(): ChangelogEntry[] {
 
 const initialChangelog = seedChangelog();
 
+// ---- 連携アラートの永続化（localStorage） ----
+const ALERTS_LS_KEY = "alerts.v1";
+interface AlertPersist {
+  alerts: Alert[];
+  seenAlertIds: Record<string, true>;
+  prevCostMap: CostMap | null;
+  prevPickup: PickupSnapshot | null;
+}
+function loadAlertState(): AlertPersist {
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(ALERTS_LS_KEY) : null;
+    if (raw) {
+      const o = JSON.parse(raw) as Partial<AlertPersist>;
+      return {
+        alerts: o.alerts ?? [],
+        seenAlertIds: o.seenAlertIds ?? {},
+        prevCostMap: o.prevCostMap ?? null,
+        prevPickup: o.prevPickup ?? null,
+      };
+    }
+  } catch {
+    /* 破損時は baseline から再構築 */
+  }
+  return { alerts: [], seenAlertIds: {}, prevCostMap: null, prevPickup: null };
+}
+function saveAlertState(s: AlertPersist): void {
+  try {
+    if (typeof localStorage !== "undefined") localStorage.setItem(ALERTS_LS_KEY, JSON.stringify(s));
+  } catch {
+    /* 容量超過等は無視 */
+  }
+}
+const initAlerts = loadAlertState();
+
+/** 現在のストア状態から車両集計を構築（連携アラートの再計算用）。 */
+function buildVehiclesNow(s: AppStore): Vehicle[] {
+  return buildVehicles({
+    docs: Object.values(s.documents),
+    lines: Object.values(s.linesById),
+    manualLines: Object.values(s.manualLinesById),
+    adjustments: Object.values(s.adjustmentsById),
+    masters: Object.values(s.vehiclesById),
+    plateIndex: buildPlateIndex(Object.values(s.vehiclesById)),
+  });
+}
+
 /**
  * 書類 docId の明細を next で入れ替えた {linesById, lineIdsByDoc} を返す。
  * 旧明細は索引から除去し、新明細は内訳を再判定（freeze 指定で凍結）。
@@ -216,6 +273,39 @@ export const useAppStore = create<AppStore>((set, get) => ({
   changelog: initialChangelog,
   vehTrash: {},
   changelogSeenCount: initialChangelog.length,
+  alerts: initAlerts.alerts,
+  seenAlertIds: initAlerts.seenAlertIds,
+  prevCostMap: initAlerts.prevCostMap,
+  prevPickup: initAlerts.prevPickup,
+
+  // データ連携ログ［閉じる］時に呼ぶ。差分から①②アラートを生成し永続化する。
+  recomputeAlerts: () =>
+    set((s) => {
+      const vehicles = buildVehiclesNow(s).filter((v) => !s.vehTrash[v.key]);
+      const cur = buildCostMap(vehicles);
+      const curPk = pickupSnapshot(vehicles);
+      // 初回はベースライン確立のみ（過去全データを一斉発火させない）
+      if (s.prevCostMap == null) {
+        saveAlertState({ alerts: s.alerts, seenAlertIds: s.seenAlertIds, prevCostMap: cur, prevPickup: curPk });
+        return { prevCostMap: cur, prevPickup: curPk };
+      }
+      // データ無変化（空連携・再オープン）は何もしない＝冪等
+      if (mapsEqual(cur, s.prevCostMap)) return {};
+      const fresh = diffAlerts(s.prevCostMap, cur, s.prevPickup ?? EMPTY_PICKUP, curPk, vehicles);
+      const existing = new Set(s.alerts.map((a) => a.id));
+      const merged = [...fresh.filter((a) => !existing.has(a.id)), ...s.alerts].slice(0, ALERT_CFG.totalCap);
+      saveAlertState({ alerts: merged, seenAlertIds: s.seenAlertIds, prevCostMap: cur, prevPickup: curPk });
+      return { alerts: merged, prevCostMap: cur, prevPickup: curPk };
+    }),
+
+  // ベルを開いたとき：現在表示中の全アラートを既読化（消えたIDは剪定）。
+  markAlertsSeen: () =>
+    set((s) => {
+      const seenAlertIds: Record<string, true> = {};
+      s.alerts.forEach((a) => { seenAlertIds[a.id] = true; });
+      saveAlertState({ alerts: s.alerts, seenAlertIds, prevCostMap: s.prevCostMap, prevPickup: s.prevPickup });
+      return { seenAlertIds };
+    }),
 
   commitVehicleEdit: ({ vkey, docEdits, manualLines, changelog }) =>
     set((s) => {
