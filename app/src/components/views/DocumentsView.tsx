@@ -5,6 +5,7 @@ import { useSettingsStore } from "../../store/settings";
 import { useStore } from "../../store";
 import type { Line, DocStatus } from "../../domain/types";
 import { countUnresolved } from "../../domain/match";
+import { buildReflectedSignatures, findDuplicateDocIds } from "../../domain/duplicates";
 import { docDate, docTotal } from "../../domain/documents";
 import { yen } from "../../domain/format";
 import { STATUS_CLASS } from "../../domain/catStyle";
@@ -23,6 +24,7 @@ export function DocumentsView() {
   const lines = useLines();
   const markEntered = useDataStore((s) => s.markEntered);
   const reflectMany = useDataStore((s) => s.reflectMany);
+  const recomputeAlerts = useDataStore((s) => s.recomputeAlerts);
   const changeOffice = useDataStore((s) => s.changeOffice);
   const setDeleted = useDataStore((s) => s.setDeleted);
   const plateIndex = usePlateIndex();
@@ -44,10 +46,13 @@ export function DocumentsView() {
   const [enterConfirm, setEnterConfirm] = useState<number | null>(null);
   const [officeConfirm, setOfficeConfirm] = useState<{ ids: string[]; office: string } | null>(null);
   const [trashConfirm, setTrashConfirm] = useState<{ ids: string[]; mode: "trash" | "restore" } | null>(null);
-  const [reflectConfirm, setReflectConfirm] = useState<{ ids: string[]; warn: number } | null>(null);
+  const [reflectConfirm, setReflectConfirm] = useState<{ ids: string[]; warn: number; dups: string[] } | null>(null);
+  const [includeDups, setIncludeDups] = useState(false);
   const [reflectingIds, setReflectingIds] = useState<string[] | null>(null);
 
   const linesOf = (id: string): Line[] => lines.filter((l) => l.docId === id);
+  // 連携済み明細の重複判定キー集合（車番・金額・発生日）。
+  const reflectedSig = useMemo(() => buildReflectedSignatures(docs, lines), [docs, lines]);
 
   const counts = { 未入力: 0, 入力済み: 0, 連携済み: 0 } as Record<DocStatus, number>;
   docs.filter((d) => !d.deleted).forEach((d) => { counts[d.status]++; });
@@ -100,18 +105,19 @@ export function DocumentsView() {
           <div className="statusfilter" role="group" aria-label="ステータスで絞り込み">
             {STATUS_OPTIONS.map((s) => {
               const on = statusSel.has(s);
+              const showCount = s !== "連携済み";
               return (
                 <button
                   key={s}
                   type="button"
                   className={`stchip ${STATUS_CLASS[s]} ${on ? "on" : ""}`}
                   aria-pressed={on}
-                  aria-label={`${s} ${counts[s]}件${on ? "（絞り込み中）" : ""}`}
+                  aria-label={`${s}${showCount ? ` ${counts[s]}件` : ""}${on ? "（絞り込み中）" : ""}`}
                   onClick={() => toggleStatus(s)}
                 >
                   <span className="dot" />
                   {s}
-                  <span className="n">{counts[s]}</span>
+                  {showCount && <span className="n">{counts[s]}</span>}
                   {on && <span className="ck" aria-hidden>✓</span>}
                 </button>
               );
@@ -150,7 +156,7 @@ export function DocumentsView() {
                     <span className="lab"><IconCheck color={enterable.length ? "#0E7A4B" : "#9AA3AD"} size={14} /> 入力済みにする</span>
                     <span className="mc">未入力 {enterable.length}件</span>
                   </button>
-                  <button disabled={!reflectable.length} onClick={() => { setBulkMenu(false); setReflectConfirm({ ids: reflectable.map((d) => d.id), warn: reflectable.reduce((n, d) => n + countUnresolved(linesOf(d.id), plateIndex, threshold), 0) }); }}>
+                  <button disabled={!reflectable.length} onClick={() => { setBulkMenu(false); setIncludeDups(false); setReflectConfirm({ ids: reflectable.map((d) => d.id), warn: reflectable.reduce((n, d) => n + countUnresolved(linesOf(d.id), plateIndex, threshold), 0), dups: findDuplicateDocIds(reflectable.map((d) => ({ id: d.id, lines: linesOf(d.id) })), reflectedSig) }); }}>
                     <span className="lab">↗ データ連携する</span>
                     <span className="mc">入力済み {reflectable.length}件</span>
                   </button>
@@ -318,9 +324,28 @@ export function DocumentsView() {
       {reflectConfirm && (
         <ConfirmModal
           title="データ連携しますか？"
+          confirmDisabled={reflectConfirm.dups.length > 0 && !includeDups}
           body={
             <>
               <p style={{ margin: "0 0 10px", fontSize: 13.5 }}>選択中の <b>{reflectConfirm.ids.length}</b> 件を車両コストへデータ連携します。</p>
+              {reflectConfirm.dups.length > 0 && (
+                <div className="ce-warn" style={{ background: "var(--alertSoft)", borderColor: "var(--alert)" }}>
+                  <IconAlert color="#B23A2E" size={18} />
+                  <div>
+                    <div className="ce-q" style={{ color: "var(--alert)" }}>重複の可能性がある書類が {reflectConfirm.dups.length} 件あります。</div>
+                    <div className="ce-note">車番・金額・発生日が連携済みデータと完全一致する明細を含みます。</div>
+                    <ul style={{ margin: "6px 0 8px", paddingLeft: 18, fontSize: 12.5 }}>
+                      {reflectConfirm.dups.map((id) => (
+                        <li key={id}>{docs.find((d) => d.id === id)?.name ?? id}</li>
+                      ))}
+                    </ul>
+                    <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+                      <input type="checkbox" checked={includeDups} onChange={(e) => setIncludeDups(e.target.checked)} />
+                      重複した書類も含めて連携する
+                    </label>
+                  </div>
+                </div>
+              )}
               {reflectConfirm.warn > 0 && (
                 <div className="ce-warn" style={{ background: "var(--alertSoft)", borderColor: "var(--alert)" }}>
                   <IconAlert color="#B23A2E" size={18} />
@@ -344,7 +369,7 @@ export function DocumentsView() {
           plateIndex={plateIndex}
           threshold={threshold}
           doneLabel={`${reflectingIds.length}件の書類をデータ連携しました`}
-          onClose={() => { const n = reflectingIds.length; reflectMany(reflectingIds); setReflectingIds(null); resetSelection(); showToast(`${n}件を車両コストへデータ連携しました`); }}
+          onClose={() => { const n = reflectingIds.length; reflectMany(reflectingIds); recomputeAlerts(); setReflectingIds(null); resetSelection(); showToast(`${n}件を車両コストへデータ連携しました`); }}
         />
       )}
     </>
@@ -352,9 +377,9 @@ export function DocumentsView() {
 }
 
 function ConfirmModal({
-  title, body, confirmLabel, danger, onCancel, onConfirm,
+  title, body, confirmLabel, danger, confirmDisabled, onCancel, onConfirm,
 }: {
-  title: string; body: ReactNode; confirmLabel: string; danger?: boolean; onCancel: () => void; onConfirm: () => void;
+  title: string; body: ReactNode; confirmLabel: string; danger?: boolean; confirmDisabled?: boolean; onCancel: () => void; onConfirm: () => void;
 }) {
   return (
     <div className="ovl" onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
@@ -366,7 +391,7 @@ function ConfirmModal({
         <div className="m-body">{body}</div>
         <div className="m-foot">
           <Button variant="cancel" onClick={onCancel}>キャンセル</Button>
-          <Button variant={danger ? "cancel" : "green"} onClick={onConfirm} style={danger ? { color: "#fff", background: "var(--alert)", borderColor: "var(--alert)" } : undefined}>
+          <Button variant={danger ? "cancel" : "green"} disabled={confirmDisabled} onClick={onConfirm} style={danger ? { color: "#fff", background: "var(--alert)", borderColor: "var(--alert)" } : undefined}>
             {confirmLabel}
           </Button>
         </div>

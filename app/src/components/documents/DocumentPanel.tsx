@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDataStore } from "../../store/data";
 import { useMasterStore } from "../../store/master";
-import { useDocs, useLinesOfDoc, useVehicleMasters } from "../../store/selectors";
+import { useDocs, useLines, useLinesOfDoc, useVehicleMasters } from "../../store/selectors";
 import { useSettingsStore } from "../../store/settings";
 import { useStore } from "../../store";
 import type { DocType, Document, Lid, Line } from "../../domain/types";
@@ -9,6 +9,7 @@ import { mintLid } from "../../domain/ids";
 import { usePlateIndex } from "../../store/selectors";
 import { matchOf, resolveVehicleId } from "../../domain/match";
 import { docTotal, expectedDocTypes, ocrAmountCandidates, plateSuggestions } from "../../domain/documents";
+import { buildReflectedSignatures, linesHaveDuplicate } from "../../domain/duplicates";
 import { DOC_TYPES } from "../../domain/settings";
 import { catDocTypesRecord } from "../../domain/costCats";
 import { resolveSubcat, subcatLabel, FUEL_CAT } from "../../domain/repairSubcat";
@@ -46,6 +47,7 @@ export function DocumentPanel({
   onClose: () => void;
 }) {
   const docs = useDocs();
+  const allLines = useLines();
   const docLines = useLinesOfDoc(docId);
   const saveDocDraft = useDataStore((s) => s.saveDocDraft);
   const reflectDocDraft = useDataStore((s) => s.reflectDocDraft);
@@ -68,6 +70,7 @@ export function DocumentPanel({
   const [zoom, setZoom] = useState(100);
   const [reflecting, setReflecting] = useState(false);
   const [confirmReflect, setConfirmReflect] = useState(false);
+  const [includeDups, setIncludeDups] = useState(false);
   const [deleteLid, setDeleteLid] = useState<Lid | null>(null);
 
   useEffect(() => {
@@ -82,12 +85,16 @@ export function DocumentPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docId]);
 
+  // 連携済み明細の重複判定キー集合（車番・金額・発生日）。
+  const reflectedSig = useMemo(() => buildReflectedSignatures(docs, allLines), [docs, allLines]);
+
   if (!draft) return null;
   const ro = draft.status === "連携済み";
   const idx = ordered.findIndex((d) => d.id === docId);
   const total = docTotal(draft.lines as Line[]);
   const ocrCand = ocrAmountCandidates(draft.lines as Line[]);
   const exp = expectedDocTypes(draft.lines as Line[], catDocTypes);
+  const isDup = linesHaveDuplicate(draft.lines as Line[], reflectedSig);
 
   const patchLine = (lid: Lid, patch: Partial<DraftLine>) =>
     setDraft((d) => (d ? { ...d, lines: d.lines.map((l) => (l.lid === lid ? { ...l, ...patch } : l)) } : d));
@@ -163,7 +170,7 @@ export function DocumentPanel({
                   連携済み（{draft.reflectedAt || ""}）
                 </span>
               ) : (
-                <Button variant="green" disabled={draft.status !== "入力済み"} onClick={() => setConfirmReflect(true)}>
+                <Button variant="green" disabled={draft.status !== "入力済み"} onClick={() => { setIncludeDups(false); setConfirmReflect(true); }}>
                   データ連携する
                 </Button>
               )}
@@ -413,6 +420,19 @@ export function DocumentPanel({
             </div>
             <div className="m-body">
               <p style={{ margin: "0 0 13px", fontSize: 13.5 }}>「{draft.name}」を車両コストへデータ連携します。</p>
+              {isDup && (
+                <div className="ce-warn" style={{ background: "var(--alertSoft)", borderColor: "var(--alert)" }}>
+                  <IconAlert color="#B23A2E" size={18} />
+                  <div>
+                    <div className="ce-q" style={{ color: "var(--alert)" }}>この書類は重複の可能性があります。</div>
+                    <div className="ce-note">車番・金額・発生日が連携済みデータと完全一致する明細を含みます。</div>
+                    <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, fontWeight: 700, cursor: "pointer", marginTop: 8 }}>
+                      <input type="checkbox" checked={includeDups} onChange={(e) => setIncludeDups(e.target.checked)} />
+                      重複した書類も含めて連携する
+                    </label>
+                  </div>
+                </div>
+              )}
               <div className="ce-warn">
                 <IconAlert color="#B87514" size={18} />
                 <div>
@@ -427,6 +447,7 @@ export function DocumentPanel({
               </Button>
               <Button
                 variant="green"
+                disabled={isDup && !includeDups}
                 onClick={() => {
                   setConfirmReflect(false);
                   setReflecting(true);

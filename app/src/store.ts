@@ -32,8 +32,11 @@ interface AppState {
   toast: ToastState | null;
   /** 未入力件数バッジ（ドメインデータ移行までは外部から設定） */
   todoCount: number;
+  /** アラートから遷移してきたピックアップカードのハイライト対象（一時的） */
+  pickupHighlight: string | null;
 
   setView: (v: View) => void;
+  setPickupHighlight: (v: string | null) => void;
   toggleSidebar: () => void;
   pushOverlay: (o: OverlayItem) => void;
   closeOverlay: (id?: string) => void; // id 省略時は最前面を閉じる
@@ -47,12 +50,14 @@ export const nextOverlayId = () => "ov_" + ++_ovSeq;
 
 export const useStore = create<AppState>((set) => ({
   view: "documents",
-  sidebarCollapsed: false,
+  sidebarCollapsed: true,
   overlays: [],
   toast: null,
   todoCount: 0,
+  pickupHighlight: null,
 
   setView: (v) => set({ view: v }),
+  setPickupHighlight: (v) => set({ pickupHighlight: v }),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   pushOverlay: (o) => set((s) => ({ overlays: [...s.overlays, o] })),
   closeOverlay: (id) =>

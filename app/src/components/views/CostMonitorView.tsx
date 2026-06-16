@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDataStore, CURRENT_USER } from "../../store/data";
 import { useSettingsStore, currentSnapshot } from "../../store/settings";
 import { usePlateIndex, useVehicles } from "../../store/selectors";
@@ -33,8 +33,26 @@ export function CostMonitorView() {
   const defaultPageSize = useSettingsStore((s) => s.live.settings.defaultPageSize);
   const pushOverlay = useStore((s) => s.pushOverlay);
   const showToast = useStore((s) => s.showToast);
+  const pickupHighlight = useStore((s) => s.pickupHighlight);
+  const setPickupHighlight = useStore((s) => s.setPickupHighlight);
 
   const [tab, setTab] = useState<MonitorTab>("monitor");
+
+  // アラートから遷移してきたら、対象ピックアップカードへスクロール＆一時ハイライト
+  useEffect(() => {
+    if (!pickupHighlight) return;
+    setTab("monitor");
+    const t = setTimeout(() => {
+      const el = document.getElementById(`pk-${pickupHighlight}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("pk-flash");
+        setTimeout(() => el.classList.remove("pk-flash"), 1600);
+      }
+      setPickupHighlight(null);
+    }, 60);
+    return () => clearTimeout(t);
+  }, [pickupHighlight, setPickupHighlight]);
   const [office, setOffice] = useState("all");
   const [range, setRange] = useState<DateRange>({ start: null, end: null });
   const [trashView, setTrashView] = useState(false);

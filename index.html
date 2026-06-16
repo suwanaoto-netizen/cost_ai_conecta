@@ -51,7 +51,7 @@
 
   /* ───── shell ───── */
   .shell{display:flex;height:100vh}
-  .side{width:214px;flex-shrink:0;background:linear-gradient(180deg,#11875A 0%,#0C6A43 100%);color:#E6F4EC;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;transition:width .18s ease}
+  .side{width:214px;flex-shrink:0;background:linear-gradient(180deg,#11875A 0%,#0C6A43 100%);color:#E6F4EC;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;z-index:50;transition:width .18s ease}
   .side.collapsed{width:66px}
   .brand{display:flex;align-items:center;gap:10px;padding:18px 16px 12px}
   .brand .mark{width:34px;height:34px;border-radius:9px;background:#fff;display:grid;place-items:center;flex-shrink:0}
@@ -84,6 +84,10 @@
   .side.collapsed .navbtn .lbl,
   .side.collapsed .navbtn .ct{display:none}
   .side.collapsed .side-foot{display:none}
+  /* collapsed: ホバーで名称ツールチップ */
+  .navbtn{position:relative}
+  .side.collapsed .navbtn::after{content:attr(data-l);position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);background:#fff;color:var(--greenDark);border:1.5px solid var(--green);padding:6px 10px;border-radius:7px;font-size:12px;font-weight:700;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;z-index:9999;box-shadow:0 6px 18px rgba(0,0,0,.28);transition:opacity .12s ease}
+  .side.collapsed .navbtn:hover::after{opacity:1;visibility:visible}
 
   /* ───── main ───── */
   .main{flex:1;min-width:0;display:flex;flex-direction:column;height:100vh;min-height:0}
@@ -92,6 +96,28 @@
   .topbar .crumb b{color:var(--ink);font-weight:800}
   .topbar .who{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--inkSoft)}
   .topbar .avatar{width:26px;height:26px;border-radius:999px;background:var(--greenSoft);display:grid;place-items:center;color:var(--greenDark);font-weight:800;font-size:12px}
+  /* 連携アラート（ベル） */
+  .bell-wrap{position:relative;display:flex;align-items:center;margin-right:4px}
+  .bell{position:relative;background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;transition:background .12s}
+  .bell:hover{background:rgba(0,0,0,.05)}
+  .bell-dot{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:999px;background:#E5484D;border:1.5px solid var(--card)}
+  .bell-pop{position:absolute;top:calc(100% + 8px);right:0;width:360px;max-width:86vw;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 44px rgba(20,30,40,.22);z-index:50;overflow:hidden;animation:fade .12s ease}
+  .bp-head{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--lineSoft);font-size:13px;font-weight:800;color:var(--ink)}
+  .bp-head .x{background:none;border:none;cursor:pointer;padding:2px;display:flex}
+  .bp-list{max-height:60vh;overflow-y:auto}
+  .bp-empty{padding:26px 14px;text-align:center;font-size:12.5px;color:var(--inkFaint);font-weight:700}
+  .bp-item{display:flex;align-items:flex-start;gap:9px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--lineSoft);cursor:pointer;padding:11px 14px;transition:background .12s;font-family:inherit}
+  .bp-item:hover{background:#F5F8F5}
+  .bp-dot{flex-shrink:0;width:8px;height:8px;border-radius:999px;margin-top:4px}
+  .bp-dot.red{background:#E5484D}
+  .bp-dot.blue{background:var(--blue)}
+  .bp-main{min-width:0}
+  .bp-title{font-size:12.5px;font-weight:800;color:var(--ink);line-height:1.4}
+  .bp-detail{font-size:11.5px;color:var(--inkSoft);margin-top:2px;word-break:break-all}
+  .bp-more{width:100%;background:none;border:none;cursor:pointer;padding:10px 14px;font-size:12px;font-weight:800;color:var(--greenDark);font-family:inherit}
+  .bp-more:hover{background:#F5F8F5}
+  .pk-flash{animation:pkflash 1.6s ease}
+  @keyframes pkflash{0%,100%{box-shadow:none}20%,60%{box-shadow:0 0 0 3px var(--green) inset}}
   .content{padding:22px;animation:fade .2s ease;flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
   .doc-body{flex:1;min-height:0;display:flex;flex-direction:column}
 
@@ -229,12 +255,22 @@
   .btn-upload{background:var(--green);border:none;color:#fff;border-radius:8px;padding:9px 22px;font-size:14px;font-weight:800;cursor:pointer}
   .btn-upload:hover:not(:disabled){filter:brightness(1.05)}
   .btn-upload:disabled{background:#E5E9EE;color:#B7BEC7;cursor:not-allowed}
+  /* 重複アラート */
+  .dup-lead{margin:0 0 14px;font-size:13.5px;line-height:1.7;color:var(--ink)}
+  .dup-list{display:flex;flex-direction:column;gap:12px}
+  .dup-item{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+  .dup-item input{margin:2px 0 0;width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--blue)}
+  .dup-main{min-width:0}
+  .dup-name{font-size:13.5px;font-weight:700;color:var(--ink);word-break:break-all}
+  .dup-sub{font-size:12px;color:var(--inkSoft);margin-top:3px}
+  .dup-no{color:var(--blue);font-weight:700}
   .uprog{padding:4px 2px}
   .up-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
   .up-label{font-size:12.5px;color:var(--ink);font-weight:700;display:flex;align-items:center;gap:7px}
   .up-pct{font-size:12px;color:var(--inkSoft);font-family:var(--mono)}
   .up-track{height:7px;background:#E7EBEF;border-radius:999px;overflow:hidden}
   .up-fill{height:100%;background:var(--green);border-radius:999px;transition:width .18s linear}
+  .up-toast{position:fixed;right:26px;bottom:26px;width:320px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:0 12px 32px rgba(0,0,0,.18);z-index:80;animation:fade .2s ease}
 
   /* ───── PDF分割アップロード（フォーム） ───── */
   .sp-desc{font-size:12px;color:var(--inkSoft);line-height:1.75;margin-bottom:6px}
@@ -627,12 +663,7 @@
   .mk-note{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--inkFaint);font-weight:700}
   .mk-ico{position:absolute;right:12px;bottom:9px;width:26px;height:26px;border-radius:999px;background:var(--greenSoft);display:flex;align-items:center;justify-content:center}
   /* コストモニター ピックアップ */
-  .pickup-toggle{display:inline-flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;font-size:11.5px;font-weight:800;color:var(--inkSoft);padding:3px 6px;margin:0 0 6px -6px;border-radius:6px;transition:background .12s,color .12s}
-  .pickup-toggle:hover{background:rgba(0,0,0,.04);color:var(--ink)}
-  .pickup-toggle svg{transition:transform .15s;transform:rotate(90deg)}
-  .pickup-toggle.collapsed{margin-bottom:10px}
-  .pickup-toggle.collapsed svg{transform:rotate(0)}
-  .pickup{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:stretch}
+  .pickup{display:flex;gap:10px;margin:10px 0;flex-wrap:wrap;align-items:stretch}
   .pk-card{flex:1;min-width:248px;background:var(--card);border:1px solid var(--line);border-radius:0;padding:8px 12px;display:flex;flex-direction:column}
   .pk-card-alert{border-color:var(--alert);box-shadow:0 0 0 1px var(--alert) inset}
   .pk-h{font-size:11.5px;font-weight:800;color:var(--ink);margin-bottom:5px;display:flex;align-items:center;gap:5px}
@@ -651,16 +682,16 @@
   .pk-empty{font-size:11px;color:var(--inkFaint);font-weight:700;padding:6px 4px}
 
   /* ───── コストモニター グラフ（①原価推移 ②営業所別コスト分類推移） ───── */
-  .mon-charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;align-items:start}
-  @media (max-width:860px){.mon-charts{grid-template-columns:1fr}}
-  .chart-card{background:var(--card);border:1px solid var(--line);border-radius:0;padding:14px 16px 12px;display:flex;flex-direction:column;min-width:0}
+  .mon-charts{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr);gap:12px;margin-top:10px;flex:1;min-height:0}
+  @media (max-width:860px){.mon-charts{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(0,1fr)}}
+  .chart-card{background:var(--card);border:1px solid var(--line);border-radius:0;padding:14px 16px 12px;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
   .chart-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
   .chart-title{font-size:13.5px;font-weight:800;color:var(--ink)}
   .chart-sub{font-size:11px;color:var(--inkSoft);margin-top:2px}
   .chart-filters{display:flex;gap:8px;flex-wrap:wrap}
   .chart-sel{padding:4px 9px}
   .chart-sel select{font-size:12px;max-width:130px}
-  .chart-svg{width:100%;height:auto;display:block}
+  .chart-svg{flex:1 1 0;min-height:0;width:100%;height:100%;display:block}
   .chart-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
   .chart-legend .cl-item{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--inkSoft);font-weight:600}
   .chart-legend .cl-sw{width:11px;height:11px;border-radius:3px;flex-shrink:0}
@@ -847,7 +878,7 @@
 </head>
 <body>
 <div class="shell">
-  <aside class="side" id="side">
+  <aside class="side collapsed" id="side">
     <div class="brand">
       <div class="mark">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E7A4B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><line x1="12" y1="3.5" x2="12" y2="9.5"/><line x1="12" y1="14.5" x2="12" y2="20.5"/><line x1="3.5" y1="12" x2="9.5" y2="12"/><line x1="14.5" y1="12" x2="20.5" y2="12"/><line x1="6" y1="6" x2="10.2" y2="10.2"/><line x1="13.8" y1="13.8" x2="18" y2="18"/><line x1="18" y1="6" x2="13.8" y2="10.2"/><line x1="10.2" y1="13.8" x2="6" y2="18"/></svg>
@@ -864,7 +895,7 @@
   <div class="main">
     <div class="topbar">
       <div class="crumb" id="crumb"></div>
-      <div class="who"><span id="who-name">サンプル物流株式会社</span><span class="avatar">運</span></div>
+      <div class="who"><div class="bell-wrap" id="bell-host"></div><span id="who-name">サンプル物流株式会社</span><span class="avatar">運</span></div>
     </div>
     <div class="content" id="content"></div>
   </div>
@@ -895,6 +926,7 @@ const I = {
   send:(c='#fff',s=15)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>`,
   save:(c='#fff',s=15)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>`,
   chev:(c='#5A6472',s=14)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`,
+  bell:(c='#5A6472',s=18)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>`,
   plus:(c='#fff',s=16)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`,
   download:(c='#1B2330',s=17)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>`,
   gear:(c='#fff',s=18)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
@@ -1334,7 +1366,7 @@ function statusHelp(){
 /* ───── 状態 ───── */
 let state={
   view:"documents",
-  collapsed:false,
+  collapsed:true,
   statusSel:[],   // 選択中のステータス（複数可・空＝すべて）
   categoryFilter:"all", vehCategoryFilter:"all", vehTab:"monitor",
   chartOffice:"all", chart2Cat:"燃料費", chart2Klass:"all",
@@ -1349,8 +1381,9 @@ let state={
   vehExpanded:new Set(),
   vehEditKey:null, vehEditMeta:null, vehEditConfirm:false, vehEditSnapshot:null, vehViewDocId:null, vehViewLid:null,
   vehPanel:null, vehChartCat:null, vehChartGran:"month", vehTlExpanded:false,
-  vehTrash:new Set(), vehTrashView:false, vehTrashAction:null, vehPickupCollapsed:false,
+  vehTrash:new Set(), vehTrashView:false, vehTrashAction:null,
   changelogOpen:false, changelogSeenCount:0, vehEditHighlight:null,
+  alerts:[], seenAlertIds:{}, prevCostMap:null, prevPickup:null, bellOpen:false, bellExpanded:false, pickupHighlight:null,
   vehDateStart:null, vehDateEnd:null, vehCalOpen:false, vehCalYM:"2026-06",
   reflectConfirm:null, enterConfirm:null, officeConfirm:null,
   manualLines:[],
@@ -1380,7 +1413,7 @@ function renderNav(){
       const active=state.view===it.k;
       const ic=active?it.ic.replace(/#fff/g,'#0E7A4B'):it.ic.replace(/#fff/g,'#CFEAD9');
       const ct=(it.ct==null)?"":((it.hideZero && it.ct===0)?"":`<span class="ct">${it.ct}</span>`);
-      return `<button class="navbtn ${active?"active":""}" title="${it.l}" onclick="setView('${it.k}')">
+      return `<button class="navbtn ${active?"active":""}" title="${it.l}" data-l="${it.l}" onclick="setView('${it.k}')">
         <span class="nic">${ic}</span><span class="lbl">${it.l}</span>${ct}</button>`;
     }).join("");
 }
@@ -1448,8 +1481,8 @@ function renderDocuments(){
   </div>`;
 
   const seg=state.trash?"":`<div class="statusfilter" role="group" aria-label="ステータスで絞り込み">
-    ${Object.keys(STATUS_META).map(s=>{const on=state.statusSel.includes(s);
-      return `<button type="button" class="stchip ${STATUS_META[s].cls} ${on?"on":""}" aria-pressed="${on}" aria-label="${s} ${counts[s]}件${on?"（絞り込み中）":""}" onclick="toggleStatus('${s}')"><span class="dot"></span>${s}<span class="n">${counts[s]}</span>${on?'<span class="ck" aria-hidden="true">✓</span>':""}</button>`;
+    ${Object.keys(STATUS_META).map(s=>{const on=state.statusSel.includes(s);const showCount=s!=="連携済み";
+      return `<button type="button" class="stchip ${STATUS_META[s].cls} ${on?"on":""}" aria-pressed="${on}" aria-label="${s}${showCount?` ${counts[s]}件`:""}${on?"（絞り込み中）":""}" onclick="toggleStatus('${s}')"><span class="dot"></span>${s}${showCount?`<span class="n">${counts[s]}</span>`:""}${on?'<span class="ck" aria-hidden="true">✓</span>':""}</button>`;
     }).join("")}
   </div>`;
   const catSel=`<div class="filter-sel"><span class="fs-l">${I.boxes("#5A6472",14)} 営業所</span>
@@ -1605,7 +1638,8 @@ function bulkReflect(){ state.bulkMenu=false;
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="入力済み");
   if(t.length===0){ render(); toast("連携できる「入力済み」の書類が選択されていません"); return; }
   const warn=t.reduce((n,d)=>n+countUnresolved(docLines(d)),0);
-  state.reflectConfirm={kind:"bulk", count:t.length, label:"", warn}; renderOverlay(); }
+  const dups=findDuplicateDocs(t.map(d=>({id:d.id,lines:docLines(d)})), buildReflectedSignatures());
+  state.reflectConfirm={kind:"bulk", count:t.length, label:"", warn, dups, includeDups:false}; renderOverlay(); }
 function doBulkReflect(){
   const t=visibleDocs().filter(d=>state.selected.has(d.id)&&d.status==="入力済み");
   if(t.length===0){ render(); return; }
@@ -1704,6 +1738,14 @@ function uplRemove(i){if(state.upload.processing.active)return;state.upload.file
 function toggleOcr(){if(state.upload.processing.active)return;state.upload.ocr=!state.upload.ocr;renderOverlay();}
 function renderUploadModal(){
   const u=state.upload, proc=u.processing.active, has=u.files.length>0;
+  // アップロード中は新規・分割どちらのタブでも右下のプログレスバーのみで表示を統一
+  if(proc){
+    return `<div class="up-toast" role="status" aria-live="polite">
+      <div class="up-row"><span class="up-label" id="up-label">${I.loader('#16A571',14)}<span>${esc(u.processing.label)}</span></span>
+        <span class="up-pct" id="up-pct">${Math.round(u.processing.pct)}%</span></div>
+      <div class="up-track"><div class="up-fill" id="up-fill" style="width:${u.processing.pct}%"></div></div>
+    </div>`;
+  }
   const fileInput=`<input type="file" id="upl-file" multiple accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx,.xls" style="display:none" onchange="handleUploadFiles(this.files)">`;
   const dzAttrs=proc?"":`onclick="pickFiles()" ondragover="uplDragOver(event)" ondragleave="uplDragLeave(event)" ondrop="uplDrop(event)"`;
   let dz;
@@ -1776,6 +1818,26 @@ function uplDrop(e){ e.preventDefault(); const dz=e.currentTarget; if(dz)dz.clas
 function useSampleFiles(){ if(state.upload.processing.active)return; uploadBatch().forEach(f=>state.upload.files.push(f)); renderOverlay(); }
 function doUpload(){
   const u=state.upload; if(u.files.length===0)return;
+  // 同一書類名の重複を自動検知。重複があれば確認モーダルを表示し、含める書類を選んでもらう。
+  const items=[]; u.files.forEach((f,i)=>{ const doc=findDupDoc(f.name); if(doc) items.push({i, name:f.name, doc}); });
+  if(items.length){ u.dupAlert={items, checked:{}}; renderOverlay(); return; }
+  startUploadProgress();
+}
+/* 既存書類（ゴミ箱を除く）と書類名が完全一致するものを重複とみなす。 */
+function findDupDoc(name){ return docs.find(d=>!d.deleted && d.name===name); }
+function dupToggle(i){ const da=state.upload.dupAlert; if(!da)return; da.checked[i]=!da.checked[i]; renderOverlay(); }
+function dupCancel(){ state.upload.dupAlert=null; renderOverlay(); }
+function dupConfirm(){
+  const u=state.upload, da=u.dupAlert; if(!da)return;
+  const dupIdx=new Set(da.items.map(x=>x.i));
+  // 重複でない書類は常に含め、重複書類はチェックされたものだけ含める。
+  u.files=u.files.filter((f,i)=> !dupIdx.has(i) || da.checked[i]);
+  u.dupAlert=null;
+  if(u.files.length===0){ closeUpload(); toast("アップロードする書類がありません"); return; }
+  startUploadProgress();
+}
+function startUploadProgress(){
+  const u=state.upload; if(u.files.length===0)return;
   u.processing={active:true,pct:0,label:u.ocr?"データ化中（AI-OCR / 明細OCR）":"ファイルを保存中…"};
   renderOverlay();
   u._timer=setInterval(()=>{
@@ -1784,6 +1846,33 @@ function doUpload(){
     const pct=document.getElementById("up-pct"); if(pct)pct.textContent=Math.round(u.processing.pct)+"%";
     if(u.processing.pct>=100){clearInterval(u._timer);setTimeout(finishUpload,360);}
   },170);
+}
+/* ───── 重複アラート（同一書類名を自動検知。含める書類をチェックで選択） ───── */
+function renderDupAlert(){
+  const u=state.upload, da=u.dupAlert; if(!da) return "";
+  const total=u.files.length, dupCount=da.items.length;
+  const rows=da.items.map(it=>{
+    const d=it.doc;
+    const meta=[d.vendor, d.category||"営業所未選択", d.status].filter(Boolean).map(esc).join("・");
+    return `<label class="dup-item">
+      <input type="checkbox" ${da.checked[it.i]?"checked":""} onchange="dupToggle(${it.i})">
+      <div class="dup-main">
+        <div class="dup-name">${esc(it.name)}</div>
+        <div class="dup-sub">・ <span class="dup-no">No.${d.no}</span> ${meta}</div>
+      </div>
+    </label>`;
+  }).join("");
+  return `<div class="ovl ${state._ovFresh?'anim':''}" style="z-index:80" onclick="if(event.target===this)dupCancel()"><div class="modal" style="width:min(560px,100%)">
+    <div class="m-head"><span class="t"></span><button class="x" onclick="dupCancel()">${I.x("#5A6472",18)}</button></div>
+    <div class="m-body">
+      <p class="dup-lead">今回選択した書類全${total}件のうち${dupCount}件が、すでに同じ書類名で保存されています。<br>アップロードに含める書類をチェックしてください。</p>
+      <div class="dup-list">${rows}</div>
+    </div>
+    <div class="m-foot">
+      <button class="btn-cancel" onclick="dupCancel()">キャンセル</button>
+      <button class="btn-upload" onclick="dupConfirm()">アップロード</button>
+    </div>
+  </div></div>`;
 }
 function finishUpload(){
   const u=state.upload;
@@ -2302,6 +2391,20 @@ function buildPlanFromLines(allLines){
 /* 連携前の要確認件数（suspect / existing-suspect の明細数） */
 function countUnresolved(allLines){ return (allLines||[]).filter(l=>{const s=matchOf(l);return s==="suspect"||s==="existing-suspect";}).length; }
 
+/* ───── 重複書類の検知（車番・金額・発生日が完全一致する明細を1件でも持つ書類） ───── */
+function dupSignature(l){ return normPlate(l.plate)+"|"+l.amount+"|"+l.inspectedAt; }
+/* 比較対象は連携済み（非ゴミ箱）の明細のみ。車番が空の明細はアンカーにしない。 */
+function buildReflectedSignatures(){
+  const sig=new Set();
+  docs.filter(d=>d.status==="連携済み"&&!d.deleted).forEach(d=>{
+    docLines(d).forEach(l=>{ if(normPlate(l.plate)) sig.add(dupSignature(l)); });
+  });
+  return sig;
+}
+function linesHaveDuplicate(lines, sig){ return (lines||[]).some(l=>normPlate(l.plate)&&sig.has(dupSignature(l))); }
+function findDuplicateDocs(cands, sig){ return cands.filter(c=>linesHaveDuplicate(c.lines, sig)).map(c=>c.id); }
+function toggleReflectIncludeDups(v){ if(state.reflectConfirm) state.reflectConfirm.includeDups=v; renderOverlay(); }
+
 /* 単一・一括 共通の連携ログ。units=[{name,lines}] */
 function runReflect(units, doneLabel, onFinish){
   const plan=[];
@@ -2345,12 +2448,14 @@ function runReflect(units, doneLabel, onFinish){
   const tick=()=>{ if(done>=plan.length) return; done++; draw(); setTimeout(tick,delay); };
   if(plan.length>0) setTimeout(tick,delay);
 }
-function closeReflect(){ const f=state._reflectFinish; state._reflectFinish=null; if(f)f(); }
+function closeReflect(){ const f=state._reflectFinish; state._reflectFinish=null; if(f)f(); recomputeAlerts(); }
 
 function reflectPanel(){
   const d=docs.find(x=>x.id===state.panelId); if(!d||d.status!=="入力済み")return;
-  const warn=countUnresolved(state.draft?state.draft.lines:docLines(d));
-  state.reflectConfirm={kind:"panel", count:1, label:state.draft?state.draft.name:d.name, warn}; renderOverlay(); }
+  const cand=state.draft?state.draft.lines:docLines(d);
+  const warn=countUnresolved(cand);
+  const dups=linesHaveDuplicate(cand, buildReflectedSignatures())?[d.id]:[];
+  state.reflectConfirm={kind:"panel", count:1, label:state.draft?state.draft.name:d.name, warn, dups, includeDups:false}; renderOverlay(); }
 function doReflectPanel(){
   const d=docs.find(x=>x.id===state.panelId); if(!d||d.status!=="入力済み")return;
   runReflect([{name:state.draft.name,lines:state.draft.lines}], `${state.draft.name} をデータ連携しました`, ()=>{
@@ -2366,11 +2471,20 @@ function proceedReflect(){ const rc=state.reflectConfirm; state.reflectConfirm=n
 function renderReflectConfirm(){
   const rc=state.reflectConfirm; if(!rc) return "";
   const target = rc.kind==="bulk" ? `選択中の <b>${rc.count}</b> 件の書類` : `「${esc(rc.label)}」`;
+  const dupCount=(rc.dups&&rc.dups.length)||0;
+  const dupDisabled = dupCount>0 && !rc.includeDups;
+  const dupList = rc.kind==="bulk" ? `<ul style="margin:6px 0 8px;padding-left:18px;font-size:12.5px">${rc.dups.map(id=>`<li>${esc((docs.find(d=>d.id===id)||{}).name||id)}</li>`).join("")}</ul>` : "";
+  const dupBlock = dupCount?`<div class="ce-warn" style="background:var(--alertSoft);border-color:var(--alert)">${I.alert("#B23A2E",18)}<div>
+        <div class="ce-q" style="color:var(--alert)">${rc.kind==="bulk"?`重複の可能性がある書類が <b>${dupCount}</b> 件あります。`:`この書類は重複の可能性があります。`}</div>
+        <div class="ce-note">車番・金額・発生日が連携済みデータと完全一致する明細を含みます。</div>${dupList}
+        <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;cursor:pointer;margin-top:4px">
+          <input type="checkbox" ${rc.includeDups?"checked":""} onchange="toggleReflectIncludeDups(this.checked)"> 重複した書類も含めて連携する</label></div></div>`:"";
   return `<div class="ovl anim" style="z-index:70" onclick="if(event.target===this)closeReflectConfirm()"><div class="modal" style="width:min(480px,100%)">
     <div class="m-head"><span class="t">${I.send('#0E7A4B',18)} データ連携しますか？</span>
       <button class="x" onclick="closeReflectConfirm()">${I.x("#5A6472",18)}</button></div>
     <div class="m-body">
       <p style="margin:0 0 13px;font-size:13.5px;color:var(--ink)">${target}を車両コストへデータ連携します。</p>
+      ${dupBlock}
       ${rc.warn?`<div class="ce-warn" style="background:var(--alertSoft);border-color:var(--alert)">${I.alert("#B23A2E",18)}<div>
         <div class="ce-q" style="color:var(--alert)">読み取り信頼度が低い明細が <b>${rc.warn}</b> 件あります。</div>
         <div class="ce-note">車番が特定できない明細は連携されず、低信頼度で既存車両に一致した明細は<b>要確認</b>のまま追記されます。先に明細を確認することを推奨します。</div></div></div>`:""}
@@ -2380,7 +2494,7 @@ function renderReflectConfirm(){
     </div>
     <div class="m-foot">
       <button class="btn-cancel" onclick="closeReflectConfirm()">キャンセル</button>
-      <button class="btn-green" onclick="proceedReflect()">${I.send('#fff',14)} データ連携する</button>
+      <button class="btn-green" ${dupDisabled?"disabled":""} title="${dupDisabled?"重複書類が含まれています。チェックを入れると連携できます":""}" onclick="proceedReflect()">${I.send('#fff',14)} データ連携する</button>
     </div>
   </div></div>`;
 }
@@ -3027,6 +3141,105 @@ function setChartOffice(v){ state.chartOffice=v; render(); }
 function setChart2Cat(v){ state.chart2Cat=v; render(); }
 function setChart2Klass(v){ state.chart2Klass=v; render(); }
 
+/* ───── ピックアップ算出（表示・アラート共通） ───── */
+function _pkVSum(v,ym){ return ym?v.lines.reduce((a,l)=>a+(((l.date||"").slice(0,7)===ym)?(+l.amount||0):0),0):0; }
+function _pkMonths(vehicles){ const mo=[...new Set(vehicles.flatMap(v=>v.lines).map(l=>(l.date||"").slice(0,7)).filter(Boolean))].sort(); return {lastYM:mo[mo.length-1]||"",prevYM:mo[mo.length-2]||""}; }
+function computePickup(vehicles){
+  const {lastYM,prevYM}=_pkMonths(vehicles); const _pct=(c,p)=>p>0?((c-p)/p*100):0;
+  const topCost=vehicles.slice().sort((a,b)=>b.total-a.total).slice(0,3);
+  const incRank=vehicles.map(v=>({v,p:_pct(_pkVSum(v,lastYM),_pkVSum(v,prevYM))})).filter(x=>_pkVSum(x.v,prevYM)>0&&x.p>0).sort((a,b)=>b.p-a.p);
+  const maintRank=vehicles.map(v=>({v,r:v.total>0?(v.byCat["修繕・維持費"]||0)/v.total:0})).filter(x=>x.r>0).sort((a,b)=>b.r-a.r);
+  return {topCost,incRank,maintRank,lastYM,prevYM};
+}
+const PICKUP_LABEL={attention:"要確認車両",topcost:"コスト上位車両",increase:"コスト増加車両"};
+function pickupSnapshot(vehicles){
+  const {topCost,incRank,maintRank}=computePickup(vehicles);
+  return {
+    attention:[topCost[0]&&topCost[0].key, incRank[0]&&incRank[0].v.key, maintRank[0]&&maintRank[0].v.key].filter(Boolean),
+    topcost:topCost.map(v=>v.key),
+    increase:incRank.slice(0,3).map(x=>x.v.key),
+  };
+}
+
+/* ───── 連携アラート（データ連携ログ［閉じる］時に再計算。実明細の差分から①②を生成） ───── */
+const ALERT_CFG={ratioThreshold:0.10,minAbsIncrease:30000,minBaseAmount:30000,momMinMonths:2,avg3MinMonths:4,perVehicleCap:3,totalCap:50};
+const ALERTS_LS_KEY="alerts.v1";
+function loadAlertState(){ try{ const raw=localStorage.getItem(ALERTS_LS_KEY); if(raw){const o=JSON.parse(raw); return {alerts:o.alerts||[],seenAlertIds:o.seenAlertIds||{},prevCostMap:o.prevCostMap||null,prevPickup:o.prevPickup||null};} }catch(e){} return null; }
+function saveAlertState(){ try{ localStorage.setItem(ALERTS_LS_KEY,JSON.stringify({alerts:state.alerts,seenAlertIds:state.seenAlertIds,prevCostMap:state.prevCostMap,prevPickup:state.prevPickup})); }catch(e){} }
+function costMapOf(vehicles){ const m={}; vehicles.forEach(v=>v.lines.forEach(l=>{ const ym=(l.date||"").slice(0,7); if(!ym)return; const k=v.key+"|"+l.cat+"|"+ym; m[k]=(m[k]||0)+(+l.amount||0); })); return m; }
+function mapsEqual(a,b){ const ka=Object.keys(a); if(ka.length!==Object.keys(b).length)return false; for(const k of ka) if(a[k]!==b[k])return false; return true; }
+function _shiftYm(ym,back){ let y=+ym.slice(0,4),m=+ym.slice(5,7)-back; while(m<=0){m+=12;y-=1;} return y+"-"+String(m).padStart(2,"0"); }
+function _qualify(amt,base){ if(base<ALERT_CFG.minBaseAmount)return null; const inc=amt-base; if(inc<ALERT_CFG.minAbsIncrease)return null; const rate=inc/base; if(rate<ALERT_CFG.ratioThreshold)return null; return rate; }
+function _splitCell(k){ const p=k.split("|"); return {ym:p[p.length-1],cat:p[p.length-2],vehKey:p.slice(0,p.length-2).join("|")}; }
+function _increaseAlerts(prev,cur,targetByKey){
+  const monthCount=new Map();
+  Object.keys(cur).forEach(k=>{ if((cur[k]||0)<=0)return; const i=k.lastIndexOf("|"); const vc=k.slice(0,i); monthCount.set(vc,(monthCount.get(vc)||0)+1); });
+  const byCell=new Map();
+  Object.keys(cur).forEach(k=>{
+    const amt=cur[k]; if((prev[k]||0)===amt)return;
+    const {vehKey,cat,ym}=_splitCell(k); if(!cat||!ym)return;
+    const mc=monthCount.get(vehKey+"|"+cat)||0; const cands=[];
+    if(mc>=ALERT_CFG.momMinMonths){ const base=cur[vehKey+"|"+cat+"|"+_shiftYm(ym,1)]||0; const r=_qualify(amt,base); if(r!=null)cands.push({kind:"inc_mom",base,rate:r}); }
+    if(mc>=ALERT_CFG.avg3MinMonths){ const base=([1,2,3].reduce((a,d)=>a+(cur[vehKey+"|"+cat+"|"+_shiftYm(ym,d)]||0),0))/3; const r=_qualify(amt,base); if(r!=null)cands.push({kind:"inc_avg3",base,rate:r}); }
+    if(!cands.length)return; cands.sort((a,b)=>b.rate-a.rate); const best=cands[0]; byCell.set(k,{vehKey,cat,ym,amt,kind:best.kind,base:best.base,rate:best.rate});
+  });
+  const byVeh=new Map(); byCell.forEach(c=>{ const arr=byVeh.get(c.vehKey)||[]; arr.push(c); byVeh.set(c.vehKey,arr); });
+  const createdAt=nowStamp(); const out=[];
+  byVeh.forEach(arr=>{ arr.sort((a,b)=>b.rate-a.rate); arr.slice(0,ALERT_CFG.perVehicleCap).forEach(c=>{
+    const target=targetByKey.get(c.vehKey)||c.vehKey;
+    const label=c.kind==="inc_mom"?"前月比":"前3ヶ月平均比", baseLabel=c.kind==="inc_mom"?"前月":"前3ヶ月平均";
+    out.push({id:c.kind+"|"+c.vehKey+"|"+c.cat+"|"+c.ym, kind:c.kind, title:`${c.cat}が${label} +${Math.round(c.rate*100)}%`, detail:`車番 ${target}・${c.ym}　${yen(c.amt)}（${baseLabel} ${yen(Math.round(c.base))}）`, vehTarget:target, ym:c.ym, createdAt, target:{type:"veh_karte",vehKey:c.vehKey}});
+  }); });
+  return out;
+}
+function _pickupAlerts(prev,cur,targetByKey){
+  const out=[]; const createdAt=nowStamp(); ["attention","topcost","increase"].forEach(listId=>{
+    const p=prev[listId]||[], c=cur[listId]||[]; const pset=new Set(p),cset=new Set(c);
+    const entered=new Set(c.filter(k=>!pset.has(k))); const label=PICKUP_LABEL[listId];
+    const mk=(ct,vehKey,title)=>({id:"pickup_change|"+listId+"|"+ct+"|"+vehKey,kind:"pickup_change",title,detail:"コストモニターで確認できます",vehTarget:targetByKey.get(vehKey)||vehKey,createdAt,target:{type:"pickup",listId,vehKey}});
+    entered.forEach(k=>out.push(mk("enter",k,`${targetByKey.get(k)||k} が「${label}」に入りました`)));
+    p.filter(x=>!cset.has(x)).forEach(k=>out.push(mk("leave",k,`${targetByKey.get(k)||k} が「${label}」から外れました`)));
+    if(c[0]&&p[0]&&c[0]!==p[0]&&!entered.has(c[0])) out.push(mk("top",c[0],`「${label}」の1位が ${targetByKey.get(c[0])||c[0]} になりました`));
+  });
+  return out;
+}
+function diffAlerts(prevCost,curCost,prevPk,curPk,vehicles){ const t=new Map(vehicles.map(v=>[v.key,v.target])); return [..._increaseAlerts(prevCost,curCost,t),..._pickupAlerts(prevPk,curPk,t)]; }
+function recomputeAlerts(){
+  const vehicles=buildVehicles("all",null).filter(v=>!state.vehTrash.has(v.key));
+  const cur=costMapOf(vehicles), curPk=pickupSnapshot(vehicles);
+  if(state.prevCostMap==null){ state.prevCostMap=cur; state.prevPickup=curPk; saveAlertState(); renderBell(); return; } // 初回はベースライン確立のみ
+  if(mapsEqual(cur,state.prevCostMap)) return; // データ無変化＝冪等
+  const fresh=diffAlerts(state.prevCostMap,cur,state.prevPickup||{attention:[],topcost:[],increase:[]},curPk,vehicles);
+  const existing=new Set(state.alerts.map(a=>a.id));
+  state.alerts=fresh.filter(a=>!existing.has(a.id)).concat(state.alerts).slice(0,ALERT_CFG.totalCap);
+  state.prevCostMap=cur; state.prevPickup=curPk; saveAlertState(); renderBell();
+}
+function markAlertsSeen(){ const s={}; state.alerts.forEach(a=>s[a.id]=true); state.seenAlertIds=s; saveAlertState(); renderBell(); }
+/* ───── ベル（ヘッダー右端） ───── */
+function renderBell(){
+  const host=document.getElementById("bell-host"); if(!host)return;
+  const hasUnseen=state.alerts.some(a=>!state.seenAlertIds[a.id]);
+  const dot=hasUnseen?`<span class="bell-dot"></span>`:"";
+  let pop="";
+  if(state.bellOpen){
+    let list;
+    if(state.alerts.length){
+      const shown=state.alerts.slice(0, state.bellExpanded?10:5); // 初期5件→もっとみるで10件まで（10件超は非表示）
+      list=shown.map(a=>`<button class="bp-item" onclick="alertDispatch('${a.id}')"><span class="bp-dot ${a.kind==='pickup_change'?'blue':'red'}"></span><div class="bp-main"><div class="bp-title">${esc(a.title)}</div><div class="bp-detail">${esc(a.detail)}</div></div></button>`).join("");
+      if(!state.bellExpanded && state.alerts.length>5) list+=`<button class="bp-more" onclick="bellMore()">もっとみる</button>`;
+    } else { list=`<div class="bp-empty">新しいアラートはありません</div>`; }
+    pop=`<div class="bell-pop"><div class="bp-head"><span>アラート</span><button class="x" onclick="toggleBell()">${I.x("#5A6472",16)}</button></div><div class="bp-list">${list}</div></div>`;
+  }
+  host.innerHTML=`<button class="bell" onclick="toggleBell()" aria-label="アラート">${I.bell("#5A6472",18)}${dot}</button>${pop}`;
+}
+function toggleBell(){ state.bellOpen=!state.bellOpen; state.bellExpanded=false; if(state.bellOpen) markAlertsSeen(); else renderBell(); }
+function bellMore(){ state.bellExpanded=true; renderBell(); }
+function alertDispatch(id){
+  const a=state.alerts.find(x=>x.id===id); if(!a)return; state.bellOpen=false;
+  if(a.target.type==="veh_karte"){ const v=buildVehicles("all").find(x=>x.key===a.target.vehKey); if(!v){ renderBell(); toast("対象の車両が見つかりませんでした"); return; } renderBell(); openVehPanel(v.key,v.kind,v.target); }
+  else { state.view="vehicles"; state.vehTab="monitor"; state.pickupHighlight=a.target.listId; render(); }
+}
+
 function renderVehicles(){
   const tabs=`<div class="upl-tabs" style="margin-bottom:18px">
     <button class="upl-tab ${state.vehTab!=="individual"?"active":""}" onclick="setVehTab('monitor')">コストモニター</button>
@@ -3080,11 +3293,7 @@ function renderVehMonitor(){
   </div>`;
 
   /* ───── ピックアップ（登録データから自動抽出。クリックで車両カルテを表示） ───── */
-  const topCost=vehicles.slice(0,3);
-  const incRank=vehicles.map(v=>({v,p:pct(vSum(v,lastYM),vSum(v,prevYM))}))
-    .filter(x=>vSum(x.v,prevYM)>0 && x.p>0).sort((a,b)=>b.p-a.p);
-  const maintRank=vehicles.map(v=>({v,r:v.total>0?(v.byCat["修繕・維持費"]||0)/v.total:0}))
-    .filter(x=>x.r>0).sort((a,b)=>b.r-a.r);
+  const {topCost,incRank,maintRank}=computePickup(vehicles);
   const pkItem=(v,inner)=>`<div class="pk-item" onclick="openVehPanel('${v.key}','${v.kind}','${esc(v.target)}')">${inner}<span class="pk-detail">詳細${I.chev("#0E7A4B",13)}</span></div>`;
   const att=[];
   if(topCost[0]) att.push(pkItem(topCost[0],`<span class="pk-rank">1</span><div class="pk-main"><div class="pk-plate">${esc(topCost[0].target)}</div><div class="pk-metric">累計コスト ${yen(topCost[0].total)}・全車両中 1位</div></div>`));
@@ -3093,12 +3302,11 @@ function renderVehMonitor(){
   const topItems=topCost.map((v,i)=>pkItem(v,`<span class="pk-rank wide">${i+1}位</span><div class="pk-main"><div class="pk-plate">${esc(v.target)}</div></div><span class="pk-amt">${yen(v.total)}</span>`));
   const incItems=incRank.slice(0,3).map(x=>pkItem(x.v,`<span class="pk-pct">+${Math.round(x.p)}%</span><div class="pk-main"><div class="pk-plate">${esc(x.v.target)}</div></div>`));
   const emptyMsg=`<div class="pk-empty">該当する車両はありません</div>`;
-  const pkCol=state.vehPickupCollapsed;
-  const pickup=`<button class="pickup-toggle ${pkCol?"collapsed":""}" onclick="toggleVehPickup()" aria-expanded="${!pkCol}">${I.chev("#5A6472",13)}<span>ピックアップ</span></button>${pkCol?"":`<div class="pickup">
-    <div class="pk-card pk-card-alert"><div class="pk-h">${I.alert("#B23A2E",14)} 要確認車両</div><div class="pk-list">${att.join("")||emptyMsg}</div></div>
-    <div class="pk-card"><div class="pk-h">${I.truckN("#0E7A4B",15)} コスト上位車両</div><div class="pk-list">${topItems.join("")||emptyMsg}</div></div>
-    <div class="pk-card"><div class="pk-h" title="先月（${moJP(lastYM)}）を、その前月（${moJP(prevYM)}）と比較した前月比の増加率です">${I.alert("#B87514",14)} コスト増加車両 <span class="pk-hsub">前月比（先月：${moJP(lastYM)}）</span></div><div class="pk-list">${incItems.join("")||emptyMsg}</div></div>
-  </div>`}`;
+  const pickup=`<div class="pickup">
+    <div class="pk-card pk-card-alert" id="pk-attention"><div class="pk-h">${I.alert("#B23A2E",14)} 要確認車両</div><div class="pk-list">${att.join("")||emptyMsg}</div></div>
+    <div class="pk-card" id="pk-topcost"><div class="pk-h">${I.truckN("#0E7A4B",15)} コスト上位車両</div><div class="pk-list">${topItems.join("")||emptyMsg}</div></div>
+    <div class="pk-card" id="pk-increase"><div class="pk-h" title="先月（${moJP(lastYM)}）を、その前月（${moJP(prevYM)}）と比較した前月比の増加率です">${I.alert("#B87514",14)} コスト増加車両 <span class="pk-hsub">前月比（先月：${moJP(lastYM)}）</span></div><div class="pk-list">${incItems.join("")||emptyMsg}</div></div>
+  </div>`;
   const charts=`<div class="mon-charts">${renderCostTrendBar()}${renderOfficeLineChart()}</div>`;
   return head+kpis+pickup+charts;
 }
@@ -3195,7 +3403,6 @@ function setVehCategoryFilter(v){ state.vehCategoryFilter=v; state.vehPage=1; re
 function setVehTab(t){ state.vehTab=t; render(); }
 /* ───── 車両のゴミ箱（確認ステップ＋変更履歴） ───── */
 function toggleVehTrash(){ state.vehTrashView=!state.vehTrashView; state.vehPage=1; render(); }
-function toggleVehPickup(){ state.vehPickupCollapsed=!state.vehPickupCollapsed; render(); }
 function _findVeh(key){ return buildVehicles("all").find(v=>v.key===key); }
 function vehAskTrash(key){ const v=_findVeh(key); if(!v) return;
   state.vehTrashAction={mode:"trash",key,kind:v.kind,target:v.target,total:v.total,count:v.count}; renderOverlay(); }
@@ -3640,6 +3847,7 @@ function renderOverlay(){
     if(state.splitUpload.settingsOpen) h+=renderSplitSettingsModal();
     if(state.splitUpload.zoom!=null) h+=renderSplitZoom();
     if(state.splitUpload.guide) h+=renderCoach();
+    if(state.upload.dupAlert) h+=renderDupAlert();
   }
   else if(state.panelId){ h=renderPanel(); state.panelJustOpened=false; }
   else if(state.vehPanel) h=renderVehPanel();
@@ -3687,9 +3895,19 @@ function render(){
   if(state.view==="documents") setSelectAllState();
   _restoreScroll(c,cs);
   renderOverlay();
+  renderBell();
+  // アラートから遷移してきたら、対象ピックアップカードへスクロール＆一時ハイライト
+  if(state.pickupHighlight && state.view==="vehicles"){
+    const id="pk-"+state.pickupHighlight; state.pickupHighlight=null;
+    setTimeout(()=>{ const el=document.getElementById(id); if(el){ el.scrollIntoView({behavior:"smooth",block:"center"}); el.classList.add("pk-flash"); setTimeout(()=>el.classList.remove("pk-flash"),1600); } },60);
+  }
 }
 freezeReflectedLines();
 seedChangelog();
+// 連携アラートを localStorage から復元（無ければ初回連携でベースライン確立）
+(function(){ const a=loadAlertState(); if(a){ state.alerts=a.alerts; state.seenAlertIds=a.seenAlertIds; state.prevCostMap=a.prevCostMap; state.prevPickup=a.prevPickup; } })();
+// ベル外クリックで閉じる
+document.addEventListener("mousedown",e=>{ if(state.bellOpen){ const host=document.getElementById("bell-host"); if(host && !host.contains(e.target)){ state.bellOpen=false; renderBell(); } } });
 render();
 </script>
 </body>
