@@ -7,8 +7,11 @@
 | パス | 内容 | 状態 |
 |---|---|---|
 | `app/` | **React + TypeScript 版（現行・アクティブ）** | 開発はここ。`npm run dev` / `build` / `test` |
-| `docs/PRD.md` | プロダクト要求仕様書 | 仕様の正 |
-| `docs/PRD-print.html` | PRD の印刷／PDF配布版（`PRD.md` から生成。ブラウザで開き「印刷→PDFに保存」） | 配布用 |
+| `docs/PRD.md` | プロダクト要求仕様書（画面キャプチャ入り） | 仕様の正 |
+| `docs/img/` | PRD 用の画面キャプチャ（実アプリのスクリーンショット） | 図版 |
+| `docs/PRD-print.html` | PRD の印刷／PDF配布版（`PRD.md` から生成・画像を埋め込んだ自己完結HTML） | 配布用 |
+| `docs/AI_Fleet_Pilot_PRD.pdf` | PRD の配布用PDF（`PRD-print.html` から生成） | 配布用 |
+| `docs/build-print.mjs` | `PRD.md` → `PRD-print.html` 生成スクリプト（`node docs/build-print.mjs`） | ツール |
 | `legacy-prototype.html` | 旧 Vanilla JS 単一HTMLプロトタイプ | **参照専用・非推奨（メンテナンス対象外）** |
 
 ## 現行アプリ（`app/`）
