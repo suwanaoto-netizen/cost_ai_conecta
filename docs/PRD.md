@@ -5,11 +5,24 @@
 
 - 対象読者: フロントエンドエンジニア / デザイナー / PdM
 - 現状: 現行実装は **React + TypeScript 版（`app/`）**。本書（`docs/PRD.md`）が仕様の正であり、`legacy-prototype.html`（旧 `index.html`）は参照専用（非推奨・メンテナンス対象外）。
-- 最終更新: 2026-06-15（rev.）
+- 最終更新: 2026-06-16（rev.）
 
 ---
 
-## 改訂メモ — rev. 2026-06-15（直近PRを統合）
+## 改訂メモ — rev. 2026-06-16（直近PRを統合）
+
+- **連携アラート機能を追加**：Topbar にベルアイコン＋未読の赤ポチ。連携実行（`recomputeAlerts`）後にコストの変化を検知して通知する。種別は①特定分類が**前月比（`inc_mom`）／前3ヶ月平均比（`inc_avg3`）**で増加、②**ピックアップ3リストの入替・1位交代（`pickup_change`）**。内容アドレス方式のID（同一条件は同一ID＝自動dedupe・既読安定）で、`localStorage`（`alerts.v1`）にベースライン（コストマップ＋ピックアップ・スナップショット）とともに永続化。ベルのポップオーバーは初期5件・「もっとみる」で最大10件、項目クリックで車両カルテ／コストモニターのピックアップへジャンプ。
+- **重複書類アラートを追加**（2系統）：
+  - **取込時**：アップロードモーダルで**既存書類と書類名が完全一致**するものを重複候補として検知し、含める書類をチェックで選択。
+  - **連携時**：書類詳細パネル・一括連携で、**連携済み明細と署名（正規化車番｜金額｜発生日）が一致**する明細を重複として警告。「重複した書類も含めて連携する」チェックで明示同意した場合のみ連携。
+- **サイドバーを既定で折りたたみ表示**（`sidebarCollapsed` 初期 `true`）。折りたたみ時はホバーで項目名のツールチップ（白背景・緑枠・緑文字、最前面）。
+- **アップロード進捗を右下のプログレスバーに統一**（新規・分割の両タブ共通）。
+- ピックアップの**折りたたみトグルを廃止**し、グラフを含めて1画面に収める。ピックアップ算出は `domain/pickup.ts`（`computePickup`）に集約し、表示とアラート判定で同一式を共有。
+- 書類一覧の絞り込み「連携済み」の件数表示を削除。
+
+---
+
+## 改訂メモ — rev. 2026-06-15
 
 - **コストモニターを2タブ化**：「コストモニター」（登録車両全体のサマリー＝KPI＋ピックアップ＋推移グラフ）と「個別モニター」（車両ごとの集計テーブル）に分割。
 - **推移グラフを追加**：①「車両維持コスト推移（分類構成比）」＝月次12ヶ月の積み上げ棒＋昨年同月比較・営業所絞り込み。②「営業所別 コスト分類推移」＝折れ線・コスト分類／車格で絞り込み。いずれもデモ用の決定的な月次合成データ（`monthlySeries`）で描画。
@@ -70,6 +83,9 @@
 | 実効値 (Effective value) | 原値に調整（override）を重ねた値。`effDocLine` が算出し、コスト集計・日付フィルタ・変更履歴の基準となる。 |
 | 変更履歴 (Changelog) | 連携済みコストへの編集差分・ゴミ箱/復元の監査ログ。 |
 | 車両カルテ (Karte) | 1車両の読み取り専用ビュー。コスト内訳と発生明細のタイムラインを表示。 |
+| 連携アラート (Alert) | 連携後のコスト変化を検知してTopbarのベルに通知する仕組み。種別＝`inc_mom`（前月比増加）/`inc_avg3`（前3ヶ月平均比増加）/`pickup_change`（ピックアップ入替）。`localStorage` に永続化し未読を赤ポチで表示。 |
+| ピックアップ (Pickup) | コストモニターで提示する3リスト（要確認車両 `attention` / コスト上位 `topcost` / コスト増加 `increase`）。`computePickup` が表示・アラート判定の双方に同一式を提供。 |
+| 重複書類 (Duplicate) | 既存書類と重複と判定された取込候補・連携候補。取込時は**書類名の完全一致**、連携時は**署名（正規化車番｜金額｜発生日）が連携済み明細と一致**で判定。 |
 
 ### 2.1 ステータス（書類）
 書類は次の順に進む。**前進のみで逆行はしない。**
@@ -211,7 +227,7 @@ AppShell
 │   ├─ コストモニター (vehicles)  ← [コストモニター | 個別モニター] タブ
 │   ├─ マスタデータ (master)      ← [車両マスタ | コスト分類] タブ
 │   └─ 設定 (settings)
-├─ Topbar（パンくず / 会社名 / ユーザー）
+├─ Topbar（パンくず / 会社名 / 連携アラートのベル＋赤ポチ / ユーザー）
 └─ Main（選択中ビュー）
 └─ Overlay層（モーダル・確認ダイアログ・トースト・右スライドパネル）
 ```
@@ -253,7 +269,8 @@ AppShell
 ### 3.5 ナビゲーション挙動
 - ビュー切替時、**設定ページに未保存変更がある状態で離脱しようとすると確認ダイアログ**を挟む（`settingsDirty()` → 離脱確認）。
 - サイドの「書類一覧」には未入力件数バッジ（0件は非表示）。
-- サイドバーの折りたたみトグル。
+- **サイドバーは既定で折りたたみ表示**（`sidebarCollapsed` 初期 `true`、`toggleSidebar` で展開）。折りたたみ時は各項目にホバーで名称ツールチップ（白背景・緑枠・緑文字、最前面）。
+- **Topbar のベル**: 未読アラートがあると赤ポチ表示。クリックでポップオーバー（初期5件・「もっとみる」で最大10件）を開くと既読化（赤ポチ消灯）。各項目クリックで `veh_karte`（車両カルテ）／`pickup`（コストモニターへ遷移＋該当リストをハイライト）へディスパッチ。
 
 ---
 
@@ -280,7 +297,7 @@ AppShell
 | 操作 | 対象条件 | 挙動 |
 |---|---|---|
 | 入力済みにする | 選択中の「未入力」 | 確認ダイアログ（件数）→ 一括で入力済みへ |
-| データ連携する | 選択中の「入力済み」 | 確認ダイアログ → 連携済みへ＋トースト（コストモニター導線） |
+| データ連携する | 選択中の「入力済み」 | 確認ダイアログ（要確認件数＋**重複候補件数**を表示）→ 連携済みへ＋トースト（コストモニター導線）。重複候補がある場合は「重複した書類も含めて連携する」チェックで明示同意した分のみ連携。連携後に `recomputeAlerts` でアラート再計算 |
 | 営業所を変更 | 「連携済み」以外 | 営業所選択ダイアログ → 一括変更 |
 | ゴミ箱へ移動 | 任意 | 確認ダイアログ → `deleted=true` |
 
@@ -306,6 +323,7 @@ AppShell
   - **給油量・単価**: 燃料費の明細のみ、給油量（L）・単価（円/L）を手入力欄として表示（`liters` / `unitPrice`）。連携タグに併記。
 - 右側に**請求書プレビュー＝原本**（請求書の画像そのもの）。パネルを開いた時点のスナップショット（取引先・明細）から描画し、左パネルの編集（項目／車番／金額／取引先）では変化しない。OCR読取箇所のハイライト・ズーム（`pvZoom`）。
 - **連携済み**は全フィールド readonly/disabled。明細は `Object.freeze` で凍結され、請求書原本は原値のまま不変。修正はコストモニターの調整レイヤ経由でコスト集計にのみ反映される（§4.4）。
+- **重複アラート（連携時）**: 明細が連携済み明細と署名（正規化車番｜金額｜発生日）一致のとき、連携アクション付近に「この書類は重複の可能性があります。」を警告表示し、「重複した書類も含めて連携する」チェックに同意しない限り連携をブロック（`buildReflectedSignatures` / `linesHaveDuplicate`）。
 - **データ連携ログ**（`ReflectLog`）: 連携プラン（`buildReflectPlan`）を段階表示。新規マスタ作成は high-confidence の `new` のみ、`suspect` はスキップ、`existing-suspect` は要確認付きで追記。明細には内訳タグ＋燃料情報を併記（例 `[内訳: diesel/軽油 | 120L | 155円/L]`）。
 
 ### 4.3 アップロード（モーダル）
@@ -318,7 +336,8 @@ AppShell
 - 「サンプル請求書を読み込む」導線。
 - 営業所選択行。
 - **AI-OCR トグル**（`ocr`、設定の既定値 `defaultOcr` で初期化）。
-- 取込実行 → **処理プログレス**（`processing{active,pct,label}`、アニメーション）→ 一覧へ追加（新規分は `justUploaded` でハイライト）。
+- **重複候補の検知（取込時）**: 既存書類（ゴミ箱を除く）と**書類名が完全一致**する候補を重複として表示。重複でない書類は常に含め、重複候補はチェックしたものだけ取り込む。
+- 取込実行 → **進捗は右下のプログレスバーに統一**（新規・分割の両タブ共通、`progress` 0〜100%）→ 一覧へ追加（新規分はハイライト）。
 
 **B. PDF分割アップロード (`tab:split`)**
 - 複数請求書が1PDFに連結されている場合に、ページ単位で分割して取り込む。
@@ -338,9 +357,10 @@ AppShell
 - **サマリーKPI**（`KpiCards`、登録データから自動算出）:
   - 登録車両数 / 先月のコスト合計（前月比トレンド↑↓） / 平均コスト（1台あたり、前月比） / コスト増加車両（前月比 台数） / データ収集中の車両（連携明細が2件以下）。
   - 「先月」は直近データ月、前月比はその前月。トレンドは上昇/下降/横ばいを矢印＋色で表示。
-- **ピックアップ**（`Pickup`、折りたたみ可）:
+- **ピックアップ**（`Pickup`、常時表示。算出は `computePickup` に集約し表示・アラートで共有）:
   - 要確認車両（コスト上位・前月比増加・整備費比率の代表をまとめて提示）/ コスト上位車両（Top3）/ コスト増加車両（前月比、先月vs前月）。
   - 各項目クリックで**車両カルテ**（`VehKarteModal`）を開く。
+  - 各カードに `id`（`pk-attention`/`pk-topcost`/`pk-increase`）を持ち、Topbar のアラート（`pickup_change`）からのハイライト遷移先になる。
 - **推移グラフ**（`mon-charts`、純SVG）:
   - ①**車両維持コスト推移（分類構成比）**（`CostTrendBarChart`）: 月次・直近12ヶ月の積み上げ棒。**薄い棒＝昨年同月**で前年比較。営業所（全社/各営業所）で絞り込み。バーにコスト分類別の金額・構成比をツールチップ表示。
   - ②**営業所別 コスト分類推移**（`OfficeCategoryLineChart`）: 月次・直近12ヶ月の折れ線。コスト分類・車格（小型/中型/大型/トレーラー）で絞り込み。営業所ごとに色分け。
@@ -371,6 +391,18 @@ AppShell
 - 手動明細の追加（`vehAddManualLine`）・削除（証憑なし、`src:"manual"`）。
 - 確定（`commitVehEdit`）時に実効値差分を `CHANGELOG` へ記録（追加/変更/削除、フィールド単位で旧→新）。ゴミ箱/復元も記録。
 - 変更履歴パネル（`ChangelogPanel`）: 時系列降順、各項目クリックで該当車両・該当明細へジャンプしてハイライト。
+
+#### 4.4.3 連携アラート（Topbar ベル）
+
+**目的**: 連携後にコストの異常・注目変化を検知して通知する。すべて「(車両 × コスト分類 × 月) の実額スナップショット」の差分から導出する純関数（`domain/alerts.ts`）。
+
+- **生成タイミング**: データ連携（一括）後に `recomputeAlerts` を呼ぶ。初回はベースライン（コストマップ `buildCostMap` ＋ ピックアップ・スナップショット `pickupSnapshot`）を確立するだけで通知しない。
+- **種別**:
+  - `inc_mom`（前月比増加）/ `inc_avg3`（前3ヶ月平均比増加）: しきい値 `ratioThreshold=+10%`、増加額フロア `minAbsIncrease=30,000円`、比較元下限 `minBaseAmount=30,000円`、保有月数（mom≥2 / avg3≥4）、1車両あたり `perVehicleCap=3`。
+  - `pickup_change`: 3リストの新規IN・脱落・1位交代。
+- **dedupe・既読**: ID は内容アドレス方式（`${kind}|${vehKey}|${cat}|${ym}` 等）で、同一条件の再生成は同一ID＝自動dedupe・既読安定。総数上限 `totalCap=50`。`seenAlertIds` で未読を管理し、ベルを開くと既読化。
+- **永続化**: `localStorage`（`alerts.v1`）に `alerts` / `seenAlertIds` / ベースラインを保存。破損時はベースラインから再構築。
+- **遷移**: 増加系は `veh_karte`（車両カルテ）、ピックアップ系は `pickup`（コストモニターへ遷移し該当リストをハイライト）。
 
 **車両カルテ（`VehKarteModal`）**: 読み取り専用。車番＋マスタ区分、累計コスト/明細数/最終発生、コスト内訳（構成比バー＋凡例）、発生明細のタイムライン（日付降順、`請求書より自動記録`／`手動追加` を区別、取引先表示）。
 
@@ -430,6 +462,8 @@ AppShell
 9. **内訳（subCat）の自動同期**: 修繕・維持費・燃料費の内訳は「分類＋品名」から導く従属値（`KEYWORDS_BY_CAT` 部分一致・配列順が優先、表示順と独立）。読み取り専用で直接編集不可——品名を正すことで正しい内訳へ誘導。保存・連携・override 時に再判定して永続値と一致。連携キーは表記ゆれに強い `code`、表示は `label`。未該当は分類ごとにフォールバック（修繕・維持費→`consumable`、燃料費→`diesel`）。
 10. **監査**: コストモニターでの追加・変更・削除・ゴミ箱・復元は必ず `CHANGELOG` に `ts/user/action/detail` 付きで記録。
 11. **マスタ削除の保護**: 連携済み明細（凍結・付け替え不可）や手動明細が紐付く車両マスタは削除を拒否（`countReflectedVehicleDocLines` / `countVehicleCostLines` で依存チェック）。
+12. **重複検知**: 取込時は**書類名の完全一致**（既存・非ゴミ箱）で重複候補を提示し、チェックした分のみ取り込む。連携時は**署名（正規化車番｜金額｜発生日）が連携済み明細と一致**する明細を重複として警告し、明示同意（「重複した書類も含めて連携する」）なしには連携をブロック。車番が空の明細は重複アンカーから除外。
+13. **連携アラート**: データ連携後に `recomputeAlerts` で差分から①増加（前月比/前3ヶ月平均比、しきい値・フロア・上限あり）②ピックアップ入替を生成。初回はベースライン確立のみで非通知。ID は内容アドレス方式で自動dedupe・既読安定、`localStorage` に永続化。
 
 ---
 
@@ -441,7 +475,8 @@ AppShell
 - `view`, `collapsed`（ナビ）
 - `settings`（永続設定）/ `settingsDraft`（編集中）。`live` スナップショット参照（`currentSnapshot`）。
 - ドメインデータ: `docs`, `lines`（FrozenLine）, `manualLines`, `adjustments(ADJUSTMENTS：override調整・追記専用)`, `vehicleMaster`, `changelog`, `categories(営業所)`, `costCats(コスト分類マスタ：分類名＋想定書類タイプ)`, `vehTrash`
-- オーバーレイ: `pushOverlay`（排他に1モーダル）、トースト（`showToast`）
+- 連携アラート: `alerts`, `seenAlertIds`, ベースライン（`prevCostMap` / `prevPickup`）。`recomputeAlerts` / `markAlertsSeen`。`localStorage`（`alerts.v1`）に永続化。
+- ナビ/オーバーレイ: `sidebarCollapsed`（初期 `true`）, `pickupHighlight`（アラート遷移用）, `pushOverlay`（排他に1モーダル）、トースト（`showToast`）
 
 **ビューローカル状態**
 - 書類一覧: `filterStatus, categoryFilter, q, trash, selected:Set, bulkMenu, docPage, docPerPage, docSort`
@@ -450,11 +485,11 @@ AppShell
 - コストモニター: `tab(monitor/individual), office, range, trashView, page, perPage, clogOpen`、編集系（`vehEdit*`）
 - マスタ: `tab(vehicles/costCats), masterEdit, masterPage, masterPerPage`
 
-**派生（セレクタ・純関数）**: `visibleDocs()`, `docPageInfo()`, `useVehicles()/buildVehicles(input)`, `usePlateIndex()/buildPlateIndex()`, `matchOf(line, idx, threshold)`, `countUnresolved()`, `effDocLine(line, docId, adjustments)`, `resolveSubcat(cat, item)/subcatLabel(code)/hasSubcat(cat)`, `buildReflectPlan()`, `stackByMonth()/officeLines()`（グラフ用）。いずれも副作用なし。`buildVehicles` は override を実効値として適用し、営業所初期値の解決（マスタ連動＋最多フォールバック）も純関数。
+**派生（セレクタ・純関数）**: `visibleDocs()`, `docPageInfo()`, `useVehicles()/buildVehicles(input)`, `usePlateIndex()/buildPlateIndex()`, `matchOf(line, idx, threshold)`, `countUnresolved()`, `effDocLine(line, docId, adjustments)`, `resolveSubcat(cat, item)/subcatLabel(code)/hasSubcat(cat)`, `buildReflectPlan()`, `stackByMonth()/officeLines()`（グラフ用）, `computePickup()/pickupSnapshot()`（ピックアップ）, `buildReflectedSignatures()/findDuplicateDocIds()/linesHaveDuplicate()`（重複検知）, `buildCostMap()/diffAlerts()`（アラート）。いずれも副作用なし。`buildVehicles` は override を実効値として適用し、営業所初期値の解決（マスタ連動＋最多フォールバック）も純関数。新規ドメイン: `domain/pickup.ts` / `domain/duplicates.ts` / `domain/alerts.ts`。
 
 **コンポーネント分割**
 ```
-AppShell / Sidebar / Topbar / OverlayHost
+AppShell / Sidebar（既定折りたたみ・ホバーツールチップ）/ Topbar（アラートのベル＋ポップオーバー）/ OverlayHost
 Documents/   (DocumentsView, DocumentPanel[Stepper,InfoForm,LineTable,InvoicePreview], ReflectLog,
               UploadModal[NewTab,SplitTab,Progress], SplitSettingsModal, SplitThumbnail)
 CostMonitor/ (CostMonitorView[monitor|individual], KpiCards, Pickup, CostTrendBarChart,
@@ -496,6 +531,8 @@ common/      (Button, CatPill, StatusChip, MatchBadge, Switch, Pager, Toast, Mod
 | データ連携・接続テスト | 各タブの エンドポイントURL + APIキー、`POST /integrations/{provider}/test`（`logipoke` / `mobipoke` / 外部サービス） |
 | コスト調整（override） | `GET/POST /adjustments`（追記専用。連携済み明細の実効値上書き） |
 | コスト集計・時系列 | `GET /costs/summary`（KPI）/ `GET /costs/series`（推移グラフ：月次×営業所×分類×車格） |
+| 連携アラート | `GET /alerts` / `POST /alerts/seen`（既読化）。プロトタイプは `localStorage`＋差分計算で代替（サーバ実装時は連携ジョブ完了イベントで生成） |
+| 重複検知 | `POST /documents/duplicates/check`（取込前の書類名チェック／連携前の署名チェック） |
 | 変更履歴 | `GET /changelog` |
 
 ---
@@ -507,9 +544,10 @@ common/      (Button, CatPill, StatusChip, MatchBadge, Switch, Pager, Toast, Mod
 - 詳細パネル: `openPanel, closePanel, panelNav, savePanel, reflectPanel, pnDoc, pnVendor, add/deleteLine`
 - アップロード: `openUpload, switchUploadTab, pickFiles, handleUploadFiles, toggleOcr, setUploadCategory, useSampleFiles, runUpload`（分割系: `splitUpload*`）
 - コストモニター: `setTab(monitor/individual), setVehCategoryFilter, setRange/clearRange, toggleVehTrash, openKarte, openVehEdit/commitVehEdit/closeVehEdit, vehAddManualLine/vehDeleteManualLine/vehEdit*Line, vehViewDoc, openChangelog/gotoChange`、グラフ絞り込み（`office/cat/klass`）
+- アラート/重複: `recomputeAlerts, markAlertsSeen`（Topbarベル）、`setPickupHighlight`（ピックアップ遷移）、重複（`buildReflectedSignatures, findDuplicateDocIds, linesHaveDuplicate`／取込時の書類名チェック・連携時の同意チェック `includeDups`）
 - マスタ: `setMasterTab(vehicles/costCats), openMasterNew/openMasterEdit/closeMasterEdit, masterEditField, masterEditChassis(→lookupJikenkyo), saveMaster, downloadMasterCsv`、コスト分類（`addCat/removeCat/toggleCatDocType`）
 - 設定: `setSetting, toggleSetting, setMatchThreshold, setDefaultPageSize, addCategory/removeCategory, askSaveSettings/discardSettingsEdits, testLogipoke/testMobipoke/testExternal`
 
 ---
 
-AI Fleet Pilot — プロダクト要求仕様書（PRD / フロントエンド設計向け）　|　最終更新 2026-06-15（rev.）　|　現行は React 版（`app/`）。本書（`docs/PRD.md`）が仕様の正、`legacy-prototype.html` は参照専用。
+AI Fleet Pilot — プロダクト要求仕様書（PRD / フロントエンド設計向け）　|　最終更新 2026-06-16（rev.）　|　現行は React 版（`app/`）。本書（`docs/PRD.md`）が仕様の正、`legacy-prototype.html` は参照専用。
