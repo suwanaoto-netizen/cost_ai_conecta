@@ -114,6 +114,8 @@
   .bp-main{min-width:0}
   .bp-title{font-size:12.5px;font-weight:800;color:var(--ink);line-height:1.4}
   .bp-detail{font-size:11.5px;color:var(--inkSoft);margin-top:2px;word-break:break-all}
+  .bp-more{width:100%;background:none;border:none;cursor:pointer;padding:10px 14px;font-size:12px;font-weight:800;color:var(--greenDark);font-family:inherit}
+  .bp-more:hover{background:#F5F8F5}
   .pk-flash{animation:pkflash 1.6s ease}
   @keyframes pkflash{0%,100%{box-shadow:none}20%,60%{box-shadow:0 0 0 3px var(--green) inset}}
   .content{padding:22px;animation:fade .2s ease;flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
@@ -1381,7 +1383,7 @@ let state={
   vehPanel:null, vehChartCat:null, vehChartGran:"month", vehTlExpanded:false,
   vehTrash:new Set(), vehTrashView:false, vehTrashAction:null,
   changelogOpen:false, changelogSeenCount:0, vehEditHighlight:null,
-  alerts:[], seenAlertIds:{}, prevCostMap:null, prevPickup:null, bellOpen:false, pickupHighlight:null,
+  alerts:[], seenAlertIds:{}, prevCostMap:null, prevPickup:null, bellOpen:false, bellExpanded:false, pickupHighlight:null,
   vehDateStart:null, vehDateEnd:null, vehCalOpen:false, vehCalYM:"2026-06",
   reflectConfirm:null, enterConfirm:null, officeConfirm:null,
   manualLines:[],
@@ -3194,14 +3196,18 @@ function renderBell(){
   const dot=hasUnseen?`<span class="bell-dot"></span>`:"";
   let pop="";
   if(state.bellOpen){
-    const list=state.alerts.length
-      ? state.alerts.map(a=>`<button class="bp-item" onclick="alertDispatch('${a.id}')"><span class="bp-dot ${a.kind==='pickup_change'?'blue':'red'}"></span><div class="bp-main"><div class="bp-title">${esc(a.title)}</div><div class="bp-detail">${esc(a.detail)}</div></div></button>`).join("")
-      : `<div class="bp-empty">新しいアラートはありません</div>`;
+    let list;
+    if(state.alerts.length){
+      const shown=state.alerts.slice(0, state.bellExpanded?10:5); // 初期5件→もっとみるで10件まで（10件超は非表示）
+      list=shown.map(a=>`<button class="bp-item" onclick="alertDispatch('${a.id}')"><span class="bp-dot ${a.kind==='pickup_change'?'blue':'red'}"></span><div class="bp-main"><div class="bp-title">${esc(a.title)}</div><div class="bp-detail">${esc(a.detail)}</div></div></button>`).join("");
+      if(!state.bellExpanded && state.alerts.length>5) list+=`<button class="bp-more" onclick="bellMore()">もっとみる</button>`;
+    } else { list=`<div class="bp-empty">新しいアラートはありません</div>`; }
     pop=`<div class="bell-pop"><div class="bp-head"><span>アラート</span><button class="x" onclick="toggleBell()">${I.x("#5A6472",16)}</button></div><div class="bp-list">${list}</div></div>`;
   }
   host.innerHTML=`<button class="bell" onclick="toggleBell()" aria-label="アラート">${I.bell("#5A6472",18)}${dot}</button>${pop}`;
 }
-function toggleBell(){ state.bellOpen=!state.bellOpen; if(state.bellOpen) markAlertsSeen(); else renderBell(); }
+function toggleBell(){ state.bellOpen=!state.bellOpen; state.bellExpanded=false; if(state.bellOpen) markAlertsSeen(); else renderBell(); }
+function bellMore(){ state.bellExpanded=true; renderBell(); }
 function alertDispatch(id){
   const a=state.alerts.find(x=>x.id===id); if(!a)return; state.bellOpen=false;
   if(a.target.type==="veh_karte"){ const v=buildVehicles("all").find(x=>x.key===a.target.vehKey); if(!v){ renderBell(); toast("対象の車両が見つかりませんでした"); return; } renderBell(); openVehPanel(v.key,v.kind,v.target); }

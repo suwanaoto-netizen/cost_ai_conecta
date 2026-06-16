@@ -32,9 +32,11 @@ export function Topbar() {
   const plateIndex = usePlateIndex();
 
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const hasUnseen = alerts.some((a) => !seenAlertIds[a.id]);
   const initial = USER.trim().charAt(0);
+  const shown = alerts.slice(0, expanded ? 10 : 5); // 初期5件→もっとみるで10件まで（10件超は非表示）
 
   // 外側クリックで閉じる
   useEffect(() => {
@@ -47,6 +49,7 @@ export function Topbar() {
   const toggle = () => {
     const next = !open;
     setOpen(next);
+    setExpanded(false); // 開閉のたびに5件表示へ戻す
     if (next) markAlertsSeen(); // 開いた時点で既読化＝赤ポチ消灯
   };
 
@@ -88,15 +91,20 @@ export function Topbar() {
                 {alerts.length === 0 ? (
                   <div className="bp-empty">新しいアラートはありません</div>
                 ) : (
-                  alerts.map((a) => (
-                    <button className="bp-item" key={a.id} onClick={() => dispatch(a)}>
-                      <span className={`bp-dot ${a.kind === "pickup_change" ? "blue" : "red"}`} aria-hidden="true" />
-                      <div className="bp-main">
-                        <div className="bp-title">{a.title}</div>
-                        <div className="bp-detail">{a.detail}</div>
-                      </div>
-                    </button>
-                  ))
+                  <>
+                    {shown.map((a) => (
+                      <button className="bp-item" key={a.id} onClick={() => dispatch(a)}>
+                        <span className={`bp-dot ${a.kind === "pickup_change" ? "blue" : "red"}`} aria-hidden="true" />
+                        <div className="bp-main">
+                          <div className="bp-title">{a.title}</div>
+                          <div className="bp-detail">{a.detail}</div>
+                        </div>
+                      </button>
+                    ))}
+                    {!expanded && alerts.length > 5 && (
+                      <button className="bp-more" onClick={() => setExpanded(true)}>もっとみる</button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
