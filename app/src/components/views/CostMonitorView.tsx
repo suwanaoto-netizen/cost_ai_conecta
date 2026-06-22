@@ -5,7 +5,7 @@ import { usePlateIndex, useVehicles } from "../../store/selectors";
 import { nextOverlayId, useStore } from "../../store";
 import { plateRegistered } from "../../domain/match";
 import { type Vehicle } from "../../domain/vehicles";
-import { catStyleOf } from "../../domain/catStyle";
+import { vehicleMetrics } from "../../domain/vehicleMetrics";
 import { yen } from "../../domain/format";
 import type { ChangelogEntry } from "../../domain/types";
 import { KpiCards } from "../costmonitor/KpiCards";
@@ -21,6 +21,20 @@ import { Button } from "../common/Button";
 import { IconCheck, IconTruck, IconAlert } from "../common/Icon";
 
 type MonitorTab = "monitor" | "individual";
+
+/**
+ * 個別モニターは緑系のみで配色する。コスト分類は緑のトーン差（濃淡）で識別する。
+ * （全体のコスト分類色 CAT_STYLE はそのままで、この画面だけ緑系に置き換える）
+ */
+const GREEN_CAT_STYLE: Record<string, { fg: string; bg: string }> = {
+  燃料費: { fg: "#0E7A4B", bg: "#E4F4EC" },
+  "修繕・維持費": { fg: "#157F73", bg: "#DCEFEC" },
+  保険料: { fg: "#2F8F5B", bg: "#E7F4EB" },
+  調達コスト: { fg: "#25786A", bg: "#DEEFEA" },
+  税金: { fg: "#4C8A3F", bg: "#EAF3E1" },
+  通行料: { fg: "#5E8C2A", bg: "#EEF3DD" },
+};
+const greenCatStyle = (cat: string) => GREEN_CAT_STYLE[cat] ?? { fg: "#0E7A4B", bg: "#E4F4EC" };
 
 export function CostMonitorView() {
   const vehTrash = useDataStore((s) => s.vehTrash);
@@ -73,6 +87,8 @@ export function CostMonitorView() {
 
   const start = (page - 1) * perPage;
   const pageVeh = visible.slice(start, start + perPage);
+  // 横一列メトリクスのヘッダー構成（ラベル・分類・na/通算フラグは車両に依らず一定）。
+  const metricSchema = pageVeh.length ? vehicleMetrics(pageVeh[0]) : [];
 
   const openEdit = (v: Vehicle) => {
     pushOverlay({
@@ -261,60 +277,41 @@ export function CostMonitorView() {
       ) : (
         <div className="veh-card">
           <div className="tscroll">
-            <table className="vt">
+            <table className="vt vt-metrics">
               <thead>
                 <tr>
-                  <th>車番</th>
-                  <th>マスタ</th>
-                  <th>コスト内訳</th>
-                  <th>最終発生 / 明細数</th>
-                  <th className="r">累計コスト</th>
-                  <th style={{ textAlign: "right" }}>操作</th>
+                  <th className="sticky-c sticky-c1" rowSpan={2}>車番</th>
+                  <th className="sticky-c sticky-c2 r" rowSpan={2}>累計コスト</th>
+                  <th className="sticky-c sticky-c3" rowSpan={2}>操作</th>
+                  {metricSchema.map((g) => {
+                    const cs = greenCatStyle(g.cat);
+                    return (
+                      <th key={g.cat} className="vm-cat grp-start" colSpan={g.metrics.length} style={{ color: cs.fg, background: cs.bg }}>
+                        {g.cat}
+                      </th>
+                    );
+                  })}
+                  <th rowSpan={2}>最終発生 / 明細数</th>
+                </tr>
+                <tr>
+                  {metricSchema.flatMap((g) =>
+                    g.metrics.map((m, i) => (
+                      <th key={g.cat + ":" + i} className={`vm-label ${i === 0 ? "grp-start" : ""} ${m.isSum ? "sum" : ""}`}>
+                        {m.label}
+                      </th>
+                    )),
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {pageVeh.map((v) => {
-                  const isMaster = plateRegistered(plateIndex, v.target);
-                  const cats = Object.keys(v.byCat).sort((a, b) => v.byCat[b] - v.byCat[a]);
                   return (
                     <tr className="vrow" key={v.key}>
-                      <td>
+                      <td className="sticky-c sticky-c1">
                         <span className="plate">{v.target}</span>
                       </td>
-                      <td>
-                        {isMaster ? (
-                          <span className="mtag exist">
-                            <IconCheck color="#157F73" size={11} />
-                            既存マスタ
-                          </span>
-                        ) : (
-                          <span className="mtag newv">
-                            <IconTruck color="#B87514" size={11} />
-                            新規作成
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ minWidth: 200 }}>
-                        <div className="bar">
-                          {cats.map((c) => (
-                            <span key={c} style={{ width: `${((v.byCat[c] / v.total) * 100).toFixed(1)}%`, background: catStyleOf(c).fg }} />
-                          ))}
-                        </div>
-                        <div className="breakdown">
-                          {cats.map((c) => (
-                            <span className="bd" key={c}>
-                              <span className="sw" style={{ background: catStyleOf(c).fg }} />
-                              {c} {yen(v.byCat[c])}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--inkSoft)" }}>
-                        {v.last}
-                        <div style={{ marginTop: 3 }}>{v.count}明細</div>
-                      </td>
-                      <td className="r total">{yen(v.total)}</td>
-                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                      <td className="sticky-c sticky-c2 r total">{yen(v.total)}</td>
+                      <td className="sticky-c sticky-c3" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                         {trashView ? (
                           <button className="icon-btn" title="コストモニターに戻す" onClick={() => confirmTrash(v, "restore")}>
                             ↩
@@ -329,6 +326,22 @@ export function CostMonitorView() {
                             </button>
                           </>
                         )}
+                      </td>
+                      {vehicleMetrics(v).flatMap((g) => {
+                        const cs = greenCatStyle(g.cat);
+                        return g.metrics.map((m, i) => (
+                          <td
+                            key={g.cat + ":" + i}
+                            className={`vm-col ${i === 0 ? "grp-start" : ""} ${m.isSum ? "sum" : ""} ${m.na ? "na" : ""}`}
+                            style={m.isSum ? { color: cs.fg } : undefined}
+                          >
+                            {m.na ? "—" : yen(m.value)}
+                          </td>
+                        ));
+                      })}
+                      <td style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--inkSoft)", whiteSpace: "nowrap" }}>
+                        {v.last}
+                        <div style={{ marginTop: 3 }}>{v.count}明細</div>
                       </td>
                     </tr>
                   );

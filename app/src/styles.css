@@ -281,6 +281,23 @@ table.vt { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width:
 .bd .sw { width: 8px; height: 8px; border-radius: 2px; }
 .vt .total { font-size: 15px; color: var(--ink); }
 
+/* 個別モニター：車両ごとの項目金額を横一列（表の列）で表示 */
+.vt-metrics { min-width: max-content; }
+.vt-metrics thead th.vm-cat { text-align: center; font-size: 11px; font-weight: 800; letter-spacing: 0.3px; box-shadow: inset 0 -1px 0 var(--line); }
+.vt-metrics thead th.vm-label { background: #f3f5f2; font-size: 10px; font-weight: 700; line-height: 1.3; color: var(--inkSoft); white-space: normal; vertical-align: bottom; max-width: 132px; min-width: 92px; }
+.vt-metrics thead th.vm-label.sum { color: var(--ink); }
+.vt-metrics td.vm-col { text-align: right; font-family: var(--mono); font-size: 11.5px; color: var(--ink); white-space: nowrap; }
+.vt-metrics td.vm-col.sum { font-weight: 800; }
+.vt-metrics td.vm-col.na { color: var(--inkLite, #9AA3AD); }
+.vt-metrics .grp-start { border-left: 1px solid var(--line); }
+/* 車番・累計コスト・操作の3列を横スクロール時も左に固定（以降の項目列はスクロール） */
+.vt-metrics th.sticky-c, .vt-metrics td.sticky-c { position: sticky; z-index: 3; background: var(--card); white-space: nowrap; box-sizing: border-box; }
+.vt-metrics thead th.sticky-c { z-index: 4; background: #f3f5f2; }
+.vt-metrics tbody tr.vrow:hover td.sticky-c { background: #f6fbf8; }
+.vt-metrics .sticky-c1 { left: 0; width: 142px; min-width: 142px; max-width: 142px; }
+.vt-metrics .sticky-c2 { left: 142px; width: 116px; min-width: 116px; max-width: 116px; }
+.vt-metrics .sticky-c3 { left: 258px; width: 124px; min-width: 124px; max-width: 124px; box-shadow: 1px 0 0 var(--line); }
+
 /* empty state */
 .empty { text-align: center; padding: 48px 20px; color: var(--inkSoft); }
 .empty .et { font-size: 15px; font-weight: 800; color: var(--ink); margin: 14px 0 6px; }

@@ -559,6 +559,21 @@
   .vt .plate{display:inline-block;font-family:var(--mono);font-weight:800;font-size:13px;color:var(--ink);letter-spacing:.5px}
   .vt .r{text-align:right;font-family:var(--mono);font-weight:700;white-space:nowrap}
   .vt .total{font-size:15px;color:var(--ink)}
+  /* 個別モニター：項目金額を横一列（表の列）で表示。車番・累計コスト・操作は左固定。 */
+  .vt-metrics{min-width:max-content}
+  .vt-metrics thead th.vm-cat{text-align:center;font-size:11px;font-weight:800;letter-spacing:.3px;box-shadow:inset 0 -1px 0 var(--line)}
+  .vt-metrics thead th.vm-label{background:#F3F5F2;font-size:10px;font-weight:700;line-height:1.3;color:var(--inkSoft);white-space:normal;vertical-align:bottom;max-width:132px;min-width:92px}
+  .vt-metrics thead th.vm-label.sum{color:var(--ink)}
+  .vt-metrics td.vm-col{text-align:right;font-family:var(--mono);font-size:11.5px;color:var(--ink);white-space:nowrap}
+  .vt-metrics td.vm-col.sum{font-weight:800}
+  .vt-metrics td.vm-col.na{color:#9AA3AD}
+  .vt-metrics .grp-start{border-left:1px solid var(--line)}
+  .vt-metrics th.sticky-c,.vt-metrics td.sticky-c{position:sticky;z-index:3;background:var(--card);white-space:nowrap;box-sizing:border-box}
+  .vt-metrics thead th.sticky-c{z-index:4;background:#F3F5F2}
+  .vt-metrics tbody tr.vrow:hover td.sticky-c{background:#F6FBF8}
+  .vt-metrics .sticky-c1{left:0;width:142px;min-width:142px;max-width:142px}
+  .vt-metrics .sticky-c2{left:142px;width:116px;min-width:116px;max-width:116px}
+  .vt-metrics .sticky-c3{left:258px;width:124px;min-width:124px;max-width:124px;box-shadow:1px 0 0 var(--line)}
   .mtag{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:800;white-space:nowrap}
   .mtag.exist{background:var(--tealSoft);color:var(--teal)}
   .mtag.newv{background:var(--amberSoft);color:var(--amber)}
@@ -1026,6 +1041,64 @@ const CAT_STYLE={
   "調達コスト":{fg:"#3B4DA0",bg:"#E6E9F7"},
   "税金":{fg:"#5A6472",bg:"#E9ECE6"},
 };
+/* 個別モニターは緑系のみで配色する。分類は緑のトーン差（濃淡）で識別する（CAT_STYLE は全体用で不変）。 */
+const GREEN_CAT_STYLE={
+  "燃料費":{fg:"#0E7A4B",bg:"#E4F4EC"},
+  "修繕・維持費":{fg:"#157F73",bg:"#DCEFEC"},
+  "保険料":{fg:"#2F8F5B",bg:"#E7F4EB"},
+  "調達コスト":{fg:"#25786A",bg:"#DEEFEA"},
+  "税金":{fg:"#4C8A3F",bg:"#EAF3E1"},
+  "通行料":{fg:"#5E8C2A",bg:"#EEF3DD"},
+};
+function greenCatStyle(c){ return GREEN_CAT_STYLE[c]||{fg:"#0E7A4B",bg:"#E4F4EC"}; }
+/* 個別モニターの横一列メトリクス：書類項目の金額を分類ごとに集計（通算＝分類別通算金額）。
+   部品代／技術代・リース総額は明細が合計しか持たないため na（"—"）表示。 */
+function vehicleMetrics(v){
+  const bySub={}; let jidoshazei=0, juryozei=0, leaseMonthly=0;
+  (v.lines||[]).forEach(l=>{
+    const sub=resolveSubcat(l.cat,l.item);
+    if(sub) bySub[sub]=(bySub[sub]||0)+(+l.amount||0);
+    if(l.cat==="税金"){ if((l.item||"").includes("重量税")) juryozei+=+l.amount||0; else if((l.item||"").includes("自動車税")) jidoshazei+=+l.amount||0; }
+    if(l.cat==="調達コスト"&&(l.item||"").includes("リース")) leaseMonthly+=+l.amount||0;
+  });
+  const cat=c=>v.byCat[c]||0, sub=code=>bySub[code]||0;
+  const inspect=sub("inspect_shaken")+sub("inspect_3m")+sub("inspect_other");
+  return [
+    {cat:"燃料費",metrics:[
+      {label:"通算",value:cat("燃料費"),isSum:true},
+      {label:"給油履歴（ガソリン・軽油・アドブルー）レシート／カード明細金額（円）",value:cat("燃料費")},
+    ]},
+    {cat:"修繕・維持費",metrics:[
+      {label:"通算",value:cat("修繕・維持費"),isSum:true},
+      {label:"定期点検請求書 合計金額（円）",value:inspect},
+      {label:"定期点検請求書 部品代（円）",value:0,na:true},
+      {label:"定期点検請求書 技術代（円）",value:0,na:true},
+      {label:"修理 合計金額",value:sub("repair")},
+      {label:"修理 部品代（円）",value:0,na:true},
+      {label:"修理 技術代（円）",value:0,na:true},
+      {label:"タイヤ交換金額（円）",value:sub("tire")},
+    ]},
+    {cat:"保険料",metrics:[
+      {label:"通算",value:cat("保険料"),isSum:true},
+      {label:"自賠責保険 保険費用（円）",value:sub("jibaiseki")},
+      {label:"任意保険 保険費用（円）",value:sub("voluntary")},
+    ]},
+    {cat:"調達コスト",metrics:[
+      {label:"通算",value:cat("調達コスト"),isSum:true},
+      {label:"リース 総額（円）",value:0,na:true},
+      {label:"リース 月間リース料金（円）",value:leaseMonthly},
+    ]},
+    {cat:"税金",metrics:[
+      {label:"通算",value:cat("税金"),isSum:true},
+      {label:"自動車税 費用（円）",value:jidoshazei},
+      {label:"重量税 費用（円）",value:juryozei},
+    ]},
+    {cat:"通行料",metrics:[
+      {label:"通算",value:cat("通行料"),isSum:true},
+      {label:"高速道路通行料（ETC）金額（円）",value:cat("通行料")},
+    ]},
+  ];
+}
 const DOC_TYPES=["請求書","見積書","領収書","納品書","明細書","保険証券","納付書"];
 const DOC_CATS=["全ての書類",...DOC_TYPES];
 /* コスト分類 → 想定される書類タイプ（先頭が主たる想定）。設定画面で編集可 */
@@ -3361,31 +3434,34 @@ function renderVehIndividual(){
   const pageVeh=veh.slice(start,start+per);
 
   const rows=pageVeh.map(v=>{
-    const isMaster=plateRegistered(v.target);
-    const mtag=isMaster?`<span class="mtag exist">${I.check("#157F73",11,2.6)}既存マスタ</span>`
-                       :`<span class="mtag newv">${I.truck("#B87514",11)}新規作成</span>`;
-    const cats=Object.keys(v.byCat).sort((a,b)=>v.byCat[b]-v.byCat[a]);
-    const bar=`<div class="bar">${cats.map(c=>{const s=CAT_STYLE[c]||CAT_STYLE["税金"];
-      return `<span style="width:${(v.byCat[c]/v.total*100).toFixed(1)}%;background:${s.fg}"></span>`;}).join("")}</div>
-      <div class="breakdown">${cats.map(c=>{const s=CAT_STYLE[c]||CAT_STYLE["税金"];
-      return `<span class="bd"><span class="sw" style="background:${s.fg}"></span>${esc(c)} ${yen(v.byCat[c])}</span>`;}).join("")}</div>`;
     const actCell=inTrash
       ? `<button class="icon-btn restore" title="コストモニターに戻す" onclick="event.stopPropagation();vehAskRestore('${v.key}')">${I.undo("#0E7A4B",15)}</button>`
       : `<button class="veh-edit-btn" onclick="event.stopPropagation();openVehEdit('${v.key}','${v.kind}','${esc(v.target)}')">${I.pencil("#0E7A4B",13)} 編集</button>
          <button class="icon-btn" title="ゴミ箱へ移動" style="margin-left:6px" onclick="event.stopPropagation();vehAskTrash('${v.key}')">${I.trash("#B23A2E",15)}</button>`;
+    const metricCells=vehicleMetrics(v).map(g=>{const cs=greenCatStyle(g.cat);
+      return g.metrics.map((m,i)=>`<td class="vm-col ${i===0?"grp-start":""} ${m.isSum?"sum":""} ${m.na?"na":""}" ${m.isSum?`style="color:${cs.fg}"`:""}>${m.na?"—":yen(m.value)}</td>`).join("");
+    }).join("");
     return `<tr class="vrow${inTrash?" is-trash":""}" ${inTrash?"":`onclick="openVehPanel('${v.key}','${v.kind}','${esc(v.target)}')"`}>
-      <td><span class="plate">${esc(v.target)}</span>
+      <td class="sticky-c sticky-c1"><span class="plate">${esc(v.target)}</span>
         ${v.fuso?`<div style="font-size:10.5px;color:var(--inkSoft);margin-top:5px">${esc(v.fuso.body)}${v.fuso.reefer&&v.fuso.reefer!=="なし"?" / "+esc(v.fuso.reefer):""}</div>`:""}</td>
-      <td>${mtag}</td>
-      <td style="min-width:200px">${bar}</td>
-      <td style="font-family:var(--mono);font-size:11px;color:var(--inkSoft)">${v.last}<div style="margin-top:3px">${v.count}明細</div></td>
-      <td class="r total">${yen(v.total)}</td>
-      <td style="text-align:right;white-space:nowrap">${actCell}</td>
+      <td class="sticky-c sticky-c2 r total">${yen(v.total)}</td>
+      <td class="sticky-c sticky-c3" style="text-align:right;white-space:nowrap">${actCell}</td>
+      ${metricCells}
+      <td style="font-family:var(--mono);font-size:11px;color:var(--inkSoft);white-space:nowrap">${v.last}<div style="margin-top:3px">${v.count}明細</div></td>
     </tr>`;
   }).join("");
 
-  const table=`<div class="veh-card"><div class="tscroll"><table class="vt">
-    <thead><tr>${thVeh('target','車番')}${thVeh('master','マスタ')}<th>コスト内訳</th>${thVeh('last','最終発生 / 明細数')}${thVeh('total','累計コスト','r')}<th style="text-align:right">操作</th></tr></thead>
+  const metricSchema=vehicleMetrics(pageVeh[0]);
+  const groupHdr=metricSchema.map(g=>{const cs=greenCatStyle(g.cat);
+    return `<th class="vm-cat grp-start" colspan="${g.metrics.length}" style="color:${cs.fg};background:${cs.bg}">${esc(g.cat)}</th>`;}).join("");
+  const labelHdr=metricSchema.map(g=>g.metrics.map((m,i)=>
+    `<th class="vm-label ${i===0?"grp-start":""} ${m.isSum?"sum":""}">${esc(m.label)}</th>`).join("")).join("");
+
+  const table=`<div class="veh-card"><div class="tscroll"><table class="vt vt-metrics">
+    <thead>
+      <tr>${thVehSticky('target','車番','sticky-c1')}${thVehSticky('total','累計コスト','sticky-c2 r')}<th rowspan="2" class="sticky-c sticky-c3" style="text-align:right">操作</th>${groupHdr}${thVeh('last','最終発生 / 明細数','',2)}</tr>
+      <tr>${labelHdr}</tr>
+    </thead>
     <tbody>${rows}</tbody></table></div>${pager("veh",info)}</div>`;
   return head+filterBar+table;
 }
@@ -3393,10 +3469,16 @@ function setVehSort(key){const s=state.vehSort;
   if(s.key===key) s.dir=s.dir==="asc"?"desc":"asc";
   else {s.key=key; s.dir=(key==="total"||key==="count")?"desc":"asc";}
   state.vehPage=1; render();}
-function thVeh(key,label,cls){
+function thVeh(key,label,cls,rowspan){
   const a=state.vehSort.key===key;
   const ar=a?(state.vehSort.dir==="asc"?`<span class="ar">▲</span>`:`<span class="ar">▼</span>`):`<span class="ar-dim">⇅</span>`;
-  return `<th class="sortable ${cls||""} ${a?"sorted":""}" onclick="setVehSort('${key}')"><span class="th-in">${label}${ar}</span></th>`;
+  return `<th ${rowspan?`rowspan="${rowspan}"`:""} class="sortable ${cls||""} ${a?"sorted":""}" onclick="setVehSort('${key}')"><span class="th-in">${label}${ar}</span></th>`;
+}
+/* 個別モニターの固定列ヘッダー（車番・累計コスト）。横スクロール時も左に固定する2段ヘッダー用。 */
+function thVehSticky(key,label,cls){
+  const a=state.vehSort.key===key;
+  const ar=a?(state.vehSort.dir==="asc"?`<span class="ar">▲</span>`:`<span class="ar">▼</span>`):`<span class="ar-dim">⇅</span>`;
+  return `<th rowspan="2" class="sortable sticky-c ${cls||""} ${a?"sorted":""}" onclick="setVehSort('${key}')"><span class="th-in">${label}${ar}</span></th>`;
 }
 function toggleVeh(k){if(state.vehExpanded.has(k))state.vehExpanded.delete(k);else state.vehExpanded.add(k);render();}
 function setVehCategoryFilter(v){ state.vehCategoryFilter=v; state.vehPage=1; render(); }
