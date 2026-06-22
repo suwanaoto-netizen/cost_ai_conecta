@@ -280,6 +280,21 @@ table.vt { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width:
 .bd { font-size: 10px; font-family: var(--mono); color: var(--inkSoft); display: inline-flex; align-items: center; gap: 4px; }
 .bd .sw { width: 8px; height: 8px; border-radius: 2px; }
 .vt .total { font-size: 15px; color: var(--ink); }
+.vrow-toggle { display: inline-block; width: 14px; margin-right: 4px; color: var(--inkSoft); font-size: 10px; }
+
+/* 個別モニター：車両ごとの項目値（横一列） */
+.vt tbody tr.vrow-detail:hover { background: transparent; }
+.vt tr.vrow-detail > td { padding: 0; background: #fafcfb; border-bottom: 1px solid var(--line); }
+.vm-strip { display: flex; flex-wrap: nowrap; gap: 0; overflow-x: auto; padding: 12px 14px; }
+.vm-group { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; padding: 0 12px; }
+.vm-group + .vm-group { border-left: 1px dashed var(--line); }
+.vm-gh { align-self: flex-start; font-size: 10px; font-weight: 800; letter-spacing: 0.3px; padding: 2px 8px; border-radius: 999px; }
+.vm-cells { display: flex; flex-wrap: nowrap; gap: 8px; }
+.vm-cell { flex: 0 0 auto; min-width: 120px; max-width: 210px; background: var(--card); border: 1px solid var(--lineSoft); border-radius: 8px; padding: 7px 10px; display: flex; flex-direction: column; gap: 5px; }
+.vm-cell.vm-sum { border-width: 1.5px; }
+.vm-cell .vm-l { font-size: 10px; line-height: 1.35; color: var(--inkSoft); font-weight: 700; }
+.vm-cell .vm-v { font-family: var(--mono); font-size: 13px; font-weight: 800; color: var(--ink); white-space: nowrap; }
+.vm-cell .vm-v.na { color: var(--inkSoft); font-weight: 600; }
 
 /* empty state */
 .empty { text-align: center; padding: 48px 20px; color: var(--inkSoft); }

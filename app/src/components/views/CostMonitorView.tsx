@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useDataStore, CURRENT_USER } from "../../store/data";
 import { useSettingsStore, currentSnapshot } from "../../store/settings";
 import { usePlateIndex, useVehicles } from "../../store/selectors";
 import { nextOverlayId, useStore } from "../../store";
 import { plateRegistered } from "../../domain/match";
 import { type Vehicle } from "../../domain/vehicles";
+import { vehicleMetrics } from "../../domain/vehicleMetrics";
 import { catStyleOf } from "../../domain/catStyle";
 import { yen } from "../../domain/format";
 import type { ChangelogEntry } from "../../domain/types";
@@ -59,6 +60,15 @@ export function CostMonitorView() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(defaultPageSize);
   const [clogOpen, setClogOpen] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (key: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   const plateIndex = usePlateIndex();
   const allVeh = useVehicles(office, range.start && range.end ? { start: range.start, end: range.end } : null);
@@ -276,9 +286,12 @@ export function CostMonitorView() {
                 {pageVeh.map((v) => {
                   const isMaster = plateRegistered(plateIndex, v.target);
                   const cats = Object.keys(v.byCat).sort((a, b) => v.byCat[b] - v.byCat[a]);
+                  const isOpen = expanded.has(v.key);
                   return (
-                    <tr className="vrow" key={v.key}>
+                    <Fragment key={v.key}>
+                    <tr className="vrow" onClick={() => toggleExpand(v.key)}>
                       <td>
+                        <span className="vrow-toggle" aria-hidden>{isOpen ? "▾" : "▸"}</span>
                         <span className="plate">{v.target}</span>
                       </td>
                       <td>
@@ -314,7 +327,7 @@ export function CostMonitorView() {
                         <div style={{ marginTop: 3 }}>{v.count}明細</div>
                       </td>
                       <td className="r total">{yen(v.total)}</td>
-                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={(e) => e.stopPropagation()}>
                         {trashView ? (
                           <button className="icon-btn" title="コストモニターに戻す" onClick={() => confirmTrash(v, "restore")}>
                             ↩
@@ -331,6 +344,33 @@ export function CostMonitorView() {
                         )}
                       </td>
                     </tr>
+                    {isOpen && (
+                      <tr className="vrow-detail">
+                        <td colSpan={6}>
+                          <div className="vm-strip">
+                            {vehicleMetrics(v).map((g) => {
+                              const cs = catStyleOf(g.cat);
+                              return (
+                                <div className="vm-group" key={g.cat}>
+                                  <div className="vm-gh" style={{ color: cs.fg, background: cs.bg }}>{g.cat}</div>
+                                  <div className="vm-cells">
+                                    {g.metrics.map((m, i) => (
+                                      <div className={`vm-cell ${m.isSum ? "vm-sum" : ""}`} key={i} style={m.isSum ? { borderColor: cs.fg } : undefined}>
+                                        <div className="vm-l">{m.label}</div>
+                                        <div className={`vm-v ${m.na ? "na" : ""}`} style={m.isSum ? { color: cs.fg } : undefined}>
+                                          {m.na ? "—" : yen(m.value)}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })}
               </tbody>
