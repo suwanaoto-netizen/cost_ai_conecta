@@ -267,7 +267,9 @@ export function CostMonitorView() {
             <table className="vt vt-metrics">
               <thead>
                 <tr>
-                  <th className="sticky-l" rowSpan={2}>車番</th>
+                  <th className="sticky-c sticky-c1" rowSpan={2}>車番</th>
+                  <th className="sticky-c sticky-c2 r" rowSpan={2}>累計コスト</th>
+                  <th className="sticky-c sticky-c3" rowSpan={2}>操作</th>
                   {metricSchema.map((g) => {
                     const cs = catStyleOf(g.cat);
                     return (
@@ -277,8 +279,6 @@ export function CostMonitorView() {
                     );
                   })}
                   <th rowSpan={2}>最終発生 / 明細数</th>
-                  <th className="r" rowSpan={2}>累計コスト</th>
-                  <th style={{ textAlign: "right" }} rowSpan={2}>操作</th>
                 </tr>
                 <tr>
                   {metricSchema.flatMap((g) =>
@@ -294,8 +294,25 @@ export function CostMonitorView() {
                 {pageVeh.map((v) => {
                   return (
                     <tr className="vrow" key={v.key}>
-                      <td className="sticky-l">
+                      <td className="sticky-c sticky-c1">
                         <span className="plate">{v.target}</span>
+                      </td>
+                      <td className="sticky-c sticky-c2 r total">{yen(v.total)}</td>
+                      <td className="sticky-c sticky-c3" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                        {trashView ? (
+                          <button className="icon-btn" title="コストモニターに戻す" onClick={() => confirmTrash(v, "restore")}>
+                            ↩
+                          </button>
+                        ) : (
+                          <>
+                            <button className="veh-edit-btn" onClick={() => openEdit(v)}>
+                              編集
+                            </button>
+                            <button className="icon-btn" title="ゴミ箱へ移動" style={{ marginLeft: 6 }} onClick={() => confirmTrash(v, "trash")}>
+                              🗑
+                            </button>
+                          </>
+                        )}
                       </td>
                       {vehicleMetrics(v).flatMap((g) => {
                         const cs = catStyleOf(g.cat);
@@ -312,23 +329,6 @@ export function CostMonitorView() {
                       <td style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--inkSoft)", whiteSpace: "nowrap" }}>
                         {v.last}
                         <div style={{ marginTop: 3 }}>{v.count}明細</div>
-                      </td>
-                      <td className="r total">{yen(v.total)}</td>
-                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                        {trashView ? (
-                          <button className="icon-btn" title="コストモニターに戻す" onClick={() => confirmTrash(v, "restore")}>
-                            ↩
-                          </button>
-                        ) : (
-                          <>
-                            <button className="veh-edit-btn" onClick={() => openEdit(v)}>
-                              編集
-                            </button>
-                            <button className="icon-btn" title="ゴミ箱へ移動" style={{ marginLeft: 6 }} onClick={() => confirmTrash(v, "trash")}>
-                              🗑
-                            </button>
-                          </>
-                        )}
                       </td>
                     </tr>
                   );

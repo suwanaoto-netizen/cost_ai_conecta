@@ -290,10 +290,13 @@ table.vt { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width:
 .vt-metrics td.vm-col.sum { font-weight: 800; }
 .vt-metrics td.vm-col.na { color: var(--inkLite, #9AA3AD); }
 .vt-metrics .grp-start { border-left: 1px solid var(--line); }
-/* 車番列を横スクロール時も固定 */
-.vt-metrics th.sticky-l, .vt-metrics td.sticky-l { position: sticky; left: 0; z-index: 3; background: var(--card); box-shadow: 1px 0 0 var(--line); white-space: nowrap; min-width: 104px; }
-.vt-metrics thead th.sticky-l { z-index: 4; background: #f3f5f2; }
-.vt-metrics tbody tr.vrow:hover td.sticky-l { background: #f6fbf8; }
+/* 車番・累計コスト・操作の3列を横スクロール時も左に固定（以降の項目列はスクロール） */
+.vt-metrics th.sticky-c, .vt-metrics td.sticky-c { position: sticky; z-index: 3; background: var(--card); white-space: nowrap; box-sizing: border-box; }
+.vt-metrics thead th.sticky-c { z-index: 4; background: #f3f5f2; }
+.vt-metrics tbody tr.vrow:hover td.sticky-c { background: #f6fbf8; }
+.vt-metrics .sticky-c1 { left: 0; width: 142px; min-width: 142px; max-width: 142px; }
+.vt-metrics .sticky-c2 { left: 142px; width: 116px; min-width: 116px; max-width: 116px; }
+.vt-metrics .sticky-c3 { left: 258px; width: 124px; min-width: 124px; max-width: 124px; box-shadow: 1px 0 0 var(--line); }
 
 /* empty state */
 .empty { text-align: center; padding: 48px 20px; color: var(--inkSoft); }
