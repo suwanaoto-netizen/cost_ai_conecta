@@ -268,7 +268,6 @@ export function CostMonitorView() {
               <thead>
                 <tr>
                   <th className="sticky-l" rowSpan={2}>車番</th>
-                  <th rowSpan={2}>マスタ</th>
                   {metricSchema.map((g) => {
                     const cs = catStyleOf(g.cat);
                     return (
@@ -293,24 +292,10 @@ export function CostMonitorView() {
               </thead>
               <tbody>
                 {pageVeh.map((v) => {
-                  const isMaster = plateRegistered(plateIndex, v.target);
                   return (
                     <tr className="vrow" key={v.key}>
                       <td className="sticky-l">
                         <span className="plate">{v.target}</span>
-                      </td>
-                      <td>
-                        {isMaster ? (
-                          <span className="mtag exist">
-                            <IconCheck color="#157F73" size={11} />
-                            既存マスタ
-                          </span>
-                        ) : (
-                          <span className="mtag newv">
-                            <IconTruck color="#B87514" size={11} />
-                            新規作成
-                          </span>
-                        )}
                       </td>
                       {vehicleMetrics(v).flatMap((g) => {
                         const cs = catStyleOf(g.cat);
