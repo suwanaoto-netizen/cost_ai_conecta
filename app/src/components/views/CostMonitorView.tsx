@@ -6,7 +6,6 @@ import { nextOverlayId, useStore } from "../../store";
 import { plateRegistered } from "../../domain/match";
 import { type Vehicle } from "../../domain/vehicles";
 import { vehicleMetrics } from "../../domain/vehicleMetrics";
-import { catStyleOf } from "../../domain/catStyle";
 import { yen } from "../../domain/format";
 import type { ChangelogEntry } from "../../domain/types";
 import { KpiCards } from "../costmonitor/KpiCards";
@@ -22,6 +21,20 @@ import { Button } from "../common/Button";
 import { IconCheck, IconTruck, IconAlert } from "../common/Icon";
 
 type MonitorTab = "monitor" | "individual";
+
+/**
+ * 個別モニターは緑系のみで配色する。コスト分類は緑のトーン差（濃淡）で識別する。
+ * （全体のコスト分類色 CAT_STYLE はそのままで、この画面だけ緑系に置き換える）
+ */
+const GREEN_CAT_STYLE: Record<string, { fg: string; bg: string }> = {
+  燃料費: { fg: "#0E7A4B", bg: "#E4F4EC" },
+  "修繕・維持費": { fg: "#157F73", bg: "#DCEFEC" },
+  保険料: { fg: "#2F8F5B", bg: "#E7F4EB" },
+  調達コスト: { fg: "#25786A", bg: "#DEEFEA" },
+  税金: { fg: "#4C8A3F", bg: "#EAF3E1" },
+  通行料: { fg: "#5E8C2A", bg: "#EEF3DD" },
+};
+const greenCatStyle = (cat: string) => GREEN_CAT_STYLE[cat] ?? { fg: "#0E7A4B", bg: "#E4F4EC" };
 
 export function CostMonitorView() {
   const vehTrash = useDataStore((s) => s.vehTrash);
@@ -271,7 +284,7 @@ export function CostMonitorView() {
                   <th className="sticky-c sticky-c2 r" rowSpan={2}>累計コスト</th>
                   <th className="sticky-c sticky-c3" rowSpan={2}>操作</th>
                   {metricSchema.map((g) => {
-                    const cs = catStyleOf(g.cat);
+                    const cs = greenCatStyle(g.cat);
                     return (
                       <th key={g.cat} className="vm-cat grp-start" colSpan={g.metrics.length} style={{ color: cs.fg, background: cs.bg }}>
                         {g.cat}
@@ -315,7 +328,7 @@ export function CostMonitorView() {
                         )}
                       </td>
                       {vehicleMetrics(v).flatMap((g) => {
-                        const cs = catStyleOf(g.cat);
+                        const cs = greenCatStyle(g.cat);
                         return g.metrics.map((m, i) => (
                           <td
                             key={g.cat + ":" + i}
