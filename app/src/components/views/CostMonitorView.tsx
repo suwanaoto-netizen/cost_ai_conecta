@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDataStore, CURRENT_USER } from "../../store/data";
 import { useSettingsStore, currentSnapshot } from "../../store/settings";
 import { usePlateIndex, useVehicles } from "../../store/selectors";
@@ -60,15 +60,6 @@ export function CostMonitorView() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(defaultPageSize);
   const [clogOpen, setClogOpen] = useState(false);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
-  const toggleExpand = (key: string) =>
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
 
   const plateIndex = usePlateIndex();
   const allVeh = useVehicles(office, range.start && range.end ? { start: range.start, end: range.end } : null);
@@ -83,6 +74,8 @@ export function CostMonitorView() {
 
   const start = (page - 1) * perPage;
   const pageVeh = visible.slice(start, start + perPage);
+  // 横一列メトリクスのヘッダー構成（ラベル・分類・na/通算フラグは車両に依らず一定）。
+  const metricSchema = pageVeh.length ? vehicleMetrics(pageVeh[0]) : [];
 
   const openEdit = (v: Vehicle) => {
     pushOverlay({
@@ -271,27 +264,39 @@ export function CostMonitorView() {
       ) : (
         <div className="veh-card">
           <div className="tscroll">
-            <table className="vt">
+            <table className="vt vt-metrics">
               <thead>
                 <tr>
-                  <th>車番</th>
-                  <th>マスタ</th>
-                  <th>コスト内訳</th>
-                  <th>最終発生 / 明細数</th>
-                  <th className="r">累計コスト</th>
-                  <th style={{ textAlign: "right" }}>操作</th>
+                  <th className="sticky-l" rowSpan={2}>車番</th>
+                  <th rowSpan={2}>マスタ</th>
+                  {metricSchema.map((g) => {
+                    const cs = catStyleOf(g.cat);
+                    return (
+                      <th key={g.cat} className="vm-cat grp-start" colSpan={g.metrics.length} style={{ color: cs.fg, background: cs.bg }}>
+                        {g.cat}
+                      </th>
+                    );
+                  })}
+                  <th rowSpan={2}>最終発生 / 明細数</th>
+                  <th className="r" rowSpan={2}>累計コスト</th>
+                  <th style={{ textAlign: "right" }} rowSpan={2}>操作</th>
+                </tr>
+                <tr>
+                  {metricSchema.flatMap((g) =>
+                    g.metrics.map((m, i) => (
+                      <th key={g.cat + ":" + i} className={`vm-label ${i === 0 ? "grp-start" : ""} ${m.isSum ? "sum" : ""}`}>
+                        {m.label}
+                      </th>
+                    )),
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {pageVeh.map((v) => {
                   const isMaster = plateRegistered(plateIndex, v.target);
-                  const cats = Object.keys(v.byCat).sort((a, b) => v.byCat[b] - v.byCat[a]);
-                  const isOpen = expanded.has(v.key);
                   return (
-                    <Fragment key={v.key}>
-                    <tr className="vrow" onClick={() => toggleExpand(v.key)}>
-                      <td>
-                        <span className="vrow-toggle" aria-hidden>{isOpen ? "▾" : "▸"}</span>
+                    <tr className="vrow" key={v.key}>
+                      <td className="sticky-l">
                         <span className="plate">{v.target}</span>
                       </td>
                       <td>
@@ -307,27 +312,24 @@ export function CostMonitorView() {
                           </span>
                         )}
                       </td>
-                      <td style={{ minWidth: 200 }}>
-                        <div className="bar">
-                          {cats.map((c) => (
-                            <span key={c} style={{ width: `${((v.byCat[c] / v.total) * 100).toFixed(1)}%`, background: catStyleOf(c).fg }} />
-                          ))}
-                        </div>
-                        <div className="breakdown">
-                          {cats.map((c) => (
-                            <span className="bd" key={c}>
-                              <span className="sw" style={{ background: catStyleOf(c).fg }} />
-                              {c} {yen(v.byCat[c])}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--inkSoft)" }}>
+                      {vehicleMetrics(v).flatMap((g) => {
+                        const cs = catStyleOf(g.cat);
+                        return g.metrics.map((m, i) => (
+                          <td
+                            key={g.cat + ":" + i}
+                            className={`vm-col ${i === 0 ? "grp-start" : ""} ${m.isSum ? "sum" : ""} ${m.na ? "na" : ""}`}
+                            style={m.isSum ? { color: cs.fg } : undefined}
+                          >
+                            {m.na ? "—" : yen(m.value)}
+                          </td>
+                        ));
+                      })}
+                      <td style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--inkSoft)", whiteSpace: "nowrap" }}>
                         {v.last}
                         <div style={{ marginTop: 3 }}>{v.count}明細</div>
                       </td>
                       <td className="r total">{yen(v.total)}</td>
-                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={(e) => e.stopPropagation()}>
+                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                         {trashView ? (
                           <button className="icon-btn" title="コストモニターに戻す" onClick={() => confirmTrash(v, "restore")}>
                             ↩
@@ -344,33 +346,6 @@ export function CostMonitorView() {
                         )}
                       </td>
                     </tr>
-                    {isOpen && (
-                      <tr className="vrow-detail">
-                        <td colSpan={6}>
-                          <div className="vm-strip">
-                            {vehicleMetrics(v).map((g) => {
-                              const cs = catStyleOf(g.cat);
-                              return (
-                                <div className="vm-group" key={g.cat}>
-                                  <div className="vm-gh" style={{ color: cs.fg, background: cs.bg }}>{g.cat}</div>
-                                  <div className="vm-cells">
-                                    {g.metrics.map((m, i) => (
-                                      <div className={`vm-cell ${m.isSum ? "vm-sum" : ""}`} key={i} style={m.isSum ? { borderColor: cs.fg } : undefined}>
-                                        <div className="vm-l">{m.label}</div>
-                                        <div className={`vm-v ${m.na ? "na" : ""}`} style={m.isSum ? { color: cs.fg } : undefined}>
-                                          {m.na ? "—" : yen(m.value)}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                    </Fragment>
                   );
                 })}
               </tbody>
